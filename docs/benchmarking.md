@@ -40,7 +40,6 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 
 #### Unique / Differentiating Features
 - Strong focus on local, in-person transactions.
-- Very broad category scope including real estate, vehicles, and jobs — functions almost as a general classifieds platform.
 - Lightweight listing flow designed for speed.
 
 #### Safety & Trust
@@ -86,7 +85,6 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 #### Unique / Differentiating Features
 - Zero seller fees — sellers keep 100% of the sale price.
 - Fashion-focused niche with size, brand, and material filters tailored to clothing.
-- "Bundle" feature — buyers can combine multiple items from the same seller into one shipment for a single shipping cost.
 - Vinted Wallet for quick payouts and re-spending within the platform.
 
 #### Safety & Trust
@@ -104,9 +102,9 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 ### 2.3 eBay
 
 #### Core Features
-- **Listings:** Detailed listings with title, description, item specifics (brand, model, condition, dimensions), price (fixed or auction), and quantity.
+- **Listings:** Detailed listings with title, description, item specifics (brand, model, condition, dimensions), price, and quantity.
 - **Categories:** Extremely broad category taxonomy covering virtually every product type — electronics, fashion, collectibles, vehicles, home, sports, business & industrial, etc.
-- **Search & Filters:** Powerful search with filters for category, price, condition (new/used/refurbished), buying format (auction/buy-it-now), location, seller rating, free shipping, and many item-specific attributes.
+- **Search & Filters:** Powerful search with filters for category, price, condition (new/used/refurbished), location, seller rating, free shipping, and many item-specific attributes.
 - **Images:** Up to 24 photos per listing. Gallery view and zoom.
 
 #### User Management
@@ -117,10 +115,10 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 
 #### Communication
 - **Messaging:** eBay messaging system for buyer-seller communication. Structured messaging with order-related templates.
-- **Notifications:** Email, push, and in-app notifications for bids, outbid alerts, order updates, messages, watched-item changes, and saved-search matches.
+- **Notifications:** Email, push, and in-app notifications for order updates, messages, watched-item changes, and saved-search matches.
 
 #### Transactions & Payments
-- **Methods:** eBay Managed Payments (credit/debit card, PayPal, Apple Pay, Google Pay, bank transfer). Auction and fixed-price formats.
+- **Methods:** eBay Managed Payments (credit/debit card, PayPal, Apple Pay, Google Pay, bank transfer).
 - **Shipping:** Seller-arranged or eBay-integrated shipping labels (discounted USPS/UPS/FedEx rates). Global Shipping Programme for international sales. Tracking and estimated delivery dates.
 - **Buyer/Seller Protection:** eBay Money Back Guarantee — full refund if item not received or not as described. Seller protections against fraudulent claims.
 
@@ -130,7 +128,6 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 - **Subscriptions:** eBay Store subscriptions (Starter, Basic, Premium, Anchor, Enterprise) with reduced fees, more free listings, and marketing tools.
 
 #### Unique / Differentiating Features
-- Auction format — unique bidding mechanic that no other major second-hand platform replicates at scale.
 - "Best Offer" — buyers can negotiate on fixed-price listings.
 - Authenticity Guarantee for luxury items (sneakers, watches, handbags) — items verified by independent authenticators.
 - Refurbished programme with manufacturer or eBay-certified refurbished items and warranties.
@@ -142,7 +139,7 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 - **Fraud Prevention:** Money Back Guarantee; seller performance standards enforcement; suspicious-activity monitoring; address verification.
 
 #### Social Features
-- **Favourites:** Watchlist for tracking auction items and buy-it-now listings.
+- **Favourites:** Watchlist for tracking listings.
 - **Sharing:** Share listings via link, email, or social media.
 - **Following:** Follow sellers to see new listings; saved sellers list.
 
@@ -177,7 +174,6 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 - **Subscriptions:** Pro accounts for frequent or professional sellers with analytics and bulk tools.
 
 #### Unique / Differentiating Features
-- Strong local/proximity focus — default view is a map-based or distance-sorted feed showing items near the user.
 - One-tap offer button in listing view and chat — very low-friction negotiation.
 - "Wallapop Cars" sub-platform with specialised vehicle listings including make, model, mileage, and year filters.
 - "Super Seller" badge rewards reliable sellers.
@@ -200,7 +196,7 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 - **Listings:** Listing creation with title, price, description, condition, category, location, and product tags.
 - **Categories:** Broad categories — vehicles, property rentals/sales, clothing, electronics, furniture, garden, toys, and more.
 - **Search & Filters:** Keyword search with filters for category, price range, condition, distance/location, seller type (individual/business), and date listed.
-- **Images:** Up to 10 photos per listing; video supported.
+- **Images:** Up to 10 photos per listing.
 
 #### User Management
 - **Registration:** Requires an existing Facebook account.
@@ -226,7 +222,6 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 - Embedded within Facebook's ecosystem — massive built-in user base with zero separate registration required.
 - Social graph integration — buyers can see mutual friends with sellers, adding a layer of social trust.
 - Local community groups — integration with Facebook Buy & Sell groups extends reach.
-- Video listings supported.
 - AI-powered personalised feed based on Facebook's interest and behaviour data.
 
 #### Safety & Trust
@@ -248,7 +243,6 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 | **Listing Cost** | Free | Free | Free (up to ~250/month) | Free | Free |
 | **Seller Commission** | None (or small OLX Pay fee) | None | ~13% final value fee | None | 5% on shipped items |
 | **Buyer Protection Fee** | Via OLX Pay | ~5% + fixed | Included in fees | Via Wallapay | Included in fees |
-| **Auction Format** | No | No | Yes | No | No |
 | **Integrated Shipping** | Select markets | Yes | Yes | Yes | Select markets |
 | **Integrated Payments** | Select markets (OLX Pay) | Yes | Yes | Yes (Wallapay) | Select markets |
 | **Escrow / Held Funds** | OLX Pay only | Yes | Yes | Yes (shipped) | Yes (checkout) |
@@ -260,12 +254,7 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 | **Subscriptions / Shops** | Business packages | No | Store tiers | Pro accounts | Commerce Manager |
 | **Follow Sellers** | No | Yes | Yes | Yes | Indirect (via FB) |
 | **Favourites / Watchlist** | Yes | Yes | Yes (Watchlist) | Yes | Yes (Saved) |
-| **Bundle Purchases** | No | Yes | No (seller can combine) | No | No |
-| **Buy Now Pay Later** | No | No | No | No | No |
-| **Video in Listings** | No | No | No | No | Yes |
-| **Category Scope** | Very broad (classifieds) | Fashion + home | Very broad | Broad + vehicles | Very broad |
 | **Primary Transaction Mode** | Local meetup | Shipped | Shipped | Local meetup | Local meetup |
-| **Map / Proximity View** | Yes | No | No | Yes (strong) | Yes |
 | **Social Feed** | No | Yes (followed users) | No | No | No |
 | **Authenticity Programme** | No | No | Yes (luxury items) | No | No |
 
@@ -284,12 +273,10 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 ### Opportunities and Gaps
 1. **Zero seller fees as a differentiator.** Vinted and Wallapop prove that a no-commission model attracts sellers. Trevo could adopt this approach and monetise through buyer fees and promoted listings instead.
 2. **Negotiation UX matters.** Wallapop's one-tap offer and Vinted's in-chat offer button lower friction compared to platforms that rely on free-form chat. Trevo should build structured negotiation into the flow.
-3. **Bundle/combined shipping is underserved.** Only Vinted offers a native bundle feature. Supporting multi-item purchases from the same seller with combined shipping could reduce costs and increase basket size.
-4. **Social features drive engagement.** Vinted benefits from follower feeds, likes, and community elements. A lightweight social layer (follow sellers, activity feed) could increase retention for Trevo.
-5. **Local + shipped hybrid model.** Most platforms lean either local (OLX, Wallapop, FB Marketplace) or shipped (Vinted, eBay). Offering both modes with a seamless UX would broaden Trevo's appeal in the Portuguese market.
-6. **Video listings are rare.** Only Facebook Marketplace supports video among the analysed platforms. Adding short video support could give sellers a richer way to present items, especially for clothing and electronics.
-7. **Authenticity and quality assurance.** Only eBay has a formal authenticity programme. A lighter verification process (e.g., condition guarantee, photo verification) could differentiate Trevo in categories like electronics or branded fashion.
-8. **Portuguese market specifics.** OLX dominates in Portugal with a classifieds model. There is room for a platform that combines OLX's local strength with Vinted's shipping, buyer protection, and social features — purpose-built for the Portuguese user.
+3. **Social features drive engagement.** Vinted benefits from follower feeds, likes, and community elements. A lightweight social layer (follow sellers, activity feed) could increase retention for Trevo.
+4. **Local + shipped hybrid model.** Most platforms lean either local (OLX, Wallapop, FB Marketplace) or shipped (Vinted, eBay). Offering both modes with a seamless UX would broaden Trevo's appeal in the Portuguese market.
+5. **Authenticity and quality assurance.** Only eBay has a formal authenticity programme. A lighter verification process (e.g., condition guarantee, photo verification) could differentiate Trevo in categories like electronics or branded fashion.
+6. **Portuguese market specifics.** OLX dominates in Portugal with a classifieds model. There is room for a platform that combines OLX's local strength with Vinted's shipping, buyer protection, and social features — purpose-built for the Portuguese user.
 
 ### Recommended Priority Features for Trevo
 - Free listings with no seller commission
@@ -300,4 +287,3 @@ Each platform is analysed across a consistent set of dimensions: core features, 
 - Promoted listings as a monetisation tool
 - Support for both local meetup and shipped transactions
 - Follow sellers and activity feed
-- Bundle purchases from the same seller

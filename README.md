@@ -1,6 +1,6 @@
 # Trevo
 
-A second-hand marketplace where buyers discover unique items and shop owners manage their storefronts — featuring virtual try-on powered by AI.
+A platform where shop owners manage their storefronts and buyers browse products — featuring virtual try-on powered by AI.
 
 ## Tech Stack
 
@@ -48,7 +48,9 @@ docker compose up
 #    Database:  localhost:5432
 ```
 
-## Development (without Docker yet)
+## Development (without Docker)
+
+If you prefer running services directly on your machine:
 
 ### Backend
 
@@ -68,6 +70,8 @@ npm run dev
 ```
 
 The dev server starts on `http://localhost:5173` with hot reload.
+
+> **Note:** When running without Docker, you need a local PostgreSQL instance running and must update `SPRING_DATASOURCE_URL` in your `.env` to point to `localhost` instead of `db`.
 
 ## Running Tests
 

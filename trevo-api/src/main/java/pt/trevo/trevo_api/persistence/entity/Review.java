@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -22,6 +23,7 @@ import org.hibernate.annotations.Check;
         name = "reviews",
         uniqueConstraints = @UniqueConstraint(name = "uk_reviews_buyer_shop", columnNames = {"buyer_id", "shop_id"})
 )
+@SuppressWarnings("deprecation")
 @Check(constraints = "rating between 1 and 5")
 @Getter
 @Setter
@@ -52,6 +54,11 @@ public class Review {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }

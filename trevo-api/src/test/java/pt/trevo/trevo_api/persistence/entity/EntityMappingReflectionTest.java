@@ -245,6 +245,7 @@ class EntityMappingReflectionTest extends BaseUnitTest {
     }
 
     private void assertCheckConstraint(Class<?> type, String expectedConstraint) {
+        @SuppressWarnings("deprecation")
         Check check = type.getAnnotation(Check.class);
         assertNotNull(check);
         assertEquals(expectedConstraint, check.constraints());

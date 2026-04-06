@@ -40,6 +40,7 @@ import pt.trevo.trevo_api.persistence.entity.Variant;
 class RepositoryDataJpaTest {
 
     @Container
+    @SuppressWarnings("resource")
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
             .withDatabaseName("trevo_test")
             .withUsername("test")

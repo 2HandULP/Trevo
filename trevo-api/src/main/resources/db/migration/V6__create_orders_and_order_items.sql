@@ -57,3 +57,22 @@ CREATE TABLE order_items (
 );
 
 CREATE INDEX idx_order_items_order ON order_items (order_id);
+
+-- ============================================================
+-- Trigger to automatically update 'updated_at' on order modifications
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION update_order_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_order_updated_at
+BEFORE UPDATE ON orders
+FOR EACH ROW
+WHEN (OLD.* IS DISTINCT FROM NEW.*)
+EXECUTE FUNCTION update_order_updated_at();
+

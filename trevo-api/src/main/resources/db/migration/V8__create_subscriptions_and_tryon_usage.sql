@@ -6,7 +6,7 @@ CREATE TYPE subscription_status AS ENUM ('ACTIVE', 'CANCELLED', 'EXPIRED');
 
 CREATE TABLE subscriptions (
     id                      BIGSERIAL               PRIMARY KEY,
-    buyer_id                BIGINT                  NOT NULL,
+    buyer_id                BIGINT                  NOT NULL UNIQUE,
     status                  subscription_status     NOT NULL DEFAULT 'ACTIVE',
     stripe_subscription_id  VARCHAR(255)            UNIQUE,
     start_date              TIMESTAMP               NOT NULL DEFAULT NOW(),

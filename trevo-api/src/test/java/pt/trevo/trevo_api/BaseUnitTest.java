@@ -5,6 +5,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 public abstract class BaseUnitTest {
-    // Base class para todos os unit tests.
-    // Usa @Mock, @InjectMocks, etc. nas subclasses.
+    // Base class for all unit tests.
+    // Use @Mock, @InjectMocks, etc. in subclasses.
 }

@@ -1,10 +1,9 @@
 package pt.trevo.trevo_api;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import pt.trevo.trevo_api.BaseIntegrationTest;
 
-@SpringBootTest
-class TrevoApiApplicationTests {
+class TrevoApiApplicationTests extends BaseIntegrationTest {
 
 	@Test
 	void contextLoads() {

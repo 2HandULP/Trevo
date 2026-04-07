@@ -11,4 +11,5 @@ COPY src src
 
 EXPOSE 8080
 
-CMD ["./mvnw", "spring-boot:run"]
+# Use `sh` so local bind mounts do not depend on the host executable bit.
+CMD ["sh", "./mvnw", "spring-boot:run"]

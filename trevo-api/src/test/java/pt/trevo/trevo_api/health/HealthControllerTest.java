@@ -6,9 +6,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.web.client.RestClient;
+import pt.trevo.trevo_api.BaseIntegrationTest;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class HealthControllerTest {
+class HealthControllerTest extends BaseIntegrationTest {
 
 	@LocalServerPort
 	private int port;

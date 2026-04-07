@@ -26,3 +26,22 @@ CREATE TABLE reviews (
 );
 
 CREATE INDEX idx_reviews_shop ON reviews (shop_id);
+
+-- ============================================================
+-- Trigger to automatically update 'updated_at' on review modifications
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION update_review_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_review_updated_at
+BEFORE UPDATE ON reviews
+FOR EACH ROW
+WHEN (OLD.* IS DISTINCT FROM NEW.*)
+EXECUTE FUNCTION update_review_updated_at();
+

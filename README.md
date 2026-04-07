@@ -48,6 +48,29 @@ docker compose up
 #    Database:  localhost:5432
 ```
 
+## Cloudinary Setup
+
+Trevo uses a shared Cloudinary project environment for image uploads. Each team
+member should copy the shared `CLOUDINARY_URL` into their local `.env`, but the
+real credential must be stored outside the repository in the team's agreed
+secret-sharing location.
+
+1. Create or access the shared Trevo Cloudinary free-tier account.
+2. Open the Cloudinary Console and go to the product environment or dashboard.
+3. Copy the full `CLOUDINARY_URL` value.
+4. Paste it into your local `.env`.
+5. Restart Docker Compose or your local backend/frontend processes after
+   updating env vars.
+
+Expected value format:
+
+```bash
+CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
+```
+
+`ENV-11` only prepares credentials and configuration. Actual upload validation
+is deferred to `SHOP-B01` and `SHOP-F05`.
+
 ## Development (without Docker)
 
 If you prefer running services directly on your machine:

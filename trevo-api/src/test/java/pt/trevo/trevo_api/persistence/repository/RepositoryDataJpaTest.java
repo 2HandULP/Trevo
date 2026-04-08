@@ -27,6 +27,7 @@ import pt.trevo.trevo_api.persistence.entity.RefreshToken;
 import pt.trevo.trevo_api.persistence.entity.Review;
 import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.Shop;
+import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.Status;
 import pt.trevo.trevo_api.persistence.entity.Subscription;
 import pt.trevo.trevo_api.persistence.entity.SubscriptionStatus;
@@ -42,6 +43,7 @@ import pt.trevo.trevo_api.persistence.entity.Variant;
 class RepositoryDataJpaTest {
 
     private static int userSequence = 0;
+    private static int shopSequence = 0;
 
     @Container
     @SuppressWarnings("resource")
@@ -261,7 +263,12 @@ class RepositoryDataJpaTest {
     }
 
     private Shop persistShop() {
+        shopSequence++;
         Shop shop = new Shop();
+        shop.setOwner(persistUser());
+        shop.setName("Test Shop " + shopSequence);
+        shop.setNif(String.format("%09d", shopSequence));
+        shop.setStatus(ShopStatus.ACTIVE);
         entityManager.persist(shop);
         entityManager.flush();
         return shop;

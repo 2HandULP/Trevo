@@ -6,10 +6,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.web.client.RestClient;
-import pt.trevo.trevo_api.BaseIntegrationTest;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class HealthControllerTest extends BaseIntegrationTest {
+@SpringBootTest(
+	webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+	properties = {
+		"spring.autoconfigure.exclude=" +
+			"org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration," +
+			"org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration," +
+			"org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
+	}
+)
+class HealthControllerTest {
 
 	@LocalServerPort
 	private int port;

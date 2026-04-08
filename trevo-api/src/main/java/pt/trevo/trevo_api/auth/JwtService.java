@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import javax.crypto.SecretKey;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pt.trevo.trevo_api.persistence.entity.Role;
@@ -22,6 +23,7 @@ public class JwtService {
     private final Duration expiration;
     private final Clock clock;
 
+    @Autowired
     public JwtService(
         @Value("${app.security.jwt.secret}") String secret,
         @Value("${app.security.jwt.expiration}") Duration expiration

@@ -25,7 +25,9 @@ import pt.trevo.trevo_api.persistence.entity.PaymentMethod;
 import pt.trevo.trevo_api.persistence.entity.PasswordResetToken;
 import pt.trevo.trevo_api.persistence.entity.RefreshToken;
 import pt.trevo.trevo_api.persistence.entity.Review;
+import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.Shop;
+import pt.trevo.trevo_api.persistence.entity.Status;
 import pt.trevo.trevo_api.persistence.entity.Subscription;
 import pt.trevo.trevo_api.persistence.entity.SubscriptionStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
@@ -38,6 +40,8 @@ import pt.trevo.trevo_api.persistence.entity.Variant;
 @Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class RepositoryDataJpaTest {
+
+    private static int userSequence = 0;
 
     @Container
     @SuppressWarnings("resource")
@@ -245,6 +249,12 @@ class RepositoryDataJpaTest {
 
     private User persistUser() {
         User user = new User();
+        userSequence++;
+        user.setEmail("user" + userSequence + "@example.com");
+        user.setPasswordHash("hashed-password");
+        user.setFullName("Test User " + userSequence);
+        user.setRole(Role.BUYER);
+        user.setStatus(Status.ACTIVE);
         entityManager.persist(user);
         entityManager.flush();
         return user;

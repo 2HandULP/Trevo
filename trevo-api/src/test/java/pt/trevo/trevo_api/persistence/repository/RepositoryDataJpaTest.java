@@ -23,9 +23,14 @@ import pt.trevo.trevo_api.persistence.entity.OrderItem;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.PaymentMethod;
 import pt.trevo.trevo_api.persistence.entity.PasswordResetToken;
+import pt.trevo.trevo_api.persistence.entity.Product;
+import pt.trevo.trevo_api.persistence.entity.ProductStatus;
 import pt.trevo.trevo_api.persistence.entity.RefreshToken;
 import pt.trevo.trevo_api.persistence.entity.Review;
+import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.Shop;
+import pt.trevo.trevo_api.persistence.entity.ShopStatus;
+import pt.trevo.trevo_api.persistence.entity.Status;
 import pt.trevo.trevo_api.persistence.entity.Subscription;
 import pt.trevo.trevo_api.persistence.entity.SubscriptionStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
@@ -38,6 +43,10 @@ import pt.trevo.trevo_api.persistence.entity.Variant;
 @Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class RepositoryDataJpaTest {
+
+    private static int userSequence = 0;
+    private static int shopSequence = 0;
+    private static int productSequence = 0;
 
     @Container
     @SuppressWarnings("resource")
@@ -245,20 +254,43 @@ class RepositoryDataJpaTest {
 
     private User persistUser() {
         User user = new User();
+        userSequence++;
+        user.setEmail("user" + userSequence + "@example.com");
+        user.setPasswordHash("hashed-password");
+        user.setFullName("Test User " + userSequence);
+        user.setRole(Role.BUYER);
+        user.setStatus(Status.ACTIVE);
         entityManager.persist(user);
         entityManager.flush();
         return user;
     }
 
     private Shop persistShop() {
+        shopSequence++;
         Shop shop = new Shop();
+        shop.setOwner(persistUser());
+        shop.setName("Test Shop " + shopSequence);
+        shop.setNif(String.format("%09d", shopSequence));
+        shop.setStatus(ShopStatus.ACTIVE);
         entityManager.persist(shop);
         entityManager.flush();
         return shop;
     }
 
     private Variant persistVariant() {
+        productSequence++;
+        Product product = new Product();
+        product.setShop(persistShop());
+        product.setName("Test Product " + productSequence);
+        product.setPrice(new BigDecimal("49.99"));
+        product.setStatus(ProductStatus.ACTIVE);
+        entityManager.persist(product);
+
         Variant variant = new Variant();
+        variant.setProduct(product);
+        variant.setSize("M");
+        variant.setColor("Black");
+        variant.setStock(10);
         entityManager.persist(variant);
         entityManager.flush();
         return variant;

@@ -55,12 +55,18 @@ public class PostgreSQLEnumType implements UserType<Enum<?>>, DynamicParameteriz
 
     @Override
     public int getSqlType() {
-        return Types.OTHER;
+        // Types.VARCHAR allows Hibernate DDL generation (create-drop) to map this column.
+        // Actual JDBC binding uses Types.OTHER in nullSafeSet, which works for both
+        // PostgreSQL native ENUM columns (production/Flyway) and VARCHAR (create-drop tests).
+        return Types.VARCHAR;
     }
 
     @Override
     public Class<Enum<?>> returnedClass() {
-        return (Class<Enum<?>>) (Class<?>) enumClass;
+        // enumClass may be null when this type is instantiated for query parameter
+        // binding rather than entity field binding (setParameterValues not called).
+        // Returning Enum.class allows Hibernate's isInstance check to pass for any enum value.
+        return enumClass != null ? (Class<Enum<?>>) (Class<?>) enumClass : (Class<Enum<?>>) (Class<?>) Enum.class;
     }
 
     @Override

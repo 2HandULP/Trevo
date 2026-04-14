@@ -10,6 +10,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pt.trevo.trevo_api.auth.AppUserDetailsService;
+import pt.trevo.trevo_api.auth.JwtService;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
@@ -23,6 +24,9 @@ class HealthControllerTest {
 
 	@MockitoBean
 	private AppUserDetailsService appUserDetailsService;
+
+	@MockitoBean
+	private JwtService jwtService;
 
 	@MockitoBean
 	private UserRepository userRepository;

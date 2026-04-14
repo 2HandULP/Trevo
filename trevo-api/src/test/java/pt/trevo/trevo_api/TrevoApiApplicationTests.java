@@ -2,6 +2,10 @@ package pt.trevo.trevo_api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
+import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
 @SpringBootTest(properties = {
 	"spring.autoconfigure.exclude=" +
@@ -10,6 +14,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 		"org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
 })
 class TrevoApiApplicationTests {
+
+	@MockitoBean
+	private UserRepository userRepository;
+
+	@MockitoBean
+	private ShopRepository shopRepository;
+
+	@MockitoBean
+	private RefreshTokenRepository refreshTokenRepository;
 
 	@Test
 	void contextLoads() {

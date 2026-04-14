@@ -1,8 +1,8 @@
 package pt.trevo.trevo_api.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jsonwebtoken.JwtException;
 import java.time.Clock;
@@ -33,7 +33,7 @@ class JwtServiceTest extends BaseUnitTest {
 
         String token = jwtService.generateToken(user);
 
-        assertTrue(jwtService.validateToken(token));
+        assertDoesNotThrow(() -> jwtService.validateToken(token));
         assertEquals(42L, jwtService.extractUserId(token));
         assertEquals(Role.SHOP_OWNER, jwtService.extractRole(token));
         assertEquals(now.plus(Duration.ofMinutes(15)), jwtService.extractExpiration(token));

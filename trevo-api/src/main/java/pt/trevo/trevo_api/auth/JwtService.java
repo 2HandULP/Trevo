@@ -44,7 +44,6 @@ public class JwtService {
 
         return Jwts.builder()
             .subject(String.valueOf(user.getId()))
-            .claim("userId", user.getId())
             .claim("role", user.getRole().name())
             .issuedAt(Date.from(issuedAt))
             .expiration(Date.from(expiresAt))
@@ -52,9 +51,9 @@ public class JwtService {
             .compact();
     }
 
-    public boolean validateToken(String token) {
+    // Validates signature and expiration; throws JwtException when the token is invalid.
+    public void validateToken(String token) {
         parseClaims(token);
-        return true;
     }
 
     // Exposes the full JWT payload for callers that need more than the convenience accessors below.
@@ -63,11 +62,20 @@ public class JwtService {
     }
 
     public Long extractUserId(String token) {
-        return extractAllClaims(token).get("userId", Long.class);
+        return Long.valueOf(extractAllClaims(token).getSubject());
+    }
+
+    public Long extractUserId(Claims claims) {
+        return Long.valueOf(claims.getSubject());
     }
 
     public Role extractRole(String token) {
         String role = extractAllClaims(token).get("role", String.class);
+        return Role.valueOf(role);
+    }
+
+    public Role extractRole(Claims claims) {
+        String role = claims.get("role", String.class);
         return Role.valueOf(role);
     }
 

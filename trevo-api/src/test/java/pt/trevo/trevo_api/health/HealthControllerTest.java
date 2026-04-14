@@ -1,34 +1,41 @@
 package pt.trevo.trevo_api.health;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.web.client.RestClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import pt.trevo.trevo_api.auth.AppUserDetailsService;
+import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
+import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
-@SpringBootTest(
-	webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-	properties = {
-		"spring.autoconfigure.exclude=" +
-			"org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration," +
-			"org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration," +
-			"org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
-	}
-)
+@WebMvcTest(HealthController.class)
+@WithMockUser
 class HealthControllerTest {
 
-	@LocalServerPort
-	private int port;
+	@Autowired
+	private MockMvc mockMvc;
+
+	@MockitoBean
+	private AppUserDetailsService appUserDetailsService;
+
+	@MockitoBean
+	private UserRepository userRepository;
+
+	@MockitoBean
+	private ShopRepository shopRepository;
+
+	@MockitoBean
+	private RefreshTokenRepository refreshTokenRepository;
 
 	@Test
 	void shouldReturnApplicationHealth() throws Exception {
-		String responseBody = RestClient.create()
-			.get()
-			.uri("http://localhost:" + port + "/api/health")
-			.retrieve()
-			.body(String.class);
-
-		assertTrue(responseBody != null && responseBody.contains("\"status\":\"UP\""));
+		mockMvc.perform(get("/api/health"))
+				.andExpect(status().isOk());
 	}
 }

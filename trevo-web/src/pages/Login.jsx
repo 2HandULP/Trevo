@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     email: "",
@@ -20,7 +21,7 @@ export default function Login() {
     });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     if (!form.email || !form.password) {
@@ -28,13 +29,15 @@ export default function Login() {
       return;
     }
 
-    // login fake para já
-    if (form.email === "teste@teste.com" && form.password === "1234") {
-      login("token-login-123");
+    try {
+      setIsSubmitting(true);
+      await login(form);
       setError("");
-      navigate("/");
-    } else {
-      setError("Credenciais inválidas");
+      navigate("/dashboard");
+    } catch (error) {
+      setError(error.response?.data?.message || "Credenciais invalidas");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -65,7 +68,9 @@ export default function Login() {
           />
         </div>
 
-        <button type="submit">Entrar</button>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "A entrar..." : "Entrar"}
+        </button>
       </form>
     </div>
   );

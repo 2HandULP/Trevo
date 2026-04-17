@@ -1,44 +1,91 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { AuthContext } from "./auth-context";
+import {
+  clearAuthTokens,
+  getAccessToken,
+  getRefreshToken,
+  parseJwtClaims,
+  saveAuthTokens,
+} from "../lib/authStorage";
+import { loginUser, registerBuyer, registerShopOwner } from "../services/authService";
 
-const AuthContext = createContext();
-
-export function AuthProvider({ children }) {
-  const [token, setToken] = useState(null);
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-
-    if (storedToken) {
-      setToken(storedToken);
-    }
-  }, []);
-
-  function login(newToken) {
-    localStorage.setItem("token", newToken);
-    setToken(newToken);
+function getInitialAccessToken() {
+  if (typeof window === "undefined") {
+    return null;
   }
 
-  function logout() {
-    localStorage.removeItem("token");
-    setToken(null);
-  }
-
-  function register(newToken) {
-    localStorage.setItem("token", newToken);
-    setToken(newToken);
-  }
-
-  const value = {
-    token,
-    isAuthenticated: !!token,
-    login,
-    logout,
-    register,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return getAccessToken();
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
+function getInitialRefreshToken() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return getRefreshToken();
+}
+
+export function AuthProvider({ children }) {
+  const [accessToken, setAccessToken] = useState(getInitialAccessToken);
+  const [refreshToken, setRefreshToken] = useState(getInitialRefreshToken);
+
+  const persistSession = useCallback((tokens) => {
+    saveAuthTokens(tokens);
+    setAccessToken(tokens.accessToken);
+    setRefreshToken(tokens.refreshToken);
+  }, []);
+
+  const logout = useCallback(() => {
+    clearAuthTokens();
+    setAccessToken(null);
+    setRefreshToken(null);
+  }, []);
+
+  const login = useCallback(
+    async (credentials) => {
+      const tokens = await loginUser(credentials);
+      persistSession(tokens);
+      return tokens;
+    },
+    [persistSession]
+  );
+
+  const register = useCallback(async (payload) => {
+    if (payload.type === "owner") {
+      return registerShopOwner({
+        email: payload.email,
+        password: payload.password,
+        fullName: payload.fullName,
+        phone: payload.phone || null,
+        shopName: payload.shopName,
+        nif: payload.nif,
+      });
+    }
+
+    return registerBuyer({
+      email: payload.email,
+      password: payload.password,
+      fullName: payload.fullName,
+      phone: payload.phone || null,
+    });
+  }, []);
+
+  const claims = useMemo(() => parseJwtClaims(accessToken), [accessToken]);
+
+  const value = useMemo(
+    () => ({
+      token: accessToken,
+      accessToken,
+      refreshToken,
+      userId: claims?.sub || null,
+      role: claims?.role || null,
+      isAuthenticated: !!accessToken,
+      login,
+      logout,
+      register,
+    }),
+    [accessToken, claims, login, logout, refreshToken, register]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

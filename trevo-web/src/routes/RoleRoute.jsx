@@ -1,16 +1,19 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 export default function RoleRoute({ allowedRoles }) {
-  const { isAuthenticated } = useAuth();
-
-  const user = { role: "user" };
+  const { isAuthenticated, role } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  const normalizedRole = role?.toLowerCase();
+  const normalizedAllowedRoles = allowedRoles.map((allowedRole) =>
+    allowedRole.toLowerCase()
+  );
+
+  if (!normalizedAllowedRoles.includes(normalizedRole)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

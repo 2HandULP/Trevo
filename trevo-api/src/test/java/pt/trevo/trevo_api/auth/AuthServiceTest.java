@@ -22,12 +22,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
+import pt.trevo.trevo_api.persistence.entity.PasswordResetToken;
 import pt.trevo.trevo_api.persistence.entity.RefreshToken;
 import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.Status;
 import pt.trevo.trevo_api.persistence.entity.User;
+import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
@@ -46,10 +48,16 @@ class AuthServiceTest extends BaseUnitTest {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private PasswordResetEmailSender passwordResetEmailSender;
 
     @Mock
     private AuthenticationManager authenticationManager;
@@ -62,9 +70,11 @@ class AuthServiceTest extends BaseUnitTest {
         authService = new AuthService(
             userRepository,
             shopRepository,
+            passwordResetTokenRepository,
             refreshTokenRepository,
             passwordEncoder,
             jwtService,
+            passwordResetEmailSender,
             authenticationManager,
             Clock.fixed(NOW, ZoneOffset.UTC),
             AuthProperties.builder()
@@ -264,5 +274,95 @@ class AuthServiceTest extends BaseUnitTest {
         );
 
         assertThat(exception.getStatusCode().value()).isEqualTo(401);
+    }
+
+    @Test
+    void requestPasswordResetPersistsTokenWithFifteenMinuteExpiryAndSendsEmail() {
+        User user = User.builder()
+            .id(50L)
+            .email("buyer@example.com")
+            .role(Role.BUYER)
+            .status(Status.ACTIVE)
+            .build();
+        when(userRepository.findByEmail("buyer@example.com")).thenReturn(Optional.of(user));
+        when(passwordResetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        authService.requestPasswordReset("buyer@example.com");
+
+        ArgumentCaptor<PasswordResetToken> tokenCaptor = ArgumentCaptor.forClass(PasswordResetToken.class);
+        verify(passwordResetTokenRepository).save(tokenCaptor.capture());
+        PasswordResetToken savedToken = tokenCaptor.getValue();
+
+        assertThat(savedToken.getUser()).isEqualTo(user);
+        assertThat(savedToken.getToken()).isNotBlank();
+        assertThat(savedToken.getCreatedAt()).isEqualTo(NOW);
+        assertThat(savedToken.getExpiresAt()).isEqualTo(NOW.plusSeconds(15 * 60));
+        assertThat(savedToken.getUsed()).isFalse();
+        verify(passwordResetEmailSender).sendPasswordResetEmail(user, savedToken.getToken());
+    }
+
+    @Test
+    void validPasswordResetTokenShouldPassValidation() {
+        PasswordResetToken token = new PasswordResetToken();
+        token.setToken("reset-valid");
+        token.setUsed(false);
+        token.setExpiresAt(NOW.plusSeconds(60));
+
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-valid")).thenReturn(Optional.of(token));
+
+        authService.validatePasswordResetToken("reset-valid");
+
+        verify(passwordResetTokenRepository).findByTokenAndUsedFalse("reset-valid");
+    }
+
+    @Test
+    void resetPasswordUpdatesPasswordAndMarksTokenAsUsed() {
+        User user = User.builder()
+            .id(51L)
+            .email("buyer@example.com")
+            .passwordHash("old-hash")
+            .role(Role.BUYER)
+            .status(Status.ACTIVE)
+            .build();
+        PasswordResetToken token = new PasswordResetToken();
+        token.setUser(user);
+        token.setToken("reset-token");
+        token.setUsed(false);
+        token.setExpiresAt(NOW.plusSeconds(60));
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-token")).thenReturn(Optional.of(token));
+        when(passwordEncoder.encode("NewSecret123!")).thenReturn("$2a$10$newHash");
+
+        authService.resetPassword("reset-token", "NewSecret123!");
+
+        assertThat(user.getPasswordHash()).isEqualTo("$2a$10$newHash");
+        assertThat(token.getUsed()).isTrue();
+    }
+
+    @Test
+    void expiredPasswordResetTokenThrowsBadRequest() {
+        PasswordResetToken token = new PasswordResetToken();
+        token.setToken("reset-expired");
+        token.setUsed(false);
+        token.setExpiresAt(NOW.minusSeconds(1));
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-expired")).thenReturn(Optional.of(token));
+
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> authService.validatePasswordResetToken("reset-expired")
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(400);
+    }
+
+    @Test
+    void alreadyUsedPasswordResetTokenThrowsBadRequest() {
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-used")).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> authService.validatePasswordResetToken("reset-used")
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(400);
     }
 }

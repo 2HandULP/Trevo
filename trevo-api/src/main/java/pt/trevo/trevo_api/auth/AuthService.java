@@ -1,23 +1,26 @@
 package pt.trevo.trevo_api.auth;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.persistence.entity.PasswordResetToken;
 import pt.trevo.trevo_api.persistence.entity.RefreshToken;
 import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.Status;
 import pt.trevo.trevo_api.persistence.entity.User;
+import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
@@ -25,11 +28,15 @@ import pt.trevo.trevo_api.persistence.repository.UserRepository;
 @Service
 public class AuthService {
 
+    private static final Duration PASSWORD_RESET_TOKEN_EXPIRATION = Duration.ofMinutes(15);
+
     private final UserRepository userRepository;
     private final ShopRepository shopRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final PasswordResetEmailSender passwordResetEmailSender;
     private final AuthenticationManager authenticationManager;
     private final Clock clock;
     private final AuthProperties authProperties;
@@ -37,18 +44,22 @@ public class AuthService {
     public AuthService(
         UserRepository userRepository,
         ShopRepository shopRepository,
+        PasswordResetTokenRepository passwordResetTokenRepository,
         RefreshTokenRepository refreshTokenRepository,
         PasswordEncoder passwordEncoder,
         JwtService jwtService,
+        PasswordResetEmailSender passwordResetEmailSender,
         AuthenticationManager authenticationManager,
         Clock clock,
         AuthProperties authProperties
     ) {
         this.userRepository = userRepository;
         this.shopRepository = shopRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.passwordResetEmailSender = passwordResetEmailSender;
         this.authenticationManager = authenticationManager;
         this.clock = clock;
         this.authProperties = authProperties;
@@ -134,6 +145,49 @@ public class AuthService {
         return new TokenPairResponse(accessToken, refreshToken);
     }
 
+    @Transactional
+    public void invalidateSessions(Authentication authentication) {
+        refreshTokenRepository.revokeAllByUserId(extractAuthenticatedUserId(authentication));
+    }
+
+    @Transactional
+    public void requestPasswordReset(String email) {
+        if (isBlank(email)) {
+            throw badRequest("Missing email");
+        }
+
+        User user = userRepository.findByEmail(email.trim().toLowerCase())
+            .orElseThrow(() -> badRequest("User not found"));
+
+        Instant now = clock.instant();
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setUser(user);
+        resetToken.setToken(UUID.randomUUID().toString());
+        resetToken.setCreatedAt(now);
+        resetToken.setExpiresAt(now.plus(PASSWORD_RESET_TOKEN_EXPIRATION));
+        resetToken.setUsed(false);
+
+        PasswordResetToken savedToken = passwordResetTokenRepository.save(resetToken);
+        passwordResetEmailSender.sendPasswordResetEmail(user, savedToken.getToken());
+    }
+
+    @Transactional(readOnly = true)
+    public void validatePasswordResetToken(String token) {
+        getValidPasswordResetToken(token);
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        if (isBlank(newPassword)) {
+            throw badRequest("Missing password");
+        }
+
+        PasswordResetToken resetToken = getValidPasswordResetToken(token);
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        resetToken.setUsed(true);
+    }
+
     private void requireBuyerFields(RegisterBuyerRequest request) {
         if (request == null
             || isBlank(request.email())
@@ -193,8 +247,40 @@ public class AuthService {
         return refreshTokenRepository.save(refreshToken).getToken();
     }
 
+    private PasswordResetToken getValidPasswordResetToken(String token) {
+        if (isBlank(token)) {
+            throw badRequest("Missing reset token");
+        }
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenAndUsedFalse(token)
+            .orElseThrow(() -> badRequest("Invalid password reset token"));
+
+        if (!resetToken.getExpiresAt().isAfter(clock.instant())) {
+            throw badRequest("Password reset token expired");
+        }
+
+        return resetToken;
+    }
+
     private String normalizeOptional(String value) {
         return isBlank(value) ? null : value.trim();
+    }
+
+    private Long extractAuthenticatedUserId(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw unauthorized("Authentication required");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof Number number) {
+            return number.longValue();
+        }
+
+        try {
+            return Long.valueOf(principal.toString());
+        } catch (NumberFormatException exception) {
+            throw unauthorized("Authentication required");
+        }
     }
 
     private boolean isBlank(String value) {

@@ -1,4 +1,4 @@
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
   const { isAuthenticated, token, logout } = useAuth();

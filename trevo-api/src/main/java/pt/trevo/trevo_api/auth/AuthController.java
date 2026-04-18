@@ -41,6 +41,24 @@ public class AuthController {
         return authService.refresh(request);
     }
 
+    @PostMapping("/password-reset/request")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        authService.requestPasswordReset(request.email());
+    }
+
+    @PostMapping("/password-reset/validate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void validatePasswordResetToken(@Valid @RequestBody PasswordResetTokenValidationRequest request) {
+        authService.validatePasswordResetToken(request.token());
+    }
+
+    @PostMapping("/password-reset/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        authService.resetPassword(request.token(), request.newPassword());
+    }
+
     private AuthUserResponse toResponse(User user) {
         return new AuthUserResponse(user.getId(), user.getEmail(), user.getRole(), user.getStatus());
     }

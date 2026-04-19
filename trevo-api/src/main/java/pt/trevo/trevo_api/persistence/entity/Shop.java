@@ -58,6 +58,9 @@ public class Shop {
     @Column(nullable = false)
     private ShopStatus status;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

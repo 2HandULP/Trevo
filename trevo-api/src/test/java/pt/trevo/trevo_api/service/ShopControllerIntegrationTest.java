@@ -11,12 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.persistence.entity.Role;
@@ -34,13 +36,25 @@ class ShopControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private ShopService shopService;
 
+    private void setupSecurityContext(Long userId, Role role) {
+        TestingAuthenticationToken authentication = new TestingAuthenticationToken(
+            userId,
+            null,
+            "ROLE_" + role.name()
+        );
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+    }
+
     @Test
-    @WithMockUser(username = "11", authorities = "ROLE_SHOP_OWNER")
     void createShopReturnsCreatedShopWhenAuthorized() throws Exception {
         Long ownerId = 11L;
+        setupSecurityContext(ownerId, Role.SHOP_OWNER);
+        
         CreateShopRequest request = new CreateShopRequest("My Shop", "A description", "123456789", null, null);
         
         Shop savedShop = Shop.builder()
@@ -70,11 +84,13 @@ class ShopControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "22", authorities = "ROLE_BUYER")
     void createShopReturnsForbiddenWhenCallerIsNotShopOwner() throws Exception {
+        Long buyerId = 22L;
+        setupSecurityContext(buyerId, Role.BUYER);
+        
         CreateShopRequest request = new CreateShopRequest("My Shop", "A description", "123456789", null, null);
 
-        when(shopService.createShop(eq(22L), eq(Role.BUYER), any(CreateShopRequest.class)))
+        when(shopService.createShop(eq(buyerId), eq(Role.BUYER), any(CreateShopRequest.class)))
             .thenThrow(new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
                 "Only shop owners can create shops"
@@ -89,9 +105,10 @@ class ShopControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "11", authorities = "ROLE_SHOP_OWNER")
     void createShopReturnsConflictWhenOwnerAlreadyHasShop() throws Exception {
         Long ownerId = 11L;
+        setupSecurityContext(ownerId, Role.SHOP_OWNER);
+        
         CreateShopRequest request = new CreateShopRequest("My Shop", "A description", "123456789", null, null);
 
         when(shopService.createShop(eq(ownerId), eq(Role.SHOP_OWNER), any(CreateShopRequest.class)))

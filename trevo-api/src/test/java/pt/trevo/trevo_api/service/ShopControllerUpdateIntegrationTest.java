@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -11,15 +12,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
@@ -31,14 +36,25 @@ class ShopControllerUpdateIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private ShopService shopService;
 
+    private void setupSecurityContext(Long userId, Role role) {
+        TestingAuthenticationToken authentication = new TestingAuthenticationToken(
+            userId,
+            null,
+            "ROLE_" + role.name()
+        );
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+    }
+
     @Test
-    @WithMockUser(username = "11", authorities = "ROLE_SHOP_OWNER")
     void updateShopUpdatesDescriptionWhenOwner() throws Exception {
         Long ownerId = 11L;
         Long shopId = 1L;
+        setupSecurityContext(ownerId, Role.SHOP_OWNER);
 
         Shop updatedShop = Shop.builder()
             .id(shopId)
@@ -52,7 +68,7 @@ class ShopControllerUpdateIntegrationTest {
             .thenReturn(updatedShop);
 
         mockMvc.perform(
-            multipart("PUT", "/api/shops/{shopId}", shopId)
+            put("/api/shops/{shopId}", shopId)
                 .param("description", "Updated description")
         )
             .andExpect(status().isOk())
@@ -61,10 +77,10 @@ class ShopControllerUpdateIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "11", authorities = "ROLE_SHOP_OWNER")
     void updateShopUploadsLogoWhenProvided() throws Exception {
         Long ownerId = 11L;
         Long shopId = 1L;
+        setupSecurityContext(ownerId, Role.SHOP_OWNER);
 
         Shop updatedShop = Shop.builder()
             .id(shopId)
@@ -85,7 +101,7 @@ class ShopControllerUpdateIntegrationTest {
         );
 
         mockMvc.perform(
-            multipart("PUT", "/api/shops/{shopId}", shopId)
+            multipart(HttpMethod.PUT, "/api/shops/{shopId}", shopId)
                 .file(logoFile)
         )
             .andExpect(status().isOk())
@@ -93,10 +109,10 @@ class ShopControllerUpdateIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "11", authorities = "ROLE_SHOP_OWNER")
     void updateShopUploadsBannerWhenProvided() throws Exception {
         Long ownerId = 11L;
         Long shopId = 1L;
+        setupSecurityContext(ownerId, Role.SHOP_OWNER);
 
         Shop updatedShop = Shop.builder()
             .id(shopId)
@@ -117,7 +133,7 @@ class ShopControllerUpdateIntegrationTest {
         );
 
         mockMvc.perform(
-            multipart("PUT", "/api/shops/{shopId}", shopId)
+            multipart(HttpMethod.PUT, "/api/shops/{shopId}", shopId)
                 .file(bannerFile)
         )
             .andExpect(status().isOk())
@@ -125,31 +141,32 @@ class ShopControllerUpdateIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "22", authorities = "ROLE_BUYER")
     void updateShopReturnsForbiddenWhenNotOwner() throws Exception {
+        Long buyerId = 22L;
         Long shopId = 1L;
+        setupSecurityContext(buyerId, Role.BUYER);
 
-        when(shopService.updateShop(eq(22L), eq(shopId), any(UpdateShopRequest.class)))
+        when(shopService.updateShop(eq(buyerId), eq(shopId), any(UpdateShopRequest.class)))
             .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owner can update this shop"));
 
         mockMvc.perform(
-            multipart("PUT", "/api/shops/{shopId}", shopId)
+            put("/api/shops/{shopId}", shopId)
                 .param("description", "Updated")
         )
             .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(username = "11", authorities = "ROLE_SHOP_OWNER")
     void updateShopReturnsNotFoundWhenShopDoesNotExist() throws Exception {
         Long ownerId = 11L;
         Long shopId = 999L;
+        setupSecurityContext(ownerId, Role.SHOP_OWNER);
 
         when(shopService.updateShop(eq(ownerId), eq(shopId), any(UpdateShopRequest.class)))
             .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
 
         mockMvc.perform(
-            multipart("PUT", "/api/shops/{shopId}", shopId)
+            put("/api/shops/{shopId}", shopId)
                 .param("description", "Updated")
         )
             .andExpect(status().isNotFound());

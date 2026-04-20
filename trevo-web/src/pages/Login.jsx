@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState({
     email: "",
@@ -41,6 +42,9 @@ export default function Login() {
   return (
     <div style={{ padding: "20px", color: "black" }}>
       <h1>Login</h1>
+      {location.state?.passwordResetSuccess && (
+        <p style={{ color: "green" }}>Password atualizada. Ja podes iniciar sessao.</p>
+      )}
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
@@ -67,6 +71,10 @@ export default function Login() {
 
         <button type="submit">Entrar</button>
       </form>
+
+      <p style={{ marginTop: "12px" }}>
+        <Link to="/forgot-password">Esqueceste-te da password?</Link>
+      </p>
     </div>
   );
 }

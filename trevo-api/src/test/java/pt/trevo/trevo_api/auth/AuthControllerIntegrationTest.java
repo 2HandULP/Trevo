@@ -1,8 +1,10 @@
 package pt.trevo.trevo_api.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -313,6 +315,52 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void passwordResetRequestEndpointInvalidatesPreviousTokensForTheSameUser() throws Exception {
+        User user = userRepository.save(User.builder()
+            .email("repeat-reset@example.com")
+            .passwordHash("$2a$10$existingHash")
+            .fullName("Repeat Reset")
+            .role(Role.BUYER)
+            .status(Status.ACTIVE)
+            .build());
+        PasswordResetToken existingToken = new PasswordResetToken();
+        existingToken.setUser(user);
+        existingToken.setToken("old-reset-token");
+        existingToken.setUsed(false);
+        existingToken.setCreatedAt(java.time.Instant.now().minusSeconds(60));
+        existingToken.setExpiresAt(java.time.Instant.now().plusSeconds(300));
+        passwordResetTokenRepository.saveAndFlush(existingToken);
+
+        mockMvc.perform(post("/api/auth/password-reset/request")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new PasswordResetRequest("repeat-reset@example.com"))))
+            .andExpect(status().isNoContent());
+
+        assertThat(passwordResetTokenRepository.findAll())
+            .hasSize(1)
+            .allSatisfy(token -> {
+                assertThat(token.getUser().getId()).isEqualTo(user.getId());
+                assertThat(token.getToken()).isNotEqualTo("old-reset-token");
+            });
+
+        mockMvc.perform(post("/api/auth/password-reset/validate")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new PasswordResetTokenValidationRequest("old-reset-token"))))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void passwordResetRequestEndpointForUnknownEmailReturnsNoContentWithoutSendingEmail() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset/request")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new PasswordResetRequest("unknown@example.com"))))
+            .andExpect(status().isNoContent());
+
+        assertThat(passwordResetTokenRepository.findAll()).isEmpty();
+        verify(passwordResetEmailSender, never()).sendPasswordResetEmail(any(), any());
+    }
+
+    @Test
     void passwordResetValidateEndpointReturnsNoContentForValidToken() throws Exception {
         User user = userRepository.save(User.builder()
             .email("validate-reset@example.com")
@@ -374,6 +422,14 @@ class AuthControllerIntegrationTest {
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("confirm-reset@example.com", newPassword))))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void passwordResetConfirmEndpointReturnsBadRequestForShortPassword() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset/confirm")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest("reset-token", "short"))))
+            .andExpect(status().isBadRequest());
     }
 
     @Test

@@ -151,9 +151,15 @@ public class AuthService {
         }
 
         User user = userRepository.findByEmail(email.trim().toLowerCase())
-            .orElseThrow(() -> badRequest("User not found"));
+            .orElse(null);
+
+        if (user == null) {
+            // Return silently to prevent user enumeration
+            return;
+        }
 
         Instant now = clock.instant();
+        passwordResetTokenRepository.deleteByUser(user);
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUser(user);
         resetToken.setToken(UUID.randomUUID().toString());
@@ -172,8 +178,8 @@ public class AuthService {
 
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        if (isBlank(newPassword)) {
-            throw badRequest("Missing password");
+        if (newPassword.length() < 8) {
+            throw badRequest("Password must be at least 8 characters long");
         }
 
         PasswordResetToken resetToken = getValidPasswordResetToken(token);
@@ -183,22 +189,20 @@ public class AuthService {
     }
 
     private void requireBuyerFields(RegisterBuyerRequest request) {
-        if (request == null
-            || isBlank(request.email())
-            || isBlank(request.password())
-            || isBlank(request.fullName())) {
+        if (request == null) {
             throw badRequest("Missing required fields");
+        }
+        if (request.password().length() < 8) {
+            throw badRequest("Password must be at least 8 characters long");
         }
     }
 
     private void requireShopOwnerFields(RegisterShopOwnerRequest request) {
-        if (request == null
-            || isBlank(request.email())
-            || isBlank(request.password())
-            || isBlank(request.fullName())
-            || isBlank(request.shopName())
-            || isBlank(request.nif())) {
+        if (request == null) {
             throw badRequest("Missing required fields");
+        }
+        if (request.password().length() < 8) {
+            throw badRequest("Password must be at least 8 characters long");
         }
         if (!request.nif().trim().matches("^\\d{9}$")) {
             throw badRequest("NIF must contain exactly 9 digits");
@@ -206,13 +210,13 @@ public class AuthService {
     }
 
     private void requireLoginFields(LoginRequest request) {
-        if (request == null || isBlank(request.email()) || isBlank(request.password())) {
+        if (request == null) {
             throw badRequest("Missing required fields");
         }
     }
 
     private void requireRefreshToken(RefreshTokenRequest request) {
-        if (request == null || isBlank(request.refreshToken())) {
+        if (request == null) {
             throw badRequest("Missing refresh token");
         }
     }

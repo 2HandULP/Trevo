@@ -119,12 +119,23 @@ class AuthServiceTest extends BaseUnitTest {
     }
 
     @Test
-    void missingRequiredFieldsThrowBadRequest() {
-        RegisterBuyerRequest request = new RegisterBuyerRequest("", "", "", null);
+    void nullBuyerRequestThrowsBadRequest() {
+        RegisterBuyerRequest request = null;
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> authService.registerBuyer(request));
 
         assertThat(exception.getStatusCode().value()).isEqualTo(400);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void shortPasswordThrowsBadRequest() {
+        RegisterBuyerRequest request = new RegisterBuyerRequest("buyer@example.com", "short", "Buyer Name", "912345678");
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> authService.registerBuyer(request));
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(400);
+        assertThat(exception.getReason()).isEqualTo("Password must be at least 8 characters long");
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -298,7 +309,35 @@ class AuthServiceTest extends BaseUnitTest {
         assertThat(savedToken.getCreatedAt()).isEqualTo(NOW);
         assertThat(savedToken.getExpiresAt()).isEqualTo(NOW.plusSeconds(15 * 60));
         assertThat(savedToken.getUsed()).isFalse();
+        verify(passwordResetTokenRepository).deleteByUser(user);
         verify(passwordResetEmailSender).sendPasswordResetEmail(user, savedToken.getToken());
+    }
+
+    @Test
+    void requestPasswordResetDeletesExistingTokensBeforeSavingNewOne() {
+        User user = User.builder()
+            .id(52L)
+            .email("buyer@example.com")
+            .role(Role.BUYER)
+            .status(Status.ACTIVE)
+            .build();
+        when(userRepository.findByEmail("buyer@example.com")).thenReturn(Optional.of(user));
+        when(passwordResetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        authService.requestPasswordReset("buyer@example.com");
+
+        verify(passwordResetTokenRepository).deleteByUser(user);
+        verify(passwordResetTokenRepository).save(any(PasswordResetToken.class));
+    }
+
+    @Test
+    void requestPasswordResetForUnknownEmailDoesNothing() {
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        authService.requestPasswordReset("unknown@example.com");
+
+        verify(passwordResetTokenRepository, never()).save(any());
+        verify(passwordResetEmailSender, never()).sendPasswordResetEmail(any(), any());
     }
 
     @Test
@@ -336,6 +375,17 @@ class AuthServiceTest extends BaseUnitTest {
 
         assertThat(user.getPasswordHash()).isEqualTo("$2a$10$newHash");
         assertThat(token.getUsed()).isTrue();
+    }
+
+    @Test
+    void resetPasswordWithShortPasswordThrowsBadRequest() {
+        ResponseStatusException exception = assertThrows(
+            ResponseStatusException.class,
+            () -> authService.resetPassword("reset-token", "short")
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(400);
+        assertThat(exception.getReason()).isEqualTo("Password must be at least 8 characters long");
     }
 
     @Test

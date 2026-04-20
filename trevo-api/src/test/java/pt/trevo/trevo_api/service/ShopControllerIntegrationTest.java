@@ -66,7 +66,7 @@ class ShopControllerIntegrationTest {
             .status(ShopStatus.PENDING)
             .build();
 
-        when(shopService.createShop(eq(ownerId), eq(Role.SHOP_OWNER), any(CreateShopRequest.class)))
+        when(shopService.createShop(eq(ownerId), any(CreateShopRequest.class)))
             .thenReturn(savedShop);
 
         mockMvc.perform(
@@ -90,7 +90,7 @@ class ShopControllerIntegrationTest {
         
         CreateShopRequest request = new CreateShopRequest("My Shop", "A description", "123456789", null, null);
 
-        when(shopService.createShop(eq(buyerId), eq(Role.BUYER), any(CreateShopRequest.class)))
+        when(shopService.createShop(eq(buyerId), any(CreateShopRequest.class)))
             .thenThrow(new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
                 "Only shop owners can create shops"
@@ -111,7 +111,7 @@ class ShopControllerIntegrationTest {
         
         CreateShopRequest request = new CreateShopRequest("My Shop", "A description", "123456789", null, null);
 
-        when(shopService.createShop(eq(ownerId), eq(Role.SHOP_OWNER), any(CreateShopRequest.class)))
+        when(shopService.createShop(eq(ownerId), any(CreateShopRequest.class)))
             .thenThrow(new ResponseStatusException(
                 HttpStatus.CONFLICT,
                 "Owner already has a shop"

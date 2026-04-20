@@ -24,13 +24,9 @@ public class ShopService {
     }
 
     @Transactional
-    public Shop createShop(Long callerId, Role callerRole, CreateShopRequest request) {
-        if (callerId == null || callerRole == null || request == null) {
+    public Shop createShop(Long callerId, CreateShopRequest request) {
+        if (callerId == null || request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid create shop request");
-        }
-
-        if (callerRole != Role.SHOP_OWNER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owners can create shops");
         }
 
         if (shopRepository.findByOwnerId(callerId).isPresent()) {
@@ -88,28 +84,36 @@ public class ShopService {
     }
 
     @Transactional
-    public Shop deactivateShop(Long shopId) {
-        if (shopId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shop id");
+    public Shop deactivateShop(Long shopId, Long callerId) {
+        if (shopId == null || callerId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shop id or caller id");
         }
 
         Shop shop = shopRepository.findById(shopId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
 
-        shop.setIsActive(false);
+        if (!shop.getOwner().getId().equals(callerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owner can deactivate this shop");
+        }
+
+        shop.setStatus(ShopStatus.DEACTIVATED);
         return shopRepository.save(shop);
     }
 
     @Transactional
-    public Shop reactivateShop(Long shopId) {
-        if (shopId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shop id");
+    public Shop reactivateShop(Long shopId, Long callerId) {
+        if (shopId == null || callerId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shop id or caller id");
         }
 
         Shop shop = shopRepository.findById(shopId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
 
-        shop.setIsActive(true);
+        if (!shop.getOwner().getId().equals(callerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owner can reactivate this shop");
+        }
+
+        shop.setStatus(ShopStatus.ACTIVE);
         return shopRepository.save(shop);
     }
 }

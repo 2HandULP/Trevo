@@ -3,7 +3,9 @@ package pt.trevo.trevo_api.service;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -19,6 +21,7 @@ import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 
 @RestController
 @RequestMapping("/api/shops")
+@PreAuthorize("hasRole('SHOP_OWNER')")
 public class ShopController {
 
     private final ShopService shopService;
@@ -31,15 +34,9 @@ public class ShopController {
     @ResponseStatus(HttpStatus.CREATED)
     public ShopResponse createShop(
         @Valid @RequestBody CreateShopRequest request,
-        Authentication authentication
+        @AuthenticationPrincipal Long callerId
     ) {
-        Long callerId = (Long) authentication.getPrincipal();
-        Role callerRole = (Role) authentication.getAuthorities().stream()
-            .findFirst()
-            .map(auth -> Role.valueOf(auth.getAuthority().substring("ROLE_".length())))
-            .orElseThrow(() -> new IllegalStateException("No role found in authentication"));
-
-        Shop shop = shopService.createShop(callerId, callerRole, request);
+        Shop shop = shopService.createShop(callerId, request);
         return toResponse(shop);
     }
 
@@ -49,24 +46,24 @@ public class ShopController {
         @RequestParam(required = false) String description,
         @RequestParam(required = false) MultipartFile logo,
         @RequestParam(required = false) MultipartFile banner,
-        Authentication authentication
+        @AuthenticationPrincipal Long callerId
     ) throws IOException {
-        Long callerId = (Long) authentication.getPrincipal();
-
         UpdateShopRequest request = new UpdateShopRequest(description, logo, banner);
         Shop shop = shopService.updateShop(callerId, shopId, request);
         return toResponse(shop);
     }
 
     @PostMapping("/{shopId}/deactivate")
-    public ShopResponse deactivateShop(@PathVariable Long shopId) {
-        Shop shop = shopService.deactivateShop(shopId);
+    @PreAuthorize("hasRole('SHOP_OWNER') or hasRole('ADMIN')")
+    public ShopResponse deactivateShop(@PathVariable Long shopId, @AuthenticationPrincipal Long callerId) {
+        Shop shop = shopService.deactivateShop(shopId, callerId);
         return toResponse(shop);
     }
 
     @PostMapping("/{shopId}/reactivate")
-    public ShopResponse reactivateShop(@PathVariable Long shopId) {
-        Shop shop = shopService.reactivateShop(shopId);
+    @PreAuthorize("hasRole('SHOP_OWNER') or hasRole('ADMIN')")
+    public ShopResponse reactivateShop(@PathVariable Long shopId, @AuthenticationPrincipal Long callerId) {
+        Shop shop = shopService.reactivateShop(shopId, callerId);
         return toResponse(shop);
     }
 

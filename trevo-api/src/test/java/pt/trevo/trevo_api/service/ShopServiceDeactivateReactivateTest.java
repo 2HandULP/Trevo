@@ -3,6 +3,7 @@ package pt.trevo.trevo_api.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,53 +33,54 @@ class ShopServiceDeactivateReactivateTest extends BaseUnitTest {
     private ShopService shopService;
 
     @Test
-    void deactivateShopSetsIsActiveFalse() {
+    void deactivateShopSetsStatusToDeactivated() {
         Long shopId = 1L;
+        Long callerId = 11L;
         Shop existingShop = Shop.builder()
             .id(shopId)
-            .owner(User.builder().id(11L).build())
+            .owner(User.builder().id(callerId).build())
             .name("My Shop")
-            .isActive(true)
             .status(ShopStatus.ACTIVE)
             .build();
 
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(existingShop));
         when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Shop deactivated = shopService.deactivateShop(shopId);
+        Shop deactivated = shopService.deactivateShop(shopId, callerId);
 
-        assertThat(deactivated.getIsActive()).isFalse();
+        assertThat(deactivated.getStatus()).isEqualTo(ShopStatus.DEACTIVATED);
         verify(shopRepository).save(existingShop);
     }
 
     @Test
-    void reactivateShopSetsIsActiveTrue() {
+    void reactivateShopSetsStatusToActive() {
         Long shopId = 1L;
+        Long callerId = 11L;
         Shop existingShop = Shop.builder()
             .id(shopId)
-            .owner(User.builder().id(11L).build())
+            .owner(User.builder().id(callerId).build())
             .name("My Shop")
-            .isActive(false)
-            .status(ShopStatus.ACTIVE)
+            .status(ShopStatus.DEACTIVATED)
             .build();
 
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(existingShop));
         when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Shop reactivated = shopService.reactivateShop(shopId);
+        Shop reactivated = shopService.reactivateShop(shopId, callerId);
 
-        assertThat(reactivated.getIsActive()).isTrue();
+        assertThat(reactivated.getStatus()).isEqualTo(ShopStatus.ACTIVE);
         verify(shopRepository).save(existingShop);
     }
 
     @Test
     void deactivateShopThrowsNotFoundWhenShopDoesNotExist() {
         Long shopId = 999L;
+        Long callerId = 11L;
 
         when(shopRepository.findById(shopId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-            shopService.deactivateShop(shopId)
+            shopService.deactivateShop(shopId, callerId)
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -88,11 +90,12 @@ class ShopServiceDeactivateReactivateTest extends BaseUnitTest {
     @Test
     void reactivateShopThrowsNotFoundWhenShopDoesNotExist() {
         Long shopId = 999L;
+        Long callerId = 11L;
 
         when(shopRepository.findById(shopId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-            shopService.reactivateShop(shopId)
+            shopService.reactivateShop(shopId, callerId)
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -159,24 +162,20 @@ class ShopServiceDeactivateReactivateTest extends BaseUnitTest {
     @Test
     void deactivatedShopReappersInPublicQueriesAfterReactivation() {
         Long shopId = 1L;
+        Long callerId = 11L;
         Shop deactivatedShop = Shop.builder()
             .id(shopId)
-            .owner(User.builder().id(11L).build())
+            .owner(User.builder().id(callerId).build())
             .name("Reactivated Shop")
-            .isActive(false)
-            .status(ShopStatus.ACTIVE)
+            .status(ShopStatus.DEACTIVATED)
             .build();
 
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(deactivatedShop));
-        when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> {
-            Shop saved = invocation.getArgument(0);
-            saved.setIsActive(true);
-            return saved;
-        });
+        when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Shop reactivated = shopService.reactivateShop(shopId);
+        Shop reactivated = shopService.reactivateShop(shopId, callerId);
 
-        assertThat(reactivated.getIsActive()).isTrue();
+        assertThat(reactivated.getStatus()).isEqualTo(ShopStatus.ACTIVE);
         verify(shopRepository).save(any(Shop.class));
     }
 }

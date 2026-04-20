@@ -2,6 +2,8 @@ package pt.trevo.trevo_api.service;
 
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -40,10 +42,10 @@ class ShopControllerDeactivateReactivateIntegrationTest {
             .owner(User.builder().id(11L).build())
             .name("My Shop")
             .isActive(false)
-            .status(ShopStatus.ACTIVE)
+            .status(ShopStatus.DEACTIVATED)
             .build();
 
-        when(shopService.deactivateShop(shopId)).thenReturn(deactivatedShop);
+        when(shopService.deactivateShop(any(), any())).thenReturn(deactivatedShop);
 
         mockMvc.perform(
             post("/api/shops/{shopId}/deactivate", shopId)
@@ -65,7 +67,7 @@ class ShopControllerDeactivateReactivateIntegrationTest {
             .status(ShopStatus.ACTIVE)
             .build();
 
-        when(shopService.reactivateShop(shopId)).thenReturn(reactivatedShop);
+        when(shopService.reactivateShop(any(), any())).thenReturn(reactivatedShop);
 
         mockMvc.perform(
             post("/api/shops/{shopId}/reactivate", shopId)
@@ -79,7 +81,7 @@ class ShopControllerDeactivateReactivateIntegrationTest {
     void deactivateShopReturnsNotFoundWhenShopDoesNotExist() throws Exception {
         Long shopId = 999L;
 
-        when(shopService.deactivateShop(shopId))
+        when(shopService.deactivateShop(any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
 
         mockMvc.perform(
@@ -93,7 +95,7 @@ class ShopControllerDeactivateReactivateIntegrationTest {
     void reactivateShopReturnsNotFoundWhenShopDoesNotExist() throws Exception {
         Long shopId = 999L;
 
-        when(shopService.reactivateShop(shopId))
+        when(shopService.reactivateShop(any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
 
         mockMvc.perform(

@@ -1,9 +1,12 @@
 package pt.trevo.trevo_api.auth;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -27,8 +30,6 @@ import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
 @Service
 public class AuthService {
-
-    private static final Duration PASSWORD_RESET_TOKEN_EXPIRATION = Duration.ofMinutes(15);
 
     private final UserRepository userRepository;
     private final ShopRepository shopRepository;
@@ -157,18 +158,24 @@ public class AuthService {
         }
 
         User user = userRepository.findByEmail(email.trim().toLowerCase())
-            .orElseThrow(() -> badRequest("User not found"));
+            .orElse(null);
+
+        if (user == null) {
+            return;
+        }
 
         Instant now = clock.instant();
+        String rawToken = UUID.randomUUID().toString();
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUser(user);
-        resetToken.setToken(UUID.randomUUID().toString());
+        passwordResetTokenRepository.deleteByUser(user);
+        resetToken.setTokenHash(hashToken(rawToken));
         resetToken.setCreatedAt(now);
-        resetToken.setExpiresAt(now.plus(PASSWORD_RESET_TOKEN_EXPIRATION));
+        resetToken.setExpiresAt(now.plus(authProperties.passwordResetTokenExpiration()));
         resetToken.setUsed(false);
 
-        PasswordResetToken savedToken = passwordResetTokenRepository.save(resetToken);
-        passwordResetEmailSender.sendPasswordResetEmail(user, savedToken.getToken());
+        passwordResetTokenRepository.save(resetToken);
+        passwordResetEmailSender.sendPasswordResetEmail(user, rawToken);
     }
 
     @Transactional(readOnly = true)
@@ -186,6 +193,7 @@ public class AuthService {
         User user = resetToken.getUser();
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         resetToken.setUsed(true);
+        refreshTokenRepository.revokeAllByUserId(user.getId());
     }
 
     private void requireBuyerFields(RegisterBuyerRequest request) {
@@ -252,7 +260,7 @@ public class AuthService {
             throw badRequest("Missing reset token");
         }
 
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenAndUsedFalse(token)
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenHashAndUsedFalse(hashToken(token))
             .orElseThrow(() -> badRequest("Invalid password reset token"));
 
         if (!resetToken.getExpiresAt().isAfter(clock.instant())) {
@@ -260,6 +268,15 @@ public class AuthService {
         }
 
         return resetToken;
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 not available", exception);
+        }
     }
 
     private String normalizeOptional(String value) {

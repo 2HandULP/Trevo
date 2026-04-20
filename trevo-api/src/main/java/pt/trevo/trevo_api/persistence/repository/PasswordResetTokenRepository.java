@@ -5,8 +5,11 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import pt.trevo.trevo_api.persistence.entity.PasswordResetToken;
+import pt.trevo.trevo_api.persistence.entity.User;
 
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
 
-    Optional<PasswordResetToken> findByTokenAndUsedFalse(String token);
+    Optional<PasswordResetToken> findByTokenHashAndUsedFalse(String tokenHash);
+
+    void deleteByUser(User user);
 }

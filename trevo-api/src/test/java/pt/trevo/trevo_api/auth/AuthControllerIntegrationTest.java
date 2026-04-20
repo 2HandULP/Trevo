@@ -1,8 +1,10 @@
 package pt.trevo.trevo_api.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -346,15 +348,57 @@ class AuthControllerIntegrationTest {
             .andExpect(status().isNoContent());
 
         PasswordResetToken token = passwordResetTokenRepository.findAll().stream().findFirst().orElseThrow();
+        String rawToken = captureRawResetToken();
         assertThat(token.getUser().getId()).isEqualTo(user.getId());
-        assertThat(token.getToken()).isNotBlank();
+        assertThat(token.getTokenHash()).isEqualTo(hashToken(rawToken));
         assertThat(token.getUsed()).isFalse();
         assertThat(token.getExpiresAt()).isAfter(token.getCreatedAt());
         assertThat(token.getExpiresAt()).isEqualTo(token.getCreatedAt().plusSeconds(15 * 60));
         verify(passwordResetEmailSender).sendPasswordResetEmail(
             argThat(savedUser -> savedUser != null && "reset@example.com".equals(savedUser.getEmail())),
-            eq(token.getToken())
+            eq(rawToken)
         );
+    }
+
+    @Test
+    void passwordResetRequestEndpointForUnknownEmailReturnsNoContentWithoutSendingEmail() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset/request")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new PasswordResetRequest("unknown@example.com"))))
+            .andExpect(status().isNoContent());
+
+        assertThat(passwordResetTokenRepository.findAll()).isEmpty();
+        verify(passwordResetEmailSender, never()).sendPasswordResetEmail(any(), any());
+    }
+
+    @Test
+    void passwordResetRequestEndpointInvalidatesPreviousResetTokensForUser() throws Exception {
+        User user = userRepository.save(User.builder()
+            .email("repeat-reset@example.com")
+            .passwordHash("$2a$10$existingHash")
+            .fullName("Repeat Reset")
+            .role(Role.BUYER)
+            .status(Status.ACTIVE)
+            .build());
+        PasswordResetToken existingToken = new PasswordResetToken();
+        existingToken.setUser(user);
+        existingToken.setTokenHash(hashToken("old-reset-token"));
+        existingToken.setUsed(false);
+        existingToken.setCreatedAt(java.time.Instant.now().minusSeconds(60));
+        existingToken.setExpiresAt(java.time.Instant.now().plusSeconds(300));
+        passwordResetTokenRepository.saveAndFlush(existingToken);
+
+        mockMvc.perform(post("/api/auth/password-reset/request")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new PasswordResetRequest("repeat-reset@example.com"))))
+            .andExpect(status().isNoContent());
+
+        assertThat(passwordResetTokenRepository.findAll()).hasSize(1);
+
+        mockMvc.perform(post("/api/auth/password-reset/validate")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new PasswordResetTokenValidationRequest("old-reset-token"))))
+            .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -368,7 +412,7 @@ class AuthControllerIntegrationTest {
             .build());
         PasswordResetToken token = new PasswordResetToken();
         token.setUser(user);
-        token.setToken("valid-reset-token");
+        token.setTokenHash(hashToken("valid-reset-token"));
         token.setUsed(false);
         token.setCreatedAt(java.time.Instant.now());
         token.setExpiresAt(java.time.Instant.now().plusSeconds(60));
@@ -395,20 +439,30 @@ class AuthControllerIntegrationTest {
                 ))))
             .andExpect(status().isCreated());
 
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest("confirm-reset@example.com", oldPassword))))
+            .andExpect(status().isOk())
+            .andReturn();
+        TokenPairResponse loginResponse =
+            objectMapper.readValue(loginResult.getResponse().getContentAsByteArray(), TokenPairResponse.class);
+
         mockMvc.perform(post("/api/auth/password-reset/request")
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new PasswordResetRequest("confirm-reset@example.com"))))
             .andExpect(status().isNoContent());
 
         PasswordResetToken token = passwordResetTokenRepository.findAll().stream().findFirst().orElseThrow();
+        String rawToken = captureRawResetToken();
 
         mockMvc.perform(post("/api/auth/password-reset/confirm")
                 .contentType(APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(token.getToken(), newPassword))))
+                .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(rawToken, newPassword))))
             .andExpect(status().isNoContent());
 
         PasswordResetToken updatedToken = passwordResetTokenRepository.findById(token.getId()).orElseThrow();
         assertThat(updatedToken.getUsed()).isTrue();
+        assertThat(refreshTokenRepository.findByTokenAndRevokedFalse(loginResponse.refreshToken())).isEmpty();
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(APPLICATION_JSON)
@@ -432,7 +486,7 @@ class AuthControllerIntegrationTest {
             .build());
         PasswordResetToken token = new PasswordResetToken();
         token.setUser(user);
-        token.setToken("expired-reset-token");
+        token.setTokenHash(hashToken("expired-reset-token"));
         token.setUsed(false);
         token.setCreatedAt(java.time.Instant.now().minusSeconds(120));
         token.setExpiresAt(java.time.Instant.now().minusSeconds(60));
@@ -445,7 +499,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void passwordResetValidateEndpointReturnsBadRequestForAlreadyUsedToken() throws Exception {
+    void passwordResetValidateEndpointReturnsBadRequestForMissingOrUsedToken() throws Exception {
         User user = userRepository.save(User.builder()
             .email("used-reset@example.com")
             .passwordHash("$2a$10$existingHash")
@@ -455,7 +509,7 @@ class AuthControllerIntegrationTest {
             .build());
         PasswordResetToken token = new PasswordResetToken();
         token.setUser(user);
-        token.setToken("used-reset-token");
+        token.setTokenHash(hashToken("used-reset-token"));
         token.setUsed(true);
         token.setCreatedAt(java.time.Instant.now().minusSeconds(60));
         token.setExpiresAt(java.time.Instant.now().plusSeconds(60));
@@ -465,6 +519,21 @@ class AuthControllerIntegrationTest {
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new PasswordResetTokenValidationRequest("used-reset-token"))))
             .andExpect(status().isBadRequest());
+    }
+
+    private String captureRawResetToken() {
+        org.mockito.ArgumentCaptor<String> tokenCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(passwordResetEmailSender).sendPasswordResetEmail(any(), tokenCaptor.capture());
+        return tokenCaptor.getValue();
+    }
+
+    private String hashToken(String token) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            return java.util.HexFormat.of().formatHex(digest.digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
     }
 
     @RestController

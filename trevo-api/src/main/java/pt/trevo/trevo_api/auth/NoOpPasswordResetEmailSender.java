@@ -12,6 +12,6 @@ public class NoOpPasswordResetEmailSender implements PasswordResetEmailSender {
 
     @Override
     public void sendPasswordResetEmail(User user, String token) {
-        LOGGER.info("Password reset requested for {} with token {}", user.getEmail(), token);
+        LOGGER.info("Password reset requested for {}", user.getEmail());
     }
 }

@@ -3,6 +3,7 @@ package pt.trevo.trevo_api.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,7 +11,11 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.HexFormat;
 import java.util.Optional;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -80,6 +85,7 @@ class AuthServiceTest extends BaseUnitTest {
             Clock.fixed(NOW, ZoneOffset.UTC),
             AuthProperties.builder()
                 .refreshTokenExpiration(java.time.Duration.ofDays(30))
+                .passwordResetTokenExpiration(java.time.Duration.ofMinutes(15))
                 .build()
         );
     }
@@ -298,33 +304,47 @@ class AuthServiceTest extends BaseUnitTest {
         authService.requestPasswordReset("buyer@example.com");
 
         ArgumentCaptor<PasswordResetToken> tokenCaptor = ArgumentCaptor.forClass(PasswordResetToken.class);
+        ArgumentCaptor<String> rawTokenCaptor = ArgumentCaptor.forClass(String.class);
         verify(passwordResetTokenRepository).save(tokenCaptor.capture());
         PasswordResetToken savedToken = tokenCaptor.getValue();
+        verify(passwordResetTokenRepository).deleteByUser(user);
+        verify(passwordResetEmailSender).sendPasswordResetEmail(eq(user), rawTokenCaptor.capture());
 
         assertThat(savedToken.getUser()).isEqualTo(user);
-        assertThat(savedToken.getToken()).isNotBlank();
+        assertThat(savedToken.getTokenHash()).isEqualTo(hashToken(rawTokenCaptor.getValue()));
         assertThat(savedToken.getCreatedAt()).isEqualTo(NOW);
         assertThat(savedToken.getExpiresAt()).isEqualTo(NOW.plusSeconds(15 * 60));
         assertThat(savedToken.getUsed()).isFalse();
-        verify(passwordResetEmailSender).sendPasswordResetEmail(user, savedToken.getToken());
+        assertThat(rawTokenCaptor.getValue()).isNotBlank();
+    }
+
+    @Test
+    void requestPasswordResetForUnknownEmailDoesNothing() {
+        when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
+
+        authService.requestPasswordReset("missing@example.com");
+
+        verify(passwordResetTokenRepository, never()).deleteByUser(any());
+        verify(passwordResetTokenRepository, never()).save(any());
+        verify(passwordResetEmailSender, never()).sendPasswordResetEmail(any(), any());
     }
 
     @Test
     void validPasswordResetTokenShouldPassValidation() {
         PasswordResetToken token = new PasswordResetToken();
-        token.setToken("reset-valid");
+        token.setTokenHash(hashToken("reset-valid"));
         token.setUsed(false);
         token.setExpiresAt(NOW.plusSeconds(60));
 
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-valid")).thenReturn(Optional.of(token));
+        when(passwordResetTokenRepository.findByTokenHashAndUsedFalse(hashToken("reset-valid"))).thenReturn(Optional.of(token));
 
         authService.validatePasswordResetToken("reset-valid");
 
-        verify(passwordResetTokenRepository).findByTokenAndUsedFalse("reset-valid");
+        verify(passwordResetTokenRepository).findByTokenHashAndUsedFalse(hashToken("reset-valid"));
     }
 
     @Test
-    void resetPasswordUpdatesPasswordAndMarksTokenAsUsed() {
+    void resetPasswordUpdatesPasswordMarksTokenAsUsedAndRevokesSessions() {
         User user = User.builder()
             .id(51L)
             .email("buyer@example.com")
@@ -334,25 +354,26 @@ class AuthServiceTest extends BaseUnitTest {
             .build();
         PasswordResetToken token = new PasswordResetToken();
         token.setUser(user);
-        token.setToken("reset-token");
+        token.setTokenHash(hashToken("reset-token"));
         token.setUsed(false);
         token.setExpiresAt(NOW.plusSeconds(60));
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-token")).thenReturn(Optional.of(token));
+        when(passwordResetTokenRepository.findByTokenHashAndUsedFalse(hashToken("reset-token"))).thenReturn(Optional.of(token));
         when(passwordEncoder.encode("NewSecret123!")).thenReturn("$2a$10$newHash");
 
         authService.resetPassword("reset-token", "NewSecret123!");
 
         assertThat(user.getPasswordHash()).isEqualTo("$2a$10$newHash");
         assertThat(token.getUsed()).isTrue();
+        verify(refreshTokenRepository).revokeAllByUserId(user.getId());
     }
 
     @Test
     void expiredPasswordResetTokenThrowsBadRequest() {
         PasswordResetToken token = new PasswordResetToken();
-        token.setToken("reset-expired");
+        token.setTokenHash(hashToken("reset-expired"));
         token.setUsed(false);
         token.setExpiresAt(NOW.minusSeconds(1));
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-expired")).thenReturn(Optional.of(token));
+        when(passwordResetTokenRepository.findByTokenHashAndUsedFalse(hashToken("reset-expired"))).thenReturn(Optional.of(token));
 
         ResponseStatusException exception = assertThrows(
             ResponseStatusException.class,
@@ -363,8 +384,8 @@ class AuthServiceTest extends BaseUnitTest {
     }
 
     @Test
-    void alreadyUsedPasswordResetTokenThrowsBadRequest() {
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-used")).thenReturn(Optional.empty());
+    void missingOrPreviouslyUsedPasswordResetTokenThrowsBadRequest() {
+        when(passwordResetTokenRepository.findByTokenHashAndUsedFalse(hashToken("reset-used"))).thenReturn(Optional.empty());
 
         ResponseStatusException exception = assertThrows(
             ResponseStatusException.class,
@@ -372,5 +393,14 @@ class AuthServiceTest extends BaseUnitTest {
         );
 
         assertThat(exception.getStatusCode().value()).isEqualTo(400);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
     }
 }

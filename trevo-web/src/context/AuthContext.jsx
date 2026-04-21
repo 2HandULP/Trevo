@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { loginUser, registerBuyer, registerShopOwner } from "../lib/authApi";
-import { AuthContext } from "./authContextValue";
+import { AuthContext } from "./auth-context";
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 

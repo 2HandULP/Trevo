@@ -10,7 +10,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "bash -lc 'tmpdir=$(mktemp -d /tmp/trevo-api-e2e.XXXXXX) && cp -a /home/waeiz/Trevo/trevo-api/. \"$tmpdir\" && cd \"$tmpdir\" && ./mvnw spring-boot:run -Dspring-boot.run.profiles=e2e'",
+        "bash -lc 'tmpdir=$(mktemp -d /tmp/trevo-api-e2e.XXXXXX) && cp -a ../trevo-api/. \"$tmpdir\" && cd \"$tmpdir\" && ./mvnw spring-boot:run -Dspring-boot.run.profiles=e2e -Dspring-boot.run.useTestClasspath=true'",
       cwd: ".",
       url: "http://127.0.0.1:8080/api/health",
       reuseExistingServer: !process.env.CI,

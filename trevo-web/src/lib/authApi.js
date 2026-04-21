@@ -42,8 +42,8 @@ export function loginUser(payload) {
   });
 }
 
-export function fetchBuyerProfile(accessToken) {
-  return apiRequest("/api/buyer/me", {
+export function fetchUserProfile(accessToken) {
+  return apiRequest("/api/users/me", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

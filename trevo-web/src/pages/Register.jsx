@@ -43,9 +43,13 @@ export default function Register() {
       setIsSubmitting(true);
       await register(form);
       setError("");
+      const successMessage =
+        form.type === "owner"
+          ? "Conta de lojista criada com estado pendente. Faz login para acompanhar a aprovação."
+          : "Conta criada com sucesso. Faz login para continuar.";
       navigate("/login", {
         replace: true,
-        state: { message: "Conta criada com sucesso. Faz login para continuar." },
+        state: { message: successMessage },
       });
     } catch (submitError) {
       setError(submitError.message || "Não foi possível registar");

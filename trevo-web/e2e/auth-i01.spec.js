@@ -20,7 +20,8 @@ test("AUTH-I01: register buyer, login, access protected route, and logout", asyn
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByText("Buyer profile loaded")).toBeVisible();
+  await expect(page.getByText("Perfil carregado")).toBeVisible();
+  await expect(page.getByText("Tipo de conta: BUYER")).toBeVisible();
   await expect(page.getByText(`Email: ${uniqueEmail}`)).toBeVisible();
 
   await page.goto("/");

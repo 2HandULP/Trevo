@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-import { fetchBuyerProfile } from "../lib/authApi";
+import { fetchUserProfile } from "../lib/authApi";
 
 export default function Dashboard() {
   const { accessToken, isAuthenticated, logout } = useAuth();
@@ -20,9 +20,9 @@ export default function Dashboard() {
       }
 
       try {
-        const buyerProfile = await fetchBuyerProfile(accessToken);
+        const currentUserProfile = await fetchUserProfile(accessToken);
         if (active) {
-          setProfile(buyerProfile);
+          setProfile(currentUserProfile);
           setError("");
         }
       } catch (loadError) {
@@ -53,10 +53,13 @@ export default function Dashboard() {
       {error && <p style={{ color: "red" }}>{error}</p>}
       {profile && (
         <>
-          <p>Buyer profile loaded</p>
+          <p>Perfil carregado</p>
+          <p>Tipo de conta: {profile.role}</p>
           <p>Email: {profile.email}</p>
           <p>Nome: {profile.fullName}</p>
-          <p>Estado: {profile.status}</p>
+          <p>Estado da conta: {profile.status}</p>
+          {profile.shopName && <p>Loja: {profile.shopName}</p>}
+          {profile.shopStatus && <p>Estado da loja: {profile.shopStatus}</p>}
         </>
       )}
     </div>

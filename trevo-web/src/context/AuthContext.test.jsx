@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -40,10 +40,17 @@ function createJwtToken(payload) {
 function renderAuthProvider() {
   const container = document.createElement("div");
   const root = createRoot(container);
-  let latestAuth;
+  const authRef = {
+    current: null,
+  };
 
   function AuthProbe() {
-    latestAuth = useAuth();
+    const auth = useAuth();
+
+    useEffect(() => {
+      authRef.current = auth;
+    }, [auth]);
+
     return null;
   }
 
@@ -56,7 +63,7 @@ function renderAuthProvider() {
   });
 
   return {
-    getAuth: () => latestAuth,
+    getAuth: () => authRef.current,
     unmount: () =>
       act(() => {
         root.unmount();

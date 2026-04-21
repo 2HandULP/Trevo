@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
   const { login } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -13,6 +14,7 @@ export default function Login() {
   });
 
   const [error, setError] = useState("");
+  const successMessage = location.state?.message || "";
 
   function handleChange(e) {
     setForm({
@@ -35,7 +37,7 @@ export default function Login() {
       setError("");
       navigate("/dashboard");
     } catch (error) {
-      setError(error.response?.data?.message || "Credenciais invalidas");
+      setError(error.response?.data?.message || "Credenciais inválidas");
     } finally {
       setIsSubmitting(false);
     }
@@ -46,6 +48,7 @@ export default function Login() {
       <h1>Login</h1>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
+      {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
 
       <form onSubmit={handleSubmit}>
         <div>

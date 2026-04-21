@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "./auth-context";
 import {
   clearAuthTokens,
@@ -7,6 +7,7 @@ import {
   parseJwtClaims,
   saveAuthTokens,
 } from "../lib/authStorage";
+import { AUTH_LOGOUT_EVENT } from "../lib/authEvents";
 import { loginUser, registerBuyer, registerShopOwner } from "../services/authService";
 
 function getInitialAccessToken() {
@@ -40,6 +41,19 @@ export function AuthProvider({ children }) {
     setAccessToken(null);
     setRefreshToken(null);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handleLogout = () => {
+      logout();
+    };
+
+    window.addEventListener(AUTH_LOGOUT_EVENT, handleLogout);
+    return () => window.removeEventListener(AUTH_LOGOUT_EVENT, handleLogout);
+  }, [logout]);
 
   const login = useCallback(
     async (credentials) => {

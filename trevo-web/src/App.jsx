@@ -7,6 +7,7 @@ import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
+import { ROLES } from "./lib/roles";
 
 export default function App() {
   return (
@@ -20,7 +21,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
       </Route>
 
-      <Route element={<RoleRoute allowedRoles={["admin"]} />}>
+      <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>
         <Route path="/admin" element={<Admin />} />
       </Route>
     </Routes>

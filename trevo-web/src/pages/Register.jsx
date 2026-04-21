@@ -17,7 +17,6 @@ export default function Register() {
   });
 
   const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleChange(e) {
@@ -36,7 +35,7 @@ export default function Register() {
     }
 
     if (form.type === "owner" && (!form.nif || !form.shopName)) {
-      setError("Shop name e NIF sao obrigatorios para Shop Owner");
+      setError("Shop name e NIF são obrigatórios para Shop Owner");
       return;
     }
 
@@ -44,11 +43,11 @@ export default function Register() {
       setIsSubmitting(true);
       await register(form);
       setError("");
-      setSuccessMessage("Conta criada com sucesso. Podes agora fazer login.");
-      navigate("/login");
+      navigate("/login", {
+        state: { message: "Conta criada com sucesso. Podes agora fazer login." },
+      });
     } catch (error) {
-      setSuccessMessage("");
-      setError(error.response?.data?.message || "Nao foi possivel concluir o registo");
+      setError(error.response?.data?.message || "Não foi possível concluir o registo");
     } finally {
       setIsSubmitting(false);
     }
@@ -59,7 +58,6 @@ export default function Register() {
       <h1>Register</h1>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
-      {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
 
       <form onSubmit={handleSubmit}>
         <div>

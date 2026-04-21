@@ -5,9 +5,16 @@ import {
   getRefreshToken,
   saveAuthTokens,
 } from "./authStorage";
+import { dispatchAuthLogoutEvent } from "./authEvents";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = configuredApiBaseUrl || "http://localhost:8080/api";
+
+if (!configuredApiBaseUrl) {
+  console.warn(
+    "VITE_API_BASE_URL is not set. Falling back to http://localhost:8080/api, which will not work from the frontend container."
+  );
+}
 
 const publicClient = axios.create({
   baseURL: API_BASE_URL,
@@ -44,6 +51,7 @@ async function refreshAccessToken() {
       })
       .catch((error) => {
         clearAuthTokens();
+        dispatchAuthLogoutEvent({ reason: "refresh-failed" });
         throw error;
       })
       .finally(() => {
@@ -85,4 +93,3 @@ apiClient.interceptors.response.use(
 
 export { publicClient };
 export default apiClient;
-

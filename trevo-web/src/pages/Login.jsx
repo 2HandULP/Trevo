@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
-
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleChange(e) {
     setForm({
@@ -20,7 +21,7 @@ export default function Login() {
     });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     if (!form.email || !form.password) {
@@ -28,19 +29,22 @@ export default function Login() {
       return;
     }
 
-    // login fake para já
-    if (form.email === "teste@teste.com" && form.password === "1234") {
-      login("token-login-123");
+    try {
+      setIsSubmitting(true);
+      await login(form);
       setError("");
-      navigate("/");
-    } else {
-      setError("Credenciais inválidas");
+      navigate("/dashboard", { replace: true });
+    } catch (submitError) {
+      setError(submitError.message || "Credenciais inválidas");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
     <div style={{ padding: "20px", color: "black" }}>
       <h1>Login</h1>
+      {location.state?.message && <p style={{ color: "green" }}>{location.state.message}</p>}
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
@@ -49,6 +53,7 @@ export default function Login() {
           <input
             type="email"
             name="email"
+            autoComplete="email"
             placeholder="Email"
             value={form.email}
             onChange={handleChange}
@@ -59,14 +64,21 @@ export default function Login() {
           <input
             type="password"
             name="password"
+            autoComplete="current-password"
             placeholder="Password"
             value={form.password}
             onChange={handleChange}
           />
         </div>
 
-        <button type="submit">Entrar</button>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "A entrar..." : "Entrar"}
+        </button>
       </form>
+
+      <p>
+        Ainda não tens conta? <Link to="/register">Registar</Link>
+      </p>
     </div>
   );
 }

@@ -8,6 +8,12 @@ export default defineConfig({
     host: '0.0.0.0',
     port: Number(process.env.FRONTEND_PORT ?? 5173),
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: `http://127.0.0.1:${Number(process.env.BACKEND_PORT ?? 8080)}`,
+        changeOrigin: true,
+      },
+    },
     watch: {
       usePolling: true,
     },

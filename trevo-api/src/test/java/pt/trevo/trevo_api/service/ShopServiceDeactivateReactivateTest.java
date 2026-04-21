@@ -20,6 +20,7 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
+import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
 class ShopServiceDeactivateReactivateTest extends BaseUnitTest {
 
@@ -27,7 +28,10 @@ class ShopServiceDeactivateReactivateTest extends BaseUnitTest {
     private ShopRepository shopRepository;
 
     @Mock
-    private ImageService imageService;
+    private UserRepository userRepository;
+
+    @Mock
+    private CloudinaryService cloudinaryService;
 
     @InjectMocks
     private ShopService shopService;

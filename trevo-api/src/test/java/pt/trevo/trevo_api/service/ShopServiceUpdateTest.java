@@ -22,6 +22,7 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
+import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
 class ShopServiceUpdateTest extends BaseUnitTest {
 
@@ -29,7 +30,10 @@ class ShopServiceUpdateTest extends BaseUnitTest {
     private ShopRepository shopRepository;
 
     @Mock
-    private ImageService imageService;
+    private UserRepository userRepository;
+
+    @Mock
+    private CloudinaryService cloudinaryService;
 
     @InjectMocks
     private ShopService shopService;
@@ -55,7 +59,7 @@ class ShopServiceUpdateTest extends BaseUnitTest {
 
         assertThat(updated.getDescription()).isEqualTo("Updated description");
         verify(shopRepository).save(existingShop);
-        verify(imageService, never()).upload(any());
+        verify(cloudinaryService, never()).uploadImage(any());
     }
 
     @Test
@@ -74,16 +78,14 @@ class ShopServiceUpdateTest extends BaseUnitTest {
             .status(ShopStatus.ACTIVE)
             .build();
 
-        Map uploadResult = Map.of("secure_url", "https://cloudinary.com/logo.jpg");
-
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(existingShop));
-        when(imageService.upload(logoFile)).thenReturn(uploadResult);
+        when(cloudinaryService.uploadImage(logoFile)).thenReturn(new CloudinaryUploadResult("logo-id", "https://cloudinary.com/logo.jpg"));
         when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Shop updated = shopService.updateShop(ownerId, shopId, request);
 
         assertThat(updated.getLogoUrl()).isEqualTo("https://cloudinary.com/logo.jpg");
-        verify(imageService).upload(logoFile);
+        verify(cloudinaryService).uploadImage(logoFile);
         verify(shopRepository).save(existingShop);
     }
 
@@ -103,16 +105,14 @@ class ShopServiceUpdateTest extends BaseUnitTest {
             .status(ShopStatus.ACTIVE)
             .build();
 
-        Map uploadResult = Map.of("secure_url", "https://cloudinary.com/banner.jpg");
-
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(existingShop));
-        when(imageService.upload(bannerFile)).thenReturn(uploadResult);
+        when(cloudinaryService.uploadImage(bannerFile)).thenReturn(new CloudinaryUploadResult("banner-id", "https://cloudinary.com/banner.jpg"));
         when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Shop updated = shopService.updateShop(ownerId, shopId, request);
 
         assertThat(updated.getBannerUrl()).isEqualTo("https://cloudinary.com/banner.jpg");
-        verify(imageService).upload(bannerFile);
+        verify(cloudinaryService).uploadImage(bannerFile);
         verify(shopRepository).save(existingShop);
     }
 
@@ -138,7 +138,7 @@ class ShopServiceUpdateTest extends BaseUnitTest {
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         verify(shopRepository, never()).save(any(Shop.class));
-        verify(imageService, never()).upload(any());
+        verify(cloudinaryService, never()).uploadImage(any());
     }
 
     @Test
@@ -182,7 +182,7 @@ class ShopServiceUpdateTest extends BaseUnitTest {
         Shop updated = shopService.updateShop(ownerId, shopId, request);
 
         assertThat(updated.getDescription()).isEqualTo("Updated description");
-        verify(imageService, never()).upload(any());
+        verify(cloudinaryService, never()).uploadImage(any());
         verify(shopRepository).save(existingShop);
     }
 }

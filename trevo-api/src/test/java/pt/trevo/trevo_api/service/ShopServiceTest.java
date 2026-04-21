@@ -19,11 +19,15 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
+import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
 class ShopServiceTest extends BaseUnitTest {
 
     @Mock
     private ShopRepository shopRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private ShopService shopService;
@@ -32,9 +36,11 @@ class ShopServiceTest extends BaseUnitTest {
     void createShopCreatesShopForShopOwner() {
         Long ownerId = 11L;
         CreateShopRequest request = new CreateShopRequest("My Shop", "A description", "123456789", null, null);
+        User ownerReference = User.builder().id(ownerId).build();
 
         when(shopRepository.findByOwnerId(ownerId)).thenReturn(Optional.empty());
         when(shopRepository.findByNif("123456789")).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(ownerId)).thenReturn(ownerReference);
         when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Shop created = shopService.createShop(ownerId, request);

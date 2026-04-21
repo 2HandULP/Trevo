@@ -1,7 +1,6 @@
 package pt.trevo.trevo_api.service;
 
 import java.io.IOException;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,16 +10,19 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
+import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
 @Service
 public class ShopService {
 
     private final ShopRepository shopRepository;
-    private final ImageService imageService;
+    private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
 
-    public ShopService(ShopRepository shopRepository, ImageService imageService) {
+    public ShopService(ShopRepository shopRepository, UserRepository userRepository, CloudinaryService cloudinaryService) {
         this.shopRepository = shopRepository;
-        this.imageService = imageService;
+        this.userRepository = userRepository;
+        this.cloudinaryService = cloudinaryService;
     }
 
     @Transactional
@@ -39,7 +41,7 @@ public class ShopService {
         }
 
         Shop shop = Shop.builder()
-            .owner(User.builder().id(callerId).build())
+            .owner(userRepository.getReferenceById(callerId))
             .name(request.name())
             .description(request.description())
             .nif(request.nif())
@@ -69,15 +71,13 @@ public class ShopService {
         }
 
         if (request.logo() != null && !request.logo().isEmpty()) {
-            Map uploadResult = imageService.upload(request.logo());
-            String logoUrl = (String) uploadResult.get("secure_url");
-            shop.setLogoUrl(logoUrl);
+            CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(request.logo());
+            shop.setLogoUrl(uploadResult.url());
         }
 
         if (request.banner() != null && !request.banner().isEmpty()) {
-            Map uploadResult = imageService.upload(request.banner());
-            String bannerUrl = (String) uploadResult.get("secure_url");
-            shop.setBannerUrl(bannerUrl);
+            CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(request.banner());
+            shop.setBannerUrl(uploadResult.url());
         }
 
         return shopRepository.save(shop);

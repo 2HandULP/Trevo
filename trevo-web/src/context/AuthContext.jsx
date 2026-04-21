@@ -1,21 +1,16 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useState } from "react";
 import { loginUser, registerBuyer, registerShopOwner } from "../lib/authApi";
-
-const AuthContext = createContext();
+import { AuthContext } from "./authContextValue";
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 
 export function AuthProvider({ children }) {
-  const [accessToken, setAccessToken] = useState(null);
-  const [refreshToken, setRefreshToken] = useState(null);
-
-  useEffect(() => {
-    const storedAccessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-    const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-
-    setAccessToken(storedAccessToken);
-    setRefreshToken(storedRefreshToken);
-  }, []);
+  const [accessToken, setAccessToken] = useState(() =>
+    localStorage.getItem(ACCESS_TOKEN_KEY),
+  );
+  const [refreshToken, setRefreshToken] = useState(() =>
+    localStorage.getItem(REFRESH_TOKEN_KEY),
+  );
 
   function persistSession(tokens) {
     localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
@@ -68,8 +63,4 @@ export function AuthProvider({ children }) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

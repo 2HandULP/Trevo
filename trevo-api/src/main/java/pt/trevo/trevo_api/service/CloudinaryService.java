@@ -2,18 +2,29 @@ package pt.trevo.trevo_api.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLConnection;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class CloudinaryService {
 
     private final Cloudinary cloudinary;
+    private final long maxFileSizeBytes;
 
-    public CloudinaryService(Cloudinary cloudinary) {
+    public CloudinaryService(
+        Cloudinary cloudinary,
+        @Value("${app.upload.image.max-file-size-bytes:5242880}") long maxFileSizeBytes
+    ) {
         this.cloudinary = cloudinary;
+        this.maxFileSizeBytes = maxFileSizeBytes;
     }
 
     public CloudinaryUploadResult uploadImage(MultipartFile file) {
@@ -31,35 +42,49 @@ public class CloudinaryService {
             String imageUrl = secureUrl != null ? secureUrl : fallbackUrl;
 
             if (publicId == null || imageUrl == null) {
-                throw new IllegalStateException("Cloudinary response did not include image identifiers");
+                throw badGateway("Cloudinary response did not include image identifiers");
             }
 
             return new CloudinaryUploadResult(publicId, imageUrl);
         } catch (IOException ex) {
-            throw new IllegalStateException("Failed to upload image to Cloudinary", ex);
+            throw badGateway("Failed to upload image to Cloudinary", ex);
         }
     }
 
     public void deleteImage(String publicId) {
         if (isBlank(publicId)) {
-            throw new IllegalArgumentException("Image publicId is required");
+            throw badRequest("Image publicId is required");
         }
 
         try {
             cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "image"));
         } catch (IOException ex) {
-            throw new IllegalStateException("Failed to delete image from Cloudinary", ex);
+            throw badGateway("Failed to delete image from Cloudinary", ex);
         }
     }
 
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Image file is required");
+            throw badRequest("Image file is required");
         }
 
         String contentType = file.getContentType();
         if (isBlank(contentType) || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("Only image files are allowed");
+            throw badRequest("Only image files are allowed");
+        }
+
+        if (file.getSize() > maxFileSizeBytes) {
+            throw badRequest("Image file exceeds maximum allowed size");
+        }
+
+        try (InputStream inputStream = new BufferedInputStream(file.getInputStream())) {
+            String detectedContentType = URLConnection.guessContentTypeFromStream(inputStream);
+
+            if (isBlank(detectedContentType) || !detectedContentType.startsWith("image/")) {
+                throw badRequest("Only image files are allowed");
+            }
+        } catch (IOException ex) {
+            throw badRequest("Unable to read image file", ex);
         }
     }
 
@@ -70,5 +95,20 @@ public class CloudinaryService {
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
-}
 
+    private ResponseStatusException badRequest(String reason) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, reason);
+    }
+
+    private ResponseStatusException badRequest(String reason, Throwable cause) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, reason, cause);
+    }
+
+    private ResponseStatusException badGateway(String reason) {
+        return new ResponseStatusException(HttpStatus.BAD_GATEWAY, reason);
+    }
+
+    private ResponseStatusException badGateway(String reason, Throwable cause) {
+        return new ResponseStatusException(HttpStatus.BAD_GATEWAY, reason, cause);
+    }
+}

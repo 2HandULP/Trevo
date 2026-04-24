@@ -165,6 +165,15 @@ public class AuthService {
         }
 
         Instant now = clock.instant();
+
+        boolean withinCooldown = passwordResetTokenRepository
+            .findTopByUserOrderByCreatedAtDesc(user)
+            .map(t -> t.getCreatedAt().plus(authProperties.passwordResetCooldown()).isAfter(now))
+            .orElse(false);
+        if (withinCooldown) {
+            return;
+        }
+
         String rawToken = UUID.randomUUID().toString();
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUser(user);

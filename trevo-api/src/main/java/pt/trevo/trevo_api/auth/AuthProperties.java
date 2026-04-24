@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Builder
 @ConfigurationProperties(prefix = "app.security.auth")
-public record AuthProperties(Duration refreshTokenExpiration, Duration passwordResetTokenExpiration) {
+public record AuthProperties(Duration refreshTokenExpiration, Duration passwordResetTokenExpiration, Duration passwordResetCooldown) {
 
     public AuthProperties {
         if (refreshTokenExpiration == null) {
@@ -14,6 +14,9 @@ public record AuthProperties(Duration refreshTokenExpiration, Duration passwordR
         }
         if (passwordResetTokenExpiration == null) {
             passwordResetTokenExpiration = Duration.ofMinutes(15);
+        }
+        if (passwordResetCooldown == null) {
+            passwordResetCooldown = Duration.ofSeconds(60);
         }
     }
 }

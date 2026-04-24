@@ -9,7 +9,18 @@ export function AuthProvider({ children }) {
     setToken(newToken);
   }
 
-  function logout() {
+  async function logout() {
+    const current = localStorage.getItem("token");
+    if (current) {
+      try {
+        await fetch("/api/auth/sessions/invalidate", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${current}` },
+        });
+      } catch {
+        // best-effort: clear client state regardless
+      }
+    }
     localStorage.removeItem("token");
     setToken(null);
   }

@@ -3,6 +3,7 @@ package pt.trevo.trevo_api;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
@@ -23,6 +24,9 @@ class TrevoApiApplicationTests {
 
 	@MockitoBean
 	private RefreshTokenRepository refreshTokenRepository;
+
+	@MockitoBean
+	private PasswordResetTokenRepository passwordResetTokenRepository;
 
 	@Test
 	void contextLoads() {

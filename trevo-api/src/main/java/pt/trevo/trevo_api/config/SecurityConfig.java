@@ -30,6 +30,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/auth/sessions/invalidate").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/shop/**").hasRole("SHOP_OWNER")
                 .requestMatchers("/api/buyer/**").hasRole("BUYER")

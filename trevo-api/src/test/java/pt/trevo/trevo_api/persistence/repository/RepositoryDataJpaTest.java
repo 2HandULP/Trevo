@@ -38,7 +38,8 @@ import pt.trevo.trevo_api.persistence.entity.Variant;
 
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.jpa.properties.hibernate.format_sql=true"
+        "spring.jpa.properties.hibernate.format_sql=true",
+        "spring.flyway.enabled=false"
 })
 @Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

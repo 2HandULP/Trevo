@@ -2,6 +2,7 @@ package pt.trevo.trevo_api.config;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.AfterEach;
@@ -23,6 +24,7 @@ import pt.trevo.trevo_api.TrevoApiApplication;
 import pt.trevo.trevo_api.auth.JwtService;
 import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.User;
+import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
@@ -52,6 +54,9 @@ class SecurityConfigIntegrationTest {
     @MockitoBean
     private RefreshTokenRepository refreshTokenRepository;
 
+    @MockitoBean
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
     @Autowired
     private WebApplicationContext context;
 
@@ -76,6 +81,21 @@ class SecurityConfigIntegrationTest {
     void authEndpointsShouldBePublic() throws Exception {
         mockMvc.perform(get("/api/auth/test/public"))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void sessionInvalidationEndpointShouldRejectMissingToken() throws Exception {
+        mockMvc.perform(post("/api/auth/sessions/invalidate"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void sessionInvalidationEndpointShouldAllowAuthenticatedUsers() throws Exception {
+        String token = generateToken(14L, Role.BUYER);
+
+        mockMvc.perform(post("/api/auth/sessions/invalidate")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isNoContent());
     }
 
     @Test

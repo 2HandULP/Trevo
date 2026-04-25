@@ -2,6 +2,7 @@ package pt.trevo.trevo_api.auth;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,6 +40,30 @@ public class AuthController {
     @PostMapping("/refresh")
     public TokenPairResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return authService.refresh(request);
+    }
+
+    @PostMapping("/sessions/invalidate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void invalidateSessions(Authentication authentication) {
+        authService.invalidateSessions(authentication);
+    }
+
+    @PostMapping("/password-reset/request")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        authService.requestPasswordReset(request.email());
+    }
+
+    @PostMapping("/password-reset/validate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void validatePasswordResetToken(@Valid @RequestBody PasswordResetTokenValidationRequest request) {
+        authService.validatePasswordResetToken(request.token());
+    }
+
+    @PostMapping("/password-reset/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        authService.resetPassword(request.token(), request.newPassword());
     }
 
     private AuthUserResponse toResponse(User user) {

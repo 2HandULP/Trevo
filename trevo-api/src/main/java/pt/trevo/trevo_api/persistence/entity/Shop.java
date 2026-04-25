@@ -17,8 +17,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -57,9 +55,6 @@ public class Shop {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ShopStatus status;
-
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = true;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

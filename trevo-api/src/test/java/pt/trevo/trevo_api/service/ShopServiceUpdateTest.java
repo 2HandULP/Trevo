@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -18,6 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
+import pt.trevo.trevo_api.dto.CloudinaryUploadResult;
+import pt.trevo.trevo_api.dto.UpdateShopRequest;
 import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.User;

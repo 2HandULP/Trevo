@@ -3,12 +3,10 @@ package pt.trevo.trevo_api.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -104,63 +102,6 @@ class ShopServiceDeactivateReactivateTest extends BaseUnitTest {
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         verify(shopRepository, never()).save(any(Shop.class));
-    }
-
-    @Test
-    void deactivatedShopIsExcludedFromPublicQueries() {
-        Long shopId1 = 1L;
-        Long shopId2 = 2L;
-        Shop activeShop = Shop.builder()
-            .id(shopId1)
-            .owner(User.builder().id(11L).build())
-            .name("Active Shop")
-            .isActive(true)
-            .status(ShopStatus.ACTIVE)
-            .build();
-
-        Shop deactivatedShop = Shop.builder()
-            .id(shopId2)
-            .owner(User.builder().id(22L).build())
-            .name("Deactivated Shop")
-            .isActive(false)
-            .status(ShopStatus.ACTIVE)
-            .build();
-
-        when(shopRepository.findAllActive()).thenReturn(List.of(activeShop));
-
-        List<Shop> activeShops = shopRepository.findAllActive();
-
-        assertThat(activeShops).containsExactly(activeShop);
-        assertThat(activeShops).doesNotContain(deactivatedShop);
-    }
-
-    @Test
-    void deactivatedShopIsExcludedFromFindByIdAndActive() {
-        Long shopId = 1L;
-
-        when(shopRepository.findByIdAndActive(shopId)).thenReturn(Optional.empty());
-
-        Optional<Shop> result = shopRepository.findByIdAndActive(shopId);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void activeShopIsIncludedInFindByIdAndActive() {
-        Long shopId = 1L;
-        Shop activeShop = Shop.builder()
-            .id(shopId)
-            .owner(User.builder().id(11L).build())
-            .name("Active Shop")
-            .isActive(true)
-            .status(ShopStatus.ACTIVE)
-            .build();
-
-        when(shopRepository.findByIdAndActive(shopId)).thenReturn(Optional.of(activeShop));
-
-        Optional<Shop> result = shopRepository.findByIdAndActive(shopId);
-
-        assertThat(result).contains(activeShop);
     }
 
     @Test

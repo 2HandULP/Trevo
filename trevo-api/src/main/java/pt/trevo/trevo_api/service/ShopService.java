@@ -1,14 +1,18 @@
 package pt.trevo.trevo_api.service;
 
 import java.io.IOException;
+import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import pt.trevo.trevo_api.persistence.entity.Role;
+import pt.trevo.trevo_api.dto.CloudinaryUploadResult;
+import pt.trevo.trevo_api.dto.CreateShopRequest;
+import pt.trevo.trevo_api.dto.UpdateShopRequest;
 import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
-import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
@@ -83,8 +87,31 @@ public class ShopService {
         return shopRepository.save(shop);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Shop> findByIdAndActive(Long shopId) {
+        if (shopId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shop id");
+        }
+
+        return shopRepository.findByIdAndActive(shopId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Shop> findAllActive(Pageable pageable) {
+        if (pageable == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pagination is required");
+        }
+
+        return shopRepository.findAllActive(pageable);
+    }
+
     @Transactional
     public Shop deactivateShop(Long shopId, Long callerId) {
+        return deactivateShop(shopId, callerId, false);
+    }
+
+    @Transactional
+    public Shop deactivateShop(Long shopId, Long callerId, boolean isAdmin) {
         if (shopId == null || callerId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shop id or caller id");
         }
@@ -92,7 +119,7 @@ public class ShopService {
         Shop shop = shopRepository.findById(shopId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
 
-        if (!shop.getOwner().getId().equals(callerId)) {
+        if (!isAdmin && !shop.getOwner().getId().equals(callerId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owner can deactivate this shop");
         }
 
@@ -102,6 +129,11 @@ public class ShopService {
 
     @Transactional
     public Shop reactivateShop(Long shopId, Long callerId) {
+        return reactivateShop(shopId, callerId, false);
+    }
+
+    @Transactional
+    public Shop reactivateShop(Long shopId, Long callerId, boolean isAdmin) {
         if (shopId == null || callerId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shop id or caller id");
         }
@@ -109,7 +141,7 @@ public class ShopService {
         Shop shop = shopRepository.findById(shopId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
 
-        if (!shop.getOwner().getId().equals(callerId)) {
+        if (!isAdmin && !shop.getOwner().getId().equals(callerId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owner can reactivate this shop");
         }
 

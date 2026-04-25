@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
+import pt.trevo.trevo_api.dto.CloudinaryUploadResult;
 
 class CloudinaryServiceTest extends BaseUnitTest {
 

@@ -1,4 +1,4 @@
-package pt.trevo.trevo_api.service;
+package pt.trevo.trevo_api.dto;
 
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 

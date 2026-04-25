@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.dto.UpdateProfileRequest;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 

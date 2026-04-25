@@ -1,4 +1,4 @@
-package pt.trevo.trevo_api.service;
+package pt.trevo.trevo_api.dto;
 
 import org.springframework.web.multipart.MultipartFile;
 

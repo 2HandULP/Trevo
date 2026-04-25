@@ -14,7 +14,7 @@ import org.mockito.Mock;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
-import pt.trevo.trevo_api.persistence.entity.Role;
+import pt.trevo.trevo_api.dto.CreateShopRequest;
 import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
@@ -144,5 +144,41 @@ class ShopServiceTest extends BaseUnitTest {
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         verify(shopRepository, never()).save(any(Shop.class));
+    }
+
+    @Test
+    void deactivateShopAllowsAdminToManageAnyShop() {
+        Long shopId = 1L;
+        Shop shop = Shop.builder()
+            .id(shopId)
+            .owner(User.builder().id(11L).build())
+            .status(ShopStatus.ACTIVE)
+            .build();
+
+        when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
+        when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Shop deactivated = shopService.deactivateShop(shopId, 99L, true);
+
+        assertThat(deactivated.getStatus()).isEqualTo(ShopStatus.DEACTIVATED);
+        verify(shopRepository).save(shop);
+    }
+
+    @Test
+    void reactivateShopAllowsAdminToManageAnyShop() {
+        Long shopId = 1L;
+        Shop shop = Shop.builder()
+            .id(shopId)
+            .owner(User.builder().id(11L).build())
+            .status(ShopStatus.DEACTIVATED)
+            .build();
+
+        when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
+        when(shopRepository.save(any(Shop.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Shop reactivated = shopService.reactivateShop(shopId, 99L, true);
+
+        assertThat(reactivated.getStatus()).isEqualTo(ShopStatus.ACTIVE);
+        verify(shopRepository).save(shop);
     }
 }

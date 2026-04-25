@@ -1,11 +1,12 @@
 package pt.trevo.trevo_api.persistence.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import pt.trevo.trevo_api.persistence.entity.Shop;
+import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -15,9 +16,15 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
 
     Optional<Shop> findByOwnerId(Long ownerId);
 
-    @Query("SELECT s FROM Shop s WHERE s.id = :id AND s.isActive = true")
-    Optional<Shop> findByIdAndActive(Long id);
+    Optional<Shop> findByIdAndStatus(Long id, ShopStatus status);
 
-    @Query("SELECT s FROM Shop s WHERE s.isActive = true")
-    List<Shop> findAllActive();
+    Page<Shop> findAllByStatus(ShopStatus status, Pageable pageable);
+
+    default Optional<Shop> findByIdAndActive(Long id) {
+        return findByIdAndStatus(id, ShopStatus.ACTIVE);
+    }
+
+    default Page<Shop> findAllActive(Pageable pageable) {
+        return findAllByStatus(ShopStatus.ACTIVE, pageable);
+    }
 }

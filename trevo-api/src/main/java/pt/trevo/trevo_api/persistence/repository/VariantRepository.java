@@ -10,4 +10,8 @@ import java.util.List;
 public interface VariantRepository extends JpaRepository<Variant, Long> {
 
     List<Variant> findByProductId(Long productId);
+
+    boolean existsByProductIdAndSizeIgnoreCaseAndColorIgnoreCase(Long productId, String size, String color);
+
+    boolean existsByProductIdAndIdNotAndSizeIgnoreCaseAndColorIgnoreCase(Long productId, Long id, String size, String color);
 }

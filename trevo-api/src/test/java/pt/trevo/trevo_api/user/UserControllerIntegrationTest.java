@@ -18,7 +18,10 @@ import org.springframework.test.web.servlet.MvcResult;
 import pt.trevo.trevo_api.auth.LoginRequest;
 import pt.trevo.trevo_api.auth.RegisterBuyerRequest;
 import pt.trevo.trevo_api.auth.RegisterShopOwnerRequest;
+import pt.trevo.trevo_api.auth.JwtService;
 import pt.trevo.trevo_api.auth.TokenPairResponse;
+import pt.trevo.trevo_api.persistence.entity.Role;
+import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
@@ -47,6 +50,9 @@ class UserControllerIntegrationTest {
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private JwtService jwtService;
 
     @BeforeEach
     void cleanDatabase() {
@@ -113,6 +119,18 @@ class UserControllerIntegrationTest {
     void meEndpointRejectsMissingToken() throws Exception {
         mockMvc.perform(get("/api/users/me"))
             .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void meEndpointReturnsNotFoundWhenAuthenticatedUserRecordIsMissing() throws Exception {
+        String token = jwtService.generateToken(User.builder()
+            .id(999L)
+            .role(Role.BUYER)
+            .build());
+
+        mockMvc.perform(get("/api/users/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isNotFound());
     }
 
     private TokenPairResponse login(String email, String password) throws Exception {

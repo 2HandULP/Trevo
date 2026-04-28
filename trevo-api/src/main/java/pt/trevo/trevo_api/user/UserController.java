@@ -6,21 +6,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import pt.trevo.trevo_api.persistence.entity.Shop;
-import pt.trevo.trevo_api.persistence.entity.User;
-import pt.trevo.trevo_api.persistence.repository.ShopRepository;
-import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    private final UserRepository userRepository;
-    private final ShopRepository shopRepository;
+    private final UserService userService;
 
-    public UserController(UserRepository userRepository, ShopRepository shopRepository) {
-        this.userRepository = userRepository;
-        this.shopRepository = shopRepository;
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
 
     @GetMapping("/me")
@@ -29,19 +23,6 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
 
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
-        Shop shop = shopRepository.findByOwnerId(userId).orElse(null);
-
-        return new UserProfileResponse(
-            user.getId(),
-            user.getEmail(),
-            user.getFullName(),
-            user.getPhone(),
-            user.getRole(),
-            user.getStatus(),
-            shop != null ? shop.getName() : null,
-            shop != null ? shop.getStatus() : null
-        );
+        return userService.getCurrentUserProfile(userId);
     }
 }

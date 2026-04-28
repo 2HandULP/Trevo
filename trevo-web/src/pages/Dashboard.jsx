@@ -28,8 +28,11 @@ export default function Dashboard() {
       } catch (loadError) {
         if (active) {
           setError(loadError.message || "Não foi possível carregar o perfil");
-          logout();
-          navigate("/login", { replace: true });
+
+          if (loadError.status === 401) {
+            logout();
+            navigate("/login", { replace: true });
+          }
         }
       } finally {
         if (active) {

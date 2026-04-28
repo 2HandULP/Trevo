@@ -5,12 +5,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -70,6 +72,11 @@ class SecurityConfigIntegrationTest {
             .build();
     }
 
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void authEndpointsShouldBePublic() throws Exception {
         mockMvc.perform(get("/api/auth/test/public"))
@@ -95,7 +102,7 @@ class SecurityConfigIntegrationTest {
     void shopEndpointsShouldRequireShopOwnerRole() throws Exception {
         String token = generateToken(10L, Role.SHOP_OWNER);
 
-        mockMvc.perform(get("/api/shop/test/secure")
+        mockMvc.perform(get("/api/shops/test/secure")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
             .andExpect(status().isOk());
     }
@@ -104,15 +111,24 @@ class SecurityConfigIntegrationTest {
     void shopEndpointsShouldRejectBuyerRole() throws Exception {
         String token = generateToken(11L, Role.BUYER);
 
-        mockMvc.perform(get("/api/shop/test/secure")
+        mockMvc.perform(get("/api/shops/test/secure")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
             .andExpect(status().isForbidden());
     }
 
     @Test
     void shopEndpointsShouldRejectMissingToken() throws Exception {
-        mockMvc.perform(get("/api/shop/test/secure"))
+        mockMvc.perform(get("/api/shops/test/secure"))
             .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shopEndpointsShouldAllowAdmins() throws Exception {
+        String token = generateToken(14L, Role.ADMIN);
+
+        mockMvc.perform(get("/api/shops/test/secure")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+            .andExpect(status().isOk());
     }
 
     @Test
@@ -151,7 +167,7 @@ class SecurityConfigIntegrationTest {
     }
 
     @RestController
-    @RequestMapping("/api/shop/test")
+    @RequestMapping("/api/shops/test")
     static class TestShopController {
 
         @GetMapping("/secure")

@@ -3,5 +3,6 @@ package pt.trevo.trevo_api.persistence.entity;
 
 public enum Role {
     BUYER,
-    SHOP_OWNER
+    SHOP_OWNER,
+    ADMIN
 }

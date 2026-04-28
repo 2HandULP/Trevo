@@ -47,6 +47,9 @@ class ShopControllerUpdateIntegrationTest {
     private ShopService shopService;
 
     @MockitoBean
+    private CollectionService collectionService;
+
+    @MockitoBean
     private AppUserDetailsService appUserDetailsService;
 
     @MockitoBean

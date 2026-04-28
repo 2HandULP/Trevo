@@ -1,6 +1,7 @@
 package pt.trevo.trevo_api.service;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,10 +10,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.CloudinaryUploadResult;
+import pt.trevo.trevo_api.dto.CollectionResponse;
 import pt.trevo.trevo_api.dto.CreateShopRequest;
+import pt.trevo.trevo_api.dto.ShopProfileResponse;
 import pt.trevo.trevo_api.dto.UpdateShopRequest;
+import pt.trevo.trevo_api.persistence.entity.Collection;
 import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
+import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
+import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
@@ -22,11 +28,21 @@ public class ShopService {
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
+    private final ReviewRepository reviewRepository;
+    private final CollectionRepository collectionRepository;
 
-    public ShopService(ShopRepository shopRepository, UserRepository userRepository, CloudinaryService cloudinaryService) {
+    public ShopService(
+        ShopRepository shopRepository,
+        UserRepository userRepository,
+        CloudinaryService cloudinaryService,
+        ReviewRepository reviewRepository,
+        CollectionRepository collectionRepository
+    ) {
         this.shopRepository = shopRepository;
         this.userRepository = userRepository;
         this.cloudinaryService = cloudinaryService;
+        this.reviewRepository = reviewRepository;
+        this.collectionRepository = collectionRepository;
     }
 
     @Transactional
@@ -147,5 +163,30 @@ public class ShopService {
 
         shop.setStatus(ShopStatus.ACTIVE);
         return shopRepository.save(shop);
+    }
+
+    @Transactional(readOnly = true)
+    public ShopProfileResponse getPublicProfile(Long shopId) {
+        Shop shop = shopRepository.findByIdAndActive(shopId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
+
+        Double averageRating = reviewRepository.findAverageRatingByShopId(shopId);
+        List<Collection> collections = collectionRepository.findByShopIdOrderByDisplayOrderAsc(shopId);
+
+        List<CollectionResponse> collectionResponses = collections.stream()
+            .map(c -> new CollectionResponse(c.getId(), shopId, c.getName(), c.getDisplayOrder()))
+            .toList();
+
+        return new ShopProfileResponse(
+            shop.getId(),
+            shop.getOwner().getId(),
+            shop.getName(),
+            shop.getDescription(),
+            shop.getLogoUrl(),
+            shop.getBannerUrl(),
+            shop.getStatus(),
+            averageRating,
+            collectionResponses
+        );
     }
 }

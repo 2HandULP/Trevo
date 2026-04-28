@@ -3,6 +3,7 @@ package pt.trevo.trevo_api.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,6 +66,40 @@ class VariantServiceTest extends BaseUnitTest {
     }
 
     @Test
+    void updateVariantWithNullSizeAndConflictingColorThrows409() {
+        Long ownerId = 11L;
+        Long productId = 7L;
+        Long variantId = 101L;
+        Variant variant = existingVariant(variantId, productId, ownerId, "S", "Black", 4);
+        UpsertVariantRequest request = new UpsertVariantRequest(null, "Red", 6);
+
+        when(variantRepository.findById(variantId)).thenReturn(Optional.of(variant));
+        when(variantRepository.existsByProductIdAndIdNotAndSizeIgnoreCaseAndColorIgnoreCase(productId, variantId, "S", "Red")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+            variantService.updateVariant(ownerId, variantId, request)
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        verify(variantRepository, never()).save(any(Variant.class));
+    }
+
+    @Test
+    void addVariantWithNullSizeOrColorThrows400() {
+        Long ownerId = 11L;
+        Long productId = 7L;
+        UpsertVariantRequest request = new UpsertVariantRequest(null, null, 0);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+            variantService.addVariant(ownerId, productId, request)
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(productRepository, never()).findById(any());
+        verify(variantRepository, never()).save(any(Variant.class));
+    }
+
+    @Test
     void bulkStockUpdateModifiesMultipleVariantsInASingleCall() {
         Long ownerId = 11L;
         Long productId = 7L;
@@ -83,6 +118,26 @@ class VariantServiceTest extends BaseUnitTest {
 
         assertThat(updated).extracting(Variant::getStock).containsExactly(8, 2);
         verify(variantRepository).saveAll(List.of(first, second));
+    }
+
+    @Test
+    void bulkStockUpdateWithDuplicateVariantIdsThrows400() {
+        Long ownerId = 11L;
+        Long productId = 7L;
+        List<BulkVariantStockUpdateRequest> request = List.of(
+            new BulkVariantStockUpdateRequest(101L, 8),
+            new BulkVariantStockUpdateRequest(101L, 2)
+        );
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct(productId, ownerId)));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+            variantService.bulkUpdateStock(ownerId, productId, request)
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(variantRepository, never()).findAllById(any());
+        verify(variantRepository, never()).saveAll(any());
     }
 
     private Product existingProduct(Long productId, Long ownerId) {

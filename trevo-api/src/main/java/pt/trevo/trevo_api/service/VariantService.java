@@ -31,6 +31,7 @@ public class VariantService {
         if (callerId == null || productId == null || request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid add variant request");
         }
+        validateAttributes(request.size(), request.color());
         validateStock(request.stock());
 
         Product product = findManagedProduct(productId);
@@ -56,7 +57,10 @@ public class VariantService {
 
         Variant variant = findManagedVariant(variantId);
         ensureOwner(variant.getProduct(), callerId);
-        ensureUniqueVariant(variant.getProduct().getId(), request.size(), request.color(), variantId);
+        String effectiveSize = request.size() != null ? request.size() : variant.getSize();
+        String effectiveColor = request.color() != null ? request.color() : variant.getColor();
+        validateAttributes(effectiveSize, effectiveColor);
+        ensureUniqueVariant(variant.getProduct().getId(), effectiveSize, effectiveColor, variantId);
 
         if (request.size() != null) {
             variant.setSize(request.size());
@@ -102,6 +106,13 @@ public class VariantService {
         Product product = findManagedProduct(productId);
         ensureOwner(product, callerId);
         requests.forEach(request -> validateStock(request.stock()));
+        long distinctIds = requests.stream()
+            .map(BulkVariantStockUpdateRequest::variantId)
+            .distinct()
+            .count();
+        if (distinctIds != requests.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duplicate variantId in bulk request");
+        }
 
         List<Long> variantIds = requests.stream()
             .map(BulkVariantStockUpdateRequest::variantId)
@@ -155,6 +166,12 @@ public class VariantService {
     private void validateStock(Integer stock) {
         if (stock == null || stock < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock cannot be less than zero");
+        }
+    }
+
+    private void validateAttributes(String size, String color) {
+        if (size == null || size.isBlank() || color == null || color.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Size and color are required");
         }
     }
 }

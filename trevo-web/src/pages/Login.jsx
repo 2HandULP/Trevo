@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
@@ -75,6 +75,10 @@ export default function Login() {
           {isSubmitting ? "A entrar..." : "Entrar"}
         </button>
       </form>
+
+      <p>
+        <Link to="/forgot-password">Esqueceste-te da password?</Link>
+      </p>
     </div>
   );
 }

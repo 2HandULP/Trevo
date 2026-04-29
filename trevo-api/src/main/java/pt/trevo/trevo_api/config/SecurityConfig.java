@@ -2,6 +2,7 @@ package pt.trevo.trevo_api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,6 +35,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/api/auth/sessions/invalidate").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/shops/*").permitAll()
                 .requestMatchers("/api/shops/**").hasAnyRole("SHOP_OWNER", "ADMIN")
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/buyer/**").hasRole("BUYER")

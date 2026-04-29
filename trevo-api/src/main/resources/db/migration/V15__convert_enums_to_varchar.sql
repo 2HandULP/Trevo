@@ -30,7 +30,7 @@ ALTER TABLE users
     ALTER COLUMN status TYPE VARCHAR(50) USING status::text;
 
 ALTER TABLE users
-    ADD CONSTRAINT chk_user_role   CHECK (role   IN ('BUYER', 'SHOP_OWNER')),
+    ADD CONSTRAINT chk_user_role   CHECK (role   IN ('BUYER', 'SHOP_OWNER', 'ADMIN')),
     ADD CONSTRAINT chk_user_status CHECK (status IN ('ACTIVE', 'PENDING', 'SUSPENDED'));
 
 -- shops
@@ -63,11 +63,11 @@ ALTER TABLE subscriptions
 ALTER TABLE subscriptions
     ADD CONSTRAINT chk_subscription_status CHECK (status IN ('ACTIVE', 'CANCELLED', 'EXPIRED'));
 
--- Drop the now-unused custom types
-DROP TYPE user_role;
-DROP TYPE user_status;
-DROP TYPE shop_status;
-DROP TYPE product_status;
-DROP TYPE order_status;
-DROP TYPE payment_method;
-DROP TYPE subscription_status;
+-- Drop the now-unused custom types (CASCADE handles any remaining dependents)
+DROP TYPE user_role CASCADE;
+DROP TYPE user_status CASCADE;
+DROP TYPE shop_status CASCADE;
+DROP TYPE product_status CASCADE;
+DROP TYPE order_status CASCADE;
+DROP TYPE payment_method CASCADE;
+DROP TYPE subscription_status CASCADE;

@@ -21,7 +21,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.Type;
 
 @Entity
 @Table(name = "orders")
@@ -43,7 +42,6 @@ public class Order {
     private Shop shop;
 
     @Enumerated(EnumType.STRING)
-    @Type(PostgreSQLEnumType.class)
     @Column(nullable = false)
     private OrderStatus status;
 
@@ -57,7 +55,6 @@ public class Order {
     private BigDecimal commissionAmount;
 
     @Enumerated(EnumType.STRING)
-    @Type(PostgreSQLEnumType.class)
     @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod;
 

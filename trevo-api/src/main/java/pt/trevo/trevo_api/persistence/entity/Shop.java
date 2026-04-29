@@ -17,7 +17,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
 import java.time.LocalDateTime;
 
 @Entity
@@ -54,7 +53,6 @@ public class Shop {
     private String nif;
 
     @Enumerated(EnumType.STRING)
-    @Type(PostgreSQLEnumType.class)
     @Column(nullable = false)
     private ShopStatus status;
 

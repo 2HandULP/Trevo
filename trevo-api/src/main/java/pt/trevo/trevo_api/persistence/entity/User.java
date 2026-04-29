@@ -14,7 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
@@ -45,11 +44,9 @@ public class User {
     private String phone;
 
     @Enumerated(EnumType.STRING)
-    @Type(PostgreSQLEnumType.class)
     private Role role;
 
     @Enumerated(EnumType.STRING)
-    @Type(PostgreSQLEnumType.class)
     private Status status;
 
     @CreationTimestamp

@@ -81,6 +81,7 @@ class ProductSearchIntegrationTest extends BaseIntegrationTest {
             .name("Red Dress")
             .description("An elegant evening gown")
             .price(new BigDecimal("50.00"))
+            .brand("Test Brand")
             .status(ProductStatus.ACTIVE)
             .build());
 
@@ -89,6 +90,7 @@ class ProductSearchIntegrationTest extends BaseIntegrationTest {
             .name("Blue Jeans")
             .description("Casual denim wear")
             .price(new BigDecimal("30.00"))
+            .brand("Test Brand")
             .status(ProductStatus.ACTIVE)
             .build());
 
@@ -97,6 +99,7 @@ class ProductSearchIntegrationTest extends BaseIntegrationTest {
             .name("White Shirt")
             .description("Office shirt")
             .price(new BigDecimal("20.00"))
+            .brand("Test Brand")
             .status(ProductStatus.ARCHIVED)
             .build());
 
@@ -105,6 +108,7 @@ class ProductSearchIntegrationTest extends BaseIntegrationTest {
             .name("Purple Coat")
             .description("Warm winter coat")
             .price(new BigDecimal("100.00"))
+            .brand("Test Brand")
             .status(ProductStatus.ACTIVE)
             .build());
 

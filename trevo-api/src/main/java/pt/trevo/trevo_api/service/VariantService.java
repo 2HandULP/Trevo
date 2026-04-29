@@ -1,5 +1,6 @@
 package pt.trevo.trevo_api.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -135,6 +136,17 @@ public class VariantService {
         }
 
         return variantRepository.saveAll(variants);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Variant> findByProductId(Long productId) {
+        return variantRepository.findByProductId(productId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Variant> findByProductIds(Collection<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) return List.of();
+        return variantRepository.findByProductIdIn(productIds);
     }
 
     private Product findManagedProduct(Long productId) {

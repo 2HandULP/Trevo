@@ -1,27 +1,21 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "./e2e",
-  timeout: 60_000,
+  testDir: "./tests/e2e",
+  fullyParallel: true,
+  webServer: {
+    command: "npm run dev -- --host 127.0.0.1",
+    url: "http://127.0.0.1:5173",
+    reuseExistingServer: !process.env.CI,
+  },
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: "http://127.0.0.1:5173",
     trace: "on-first-retry",
   },
-  webServer: [
+  projects: [
     {
-      command:
-        "bash -lc 'tmpdir=$(mktemp -d /tmp/trevo-api-e2e.XXXXXX) && cp -a ../trevo-api/. \"$tmpdir\" && cd \"$tmpdir\" && ./mvnw spring-boot:run -Dspring-boot.run.profiles=e2e -Dspring-boot.run.useTestClasspath=true'",
-      cwd: ".",
-      url: "http://127.0.0.1:8080/api/health",
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-    },
-    {
-      command: "npm run dev -- --host 127.0.0.1 --port 4173",
-      cwd: ".",
-      url: "http://127.0.0.1:4173",
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
 });

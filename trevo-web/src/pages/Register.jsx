@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Register() {
@@ -34,8 +34,8 @@ export default function Register() {
       return;
     }
 
-    if (form.type === "owner" && (!form.shopName || !form.nif)) {
-      setError("Shop Name e NIF são obrigatórios para Shop Owner");
+    if (form.type === "owner" && (!form.nif || !form.shopName)) {
+      setError("Shop name e NIF são obrigatórios para Shop Owner");
       return;
     }
 
@@ -43,16 +43,11 @@ export default function Register() {
       setIsSubmitting(true);
       await register(form);
       setError("");
-      const successMessage =
-        form.type === "owner"
-          ? "Conta de lojista criada com estado pendente. Faz login para acompanhar a aprovação."
-          : "Conta criada com sucesso. Faz login para continuar.";
       navigate("/login", {
-        replace: true,
-        state: { message: successMessage },
+        state: { message: "Conta criada com sucesso. Podes agora fazer login." },
       });
-    } catch (submitError) {
-      setError(submitError.message || "Não foi possível registar");
+    } catch (error) {
+      setError(error.response?.data?.message || "Não foi possível concluir o registo");
     } finally {
       setIsSubmitting(false);
     }
@@ -79,7 +74,6 @@ export default function Register() {
           <input
             type="email"
             name="email"
-            autoComplete="email"
             placeholder="Email"
             value={form.email}
             onChange={handleChange}
@@ -90,7 +84,6 @@ export default function Register() {
           <input
             type="password"
             name="password"
-            autoComplete="new-password"
             placeholder="Password"
             value={form.password}
             onChange={handleChange}
@@ -101,7 +94,7 @@ export default function Register() {
           <input
             type="text"
             name="phone"
-            placeholder="Telefone"
+            placeholder="Telefone (opcional)"
             value={form.phone}
             onChange={handleChange}
           />
@@ -144,10 +137,6 @@ export default function Register() {
           {isSubmitting ? "A registar..." : "Registar"}
         </button>
       </form>
-
-      <p>
-        Já tens conta? <Link to="/login">Entrar</Link>
-      </p>
     </div>
   );
 }

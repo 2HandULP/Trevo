@@ -4,15 +4,17 @@ import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
   const { login } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
+
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const successMessage = location.state?.message || "";
 
   function handleChange(e) {
     setForm({
@@ -33,9 +35,9 @@ export default function Login() {
       setIsSubmitting(true);
       await login(form);
       setError("");
-      navigate("/dashboard", { replace: true });
-    } catch (submitError) {
-      setError(submitError.message || "Credenciais inválidas");
+      navigate("/dashboard");
+    } catch (error) {
+      setError(error.response?.data?.message || "Credenciais inválidas");
     } finally {
       setIsSubmitting(false);
     }
@@ -44,16 +46,15 @@ export default function Login() {
   return (
     <div style={{ padding: "20px", color: "black" }}>
       <h1>Login</h1>
-      {location.state?.message && <p style={{ color: "green" }}>{location.state.message}</p>}
 
       {error && <p style={{ color: "red" }}>{error}</p>}
+      {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
 
       <form onSubmit={handleSubmit}>
         <div>
           <input
             type="email"
             name="email"
-            autoComplete="email"
             placeholder="Email"
             value={form.email}
             onChange={handleChange}
@@ -64,7 +65,6 @@ export default function Login() {
           <input
             type="password"
             name="password"
-            autoComplete="current-password"
             placeholder="Password"
             value={form.password}
             onChange={handleChange}
@@ -77,7 +77,7 @@ export default function Login() {
       </form>
 
       <p>
-        Ainda não tens conta? <Link to="/register">Registar</Link>
+        <Link to="/forgot-password">Esqueceste-te da password?</Link>
       </p>
     </div>
   );

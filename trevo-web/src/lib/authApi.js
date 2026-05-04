@@ -9,18 +9,34 @@ async function apiRequest(path, options = {}) {
     ...options,
   });
 
+  if (response.status === 204) {
+    return null;
+  }
+
   const contentType = response.headers.get("content-type") ?? "";
   const body = contentType.includes("application/json")
     ? await response.json()
-    : null;
+    : await response.text();
 
   if (!response.ok) {
-    const error = new Error(body?.detail || body?.title || "Request failed");
+    const error = new Error(getErrorMessage(body));
     error.status = response.status;
     throw error;
   }
 
   return body;
+}
+
+function getErrorMessage(payload) {
+  if (!payload) {
+    return "Ocorreu um erro. Tenta novamente.";
+  }
+
+  if (typeof payload === "string") {
+    return payload;
+  }
+
+  return payload.detail ?? payload.message ?? payload.title ?? "Ocorreu um erro. Tenta novamente.";
 }
 
 export function registerBuyer(payload) {
@@ -49,5 +65,26 @@ export function fetchUserProfile(accessToken) {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+  });
+}
+
+export function requestPasswordReset(email) {
+  return apiRequest("/api/auth/password-reset/request", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function validatePasswordResetToken(token) {
+  return apiRequest("/api/auth/password-reset/validate", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+export function confirmPasswordReset(token, newPassword) {
+  return apiRequest("/api/auth/password-reset/confirm", {
+    method: "POST",
+    body: JSON.stringify({ token, newPassword }),
   });
 }

@@ -177,15 +177,15 @@ class EntityMappingReflectionTest extends BaseUnitTest {
     @Test
     void shouldMapPasswordResetTokenEntity() {
         assertEntityTable(PasswordResetToken.class, "password_reset_tokens");
-        assertFieldNames(PasswordResetToken.class, "id", "user", "token", "expiresAt", "used", "createdAt");
+        assertFieldNames(PasswordResetToken.class, "id", "user", "tokenHash", "expiresAt", "used", "createdAt");
         assertIdField(PasswordResetToken.class, "id");
         assertManyToOneJoinColumn(PasswordResetToken.class, "user", "user_id");
         assertColumnName(PasswordResetToken.class, "expiresAt", "expires_at");
         assertColumnName(PasswordResetToken.class, "createdAt", "created_at");
 
-        Column tokenColumn = getField(PasswordResetToken.class, "token").getAnnotation(Column.class);
+        Column tokenColumn = getField(PasswordResetToken.class, "tokenHash").getAnnotation(Column.class);
         assertNotNull(tokenColumn);
-        assertEquals("token", tokenColumn.name());
+        assertEquals("token_hash", tokenColumn.name());
         assertTrue(tokenColumn.unique());
     }
 

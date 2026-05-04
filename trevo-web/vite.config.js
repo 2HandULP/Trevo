@@ -11,6 +11,12 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
+    proxy: {
+      '/api': {
+        target: `http://localhost:${process.env.SERVER_PORT ?? 8080}`,
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     environment: 'jsdom',

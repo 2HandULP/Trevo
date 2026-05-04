@@ -3,9 +3,14 @@ package pt.trevo.trevo_api;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
+import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
+import pt.trevo.trevo_api.persistence.repository.ProductRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
+import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
+import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
 @SpringBootTest(properties = {
 	"spring.autoconfigure.exclude=" +
@@ -23,6 +28,21 @@ class TrevoApiApplicationTests {
 
 	@MockitoBean
 	private RefreshTokenRepository refreshTokenRepository;
+
+	@MockitoBean
+	private PasswordResetTokenRepository passwordResetTokenRepository;
+
+	@MockitoBean
+	private ReviewRepository reviewRepository;
+
+	@MockitoBean
+	private ProductRepository productRepository;
+
+	@MockitoBean
+	private VariantRepository variantRepository;
+
+	@MockitoBean
+	private CollectionRepository collectionRepository;
 
 	@Test
 	void contextLoads() {

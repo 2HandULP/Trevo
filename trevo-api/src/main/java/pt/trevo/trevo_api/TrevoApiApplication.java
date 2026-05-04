@@ -11,4 +11,3 @@ public class TrevoApiApplication {
 	}
 
 }
-//		CLOUDINARY_URL=cloudinary://<644264478193936>:<vt9ugvr8wc39x2KsnHnK_-jLOwI>@djdnk4fdy

@@ -5,15 +5,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -23,9 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 import pt.trevo.trevo_api.TrevoApiApplication;
 import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.User;
+import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
+import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
+import pt.trevo.trevo_api.persistence.repository.ProductRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
+import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
+import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
 @SpringBootTest(
     classes = TrevoApiApplication.class,
@@ -48,6 +54,21 @@ class JwtAuthenticationFilterIntegrationTest {
     @MockitoBean
     private RefreshTokenRepository refreshTokenRepository;
 
+    @MockitoBean
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @MockitoBean
+    private ReviewRepository reviewRepository;
+
+    @MockitoBean
+    private ProductRepository productRepository;
+
+    @MockitoBean
+    private VariantRepository variantRepository;
+
+    @MockitoBean
+    private CollectionRepository collectionRepository;
+
     @Autowired
     private WebApplicationContext context;
 
@@ -61,6 +82,11 @@ class JwtAuthenticationFilterIntegrationTest {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(context)
             .apply(springSecurity())
             .build();
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -90,7 +116,6 @@ class JwtAuthenticationFilterIntegrationTest {
             .andExpect(status().isUnauthorized());
     }
 
-    @TestConfiguration
     @RestController
     @RequestMapping("/api/test/protected")
     static class TestProtectedController {

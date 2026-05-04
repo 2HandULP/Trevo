@@ -1,6 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
-async function request(path, options = {}) {
+async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -14,15 +14,17 @@ async function request(path, options = {}) {
   }
 
   const contentType = response.headers.get("content-type") ?? "";
-  const payload = contentType.includes("application/json")
+  const body = contentType.includes("application/json")
     ? await response.json()
     : await response.text();
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(payload));
+    const error = new Error(getErrorMessage(body));
+    error.status = response.status;
+    throw error;
   }
 
-  return payload;
+  return body;
 }
 
 function getErrorMessage(payload) {
@@ -37,22 +39,51 @@ function getErrorMessage(payload) {
   return payload.detail ?? payload.message ?? payload.title ?? "Ocorreu um erro. Tenta novamente.";
 }
 
+export function registerBuyer(payload) {
+  return apiRequest("/api/auth/register/buyer", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function registerShopOwner(payload) {
+  return apiRequest("/api/auth/register/shop-owner", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function loginUser(payload) {
+  return apiRequest("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchUserProfile(accessToken) {
+  return apiRequest("/api/users/me", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
 export function requestPasswordReset(email) {
-  return request("/api/auth/password-reset/request", {
+  return apiRequest("/api/auth/password-reset/request", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
 }
 
 export function validatePasswordResetToken(token) {
-  return request("/api/auth/password-reset/validate", {
+  return apiRequest("/api/auth/password-reset/validate", {
     method: "POST",
     body: JSON.stringify({ token }),
   });
 }
 
 export function confirmPasswordReset(token, newPassword) {
-  return request("/api/auth/password-reset/confirm", {
+  return apiRequest("/api/auth/password-reset/confirm", {
     method: "POST",
     body: JSON.stringify({ token, newPassword }),
   });

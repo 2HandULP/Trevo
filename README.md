@@ -48,6 +48,11 @@ docker compose up
 #    Database:  localhost:5432
 ```
 
+If you change `POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_DB` after the
+database volume has already been created, Docker will keep the old database
+credentials. In that case, recreate the containers and volumes with
+`docker compose down -v` before running `docker compose up` again.
+
 ## Cloudinary Setup
 
 Trevo uses a shared Cloudinary project environment for image uploads. Each team

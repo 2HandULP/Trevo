@@ -38,7 +38,8 @@ import pt.trevo.trevo_api.persistence.entity.Variant;
 
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.jpa.properties.hibernate.format_sql=true"
+        "spring.jpa.properties.hibernate.format_sql=true",
+        "spring.flyway.enabled=false"
 })
 @Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -211,14 +212,14 @@ class RepositoryDataJpaTest {
 
         PasswordResetToken activeToken = new PasswordResetToken();
         activeToken.setUser(user);
-        activeToken.setToken("reset-active");
+        activeToken.setTokenHash("hash-active");
         activeToken.setExpiresAt(Instant.parse("2026-04-10T00:00:00Z"));
         activeToken.setUsed(false);
         activeToken.setCreatedAt(Instant.parse("2026-04-01T00:00:00Z"));
 
         PasswordResetToken usedToken = new PasswordResetToken();
         usedToken.setUser(user);
-        usedToken.setToken("reset-used");
+        usedToken.setTokenHash("hash-used");
         usedToken.setExpiresAt(Instant.parse("2026-04-11T00:00:00Z"));
         usedToken.setUsed(true);
         usedToken.setCreatedAt(Instant.parse("2026-04-02T00:00:00Z"));
@@ -226,8 +227,8 @@ class RepositoryDataJpaTest {
         passwordResetTokenRepository.save(activeToken);
         passwordResetTokenRepository.saveAndFlush(usedToken);
 
-        assertThat(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-active")).isPresent();
-        assertThat(passwordResetTokenRepository.findByTokenAndUsedFalse("reset-used")).isEmpty();
+        assertThat(passwordResetTokenRepository.findByTokenHashAndUsedFalse("hash-active")).isPresent();
+        assertThat(passwordResetTokenRepository.findByTokenHashAndUsedFalse("hash-used")).isEmpty();
     }
 
     private Order buildOrder(User buyer, Shop shop, Variant variant, Instant createdAt, OrderStatus status) {

@@ -2,7 +2,9 @@ package pt.trevo.trevo_api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -12,6 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import pt.trevo.trevo_api.auth.JwtAuthenticationFilter;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -30,8 +33,11 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/auth/sessions/invalidate").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/shop/**").hasRole("SHOP_OWNER")
+                .requestMatchers(HttpMethod.GET, "/api/shops/*").permitAll()
+                .requestMatchers("/api/shops/**").hasAnyRole("SHOP_OWNER", "ADMIN")
+                .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/buyer/**").hasRole("BUYER")
                 .anyRequest().authenticated()
             )

@@ -25,6 +25,7 @@ import pt.trevo.trevo_api.auth.JwtService;
 import pt.trevo.trevo_api.config.SecurityConfig;
 import pt.trevo.trevo_api.controller.UserController;
 import pt.trevo.trevo_api.dto.UpdateProfileRequest;
+import pt.trevo.trevo_api.dto.UserProfileResponse;
 import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.Status;
 import pt.trevo.trevo_api.persistence.entity.User;
@@ -77,8 +78,12 @@ class UserControllerIntegrationTest {
             .role(Role.BUYER)
             .status(Status.ACTIVE)
             .build();
+        UserProfileResponse profileResponse = new UserProfileResponse(
+            10L, "buyer@example.com", "Updated Buyer", "934567890", Role.BUYER, Status.ACTIVE, null, null
+        );
 
         when(userService.updateProfile(eq(10L), any(UpdateProfileRequest.class))).thenReturn(updatedUser);
+        when(userService.getCurrentUserProfile(10L)).thenReturn(profileResponse);
 
         mockMvc.perform(
             put("/api/users/me")

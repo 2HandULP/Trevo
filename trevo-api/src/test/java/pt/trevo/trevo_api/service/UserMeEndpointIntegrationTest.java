@@ -1,4 +1,4 @@
-package pt.trevo.trevo_api.user;
+package pt.trevo.trevo_api.service;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -34,7 +34,7 @@ import pt.trevo.trevo_api.persistence.repository.UserRepository;
     "spring.flyway.enabled=false"
 })
 @AutoConfigureMockMvc
-class UserControllerIntegrationTest {
+class UserMeEndpointIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

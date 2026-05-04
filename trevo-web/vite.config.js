@@ -18,4 +18,11 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    clearMocks: true,
+    exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**'],
+    setupFiles: './src/test/setup.js',
+  },
 })

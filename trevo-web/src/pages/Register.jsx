@@ -1,18 +1,23 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Register() {
   const { register } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    name: "",
+    fullName: "",
     email: "",
     password: "",
+    phone: "",
     type: "buyer",
+    shopName: "",
     nif: "",
   });
 
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleChange(e) {
     setForm({
@@ -21,26 +26,31 @@ export default function Register() {
     });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
-    // validação básica
-    if (!form.name || !form.email || !form.password) {
+    if (!form.fullName || !form.email || !form.password) {
       setError("Preenche todos os campos obrigatórios");
       return;
     }
 
-    if (form.type === "owner" && !form.nif) {
-      setError("NIF é obrigatório para Shop Owner");
+    if (form.type === "owner" && (!form.nif || !form.shopName)) {
+      setError("Shop name e NIF são obrigatórios para Shop Owner");
       return;
     }
 
-    setError("");
-
-    // chamada ao register (fake por agora)
-    register("token-registo-123");
-
-    console.log("Dados enviados:", form);
+    try {
+      setIsSubmitting(true);
+      await register(form);
+      setError("");
+      navigate("/login", {
+        state: { message: "Conta criada com sucesso. Podes agora fazer login." },
+      });
+    } catch (error) {
+      setError(error.response?.data?.message || "Não foi possível concluir o registo");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -53,9 +63,9 @@ export default function Register() {
         <div>
           <input
             type="text"
-            name="name"
+            name="fullName"
             placeholder="Nome"
-            value={form.name}
+            value={form.fullName}
             onChange={handleChange}
           />
         </div>
@@ -81,6 +91,16 @@ export default function Register() {
         </div>
 
         <div>
+          <input
+            type="text"
+            name="phone"
+            placeholder="Telefone (opcional)"
+            value={form.phone}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div>
           <label>Tipo:</label>
           <select name="type" value={form.type} onChange={handleChange}>
             <option value="buyer">Buyer</option>
@@ -90,18 +110,32 @@ export default function Register() {
 
         {/* NIF só aparece para owner */}
         {form.type === "owner" && (
-          <div>
-            <input
-              type="text"
-              name="nif"
-              placeholder="NIF"
-              value={form.nif}
-              onChange={handleChange}
-            />
-          </div>
+          <>
+            <div>
+              <input
+                type="text"
+                name="shopName"
+                placeholder="Nome da loja"
+                value={form.shopName}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div>
+              <input
+                type="text"
+                name="nif"
+                placeholder="NIF"
+                value={form.nif}
+                onChange={handleChange}
+              />
+            </div>
+          </>
         )}
 
-        <button type="submit">Registar</button>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "A registar..." : "Registar"}
+        </button>
       </form>
     </div>
   );

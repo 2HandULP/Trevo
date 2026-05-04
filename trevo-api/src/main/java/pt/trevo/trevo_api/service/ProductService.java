@@ -144,12 +144,13 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<Product> searchProducts(
+    public Page<Product> searchProducts(
         String q,
         BigDecimal minPrice,
         BigDecimal maxPrice,
         String size,
-        String color
+        String color,
+        Pageable pageable
     ) {
         Specification<Product> spec = ProductSpecification.activeOnly()
             .and(ProductSpecification.activeShopOnly());
@@ -167,7 +168,7 @@ public class ProductService {
             spec = spec.and(ProductSpecification.hasVariantMatching(size, color));
         }
 
-        return productRepository.findAll(spec);
+        return productRepository.findAll(spec, pageable);
     }
 
     @Transactional(readOnly = true)

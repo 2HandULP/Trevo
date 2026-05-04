@@ -77,7 +77,7 @@ class VariantServiceTest extends BaseUnitTest {
         when(variantRepository.existsByProductIdAndIdNotAndSizeIgnoreCaseAndColorIgnoreCase(productId, variantId, "S", "Red")).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-            variantService.updateVariant(ownerId, variantId, request)
+            variantService.updateVariant(ownerId, productId, variantId, request)
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);

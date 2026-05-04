@@ -131,96 +131,96 @@ class ProductSearchIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void searchByKeyword_matchesProductName() {
-        List<Product> results = productService.searchProducts("dress", null, null, null, null);
+        Page<Product> results = productService.searchProducts("dress", null, null, null, null, PageRequest.of(0, 50));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo(redDress.getId());
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getId()).isEqualTo(redDress.getId());
     }
 
     @Test
     void searchByKeyword_matchesProductDescription() {
-        List<Product> results = productService.searchProducts("elegant", null, null, null, null);
+        Page<Product> results = productService.searchProducts("elegant", null, null, null, null, PageRequest.of(0, 50));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo(redDress.getId());
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getId()).isEqualTo(redDress.getId());
     }
 
     @Test
     void searchByKeyword_isCaseInsensitive() {
-        List<Product> results = productService.searchProducts("BLUE", null, null, null, null);
+        Page<Product> results = productService.searchProducts("BLUE", null, null, null, null, PageRequest.of(0, 50));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo(blueJeans.getId());
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getId()).isEqualTo(blueJeans.getId());
     }
 
     @Test
     void searchWithMinPrice_excludesProductsBelowBound() {
-        List<Product> results = productService.searchProducts(null, new BigDecimal("35.00"), null, null, null);
+        Page<Product> results = productService.searchProducts(null, new BigDecimal("35.00"), null, null, null, PageRequest.of(0, 50));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo(redDress.getId());
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getId()).isEqualTo(redDress.getId());
     }
 
     @Test
     void searchWithMaxPrice_excludesProductsAboveBound() {
-        List<Product> results = productService.searchProducts(null, null, new BigDecimal("35.00"), null, null);
+        Page<Product> results = productService.searchProducts(null, null, new BigDecimal("35.00"), null, null, PageRequest.of(0, 50));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo(blueJeans.getId());
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getId()).isEqualTo(blueJeans.getId());
     }
 
     @Test
     void searchWithPriceRange_returnsProductsWithinBounds() {
-        List<Product> results = productService.searchProducts(null, new BigDecimal("25.00"), new BigDecimal("55.00"), null, null);
+        Page<Product> results = productService.searchProducts(null, new BigDecimal("25.00"), new BigDecimal("55.00"), null, null, PageRequest.of(0, 50));
 
-        assertThat(results).extracting(Product::getId)
+        assertThat(results.getContent()).extracting(Product::getId)
             .containsExactlyInAnyOrder(redDress.getId(), blueJeans.getId());
     }
 
     @Test
     void searchWithSize_narrowsResultsToMatchingVariants() {
-        List<Product> results = productService.searchProducts(null, null, null, "M", null);
+        Page<Product> results = productService.searchProducts(null, null, null, "M", null, PageRequest.of(0, 50));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo(redDress.getId());
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getId()).isEqualTo(redDress.getId());
     }
 
     @Test
     void searchWithColor_narrowsResultsToMatchingVariants() {
-        List<Product> results = productService.searchProducts(null, null, null, null, "Blue");
+        Page<Product> results = productService.searchProducts(null, null, null, null, "Blue", PageRequest.of(0, 50));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo(blueJeans.getId());
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getId()).isEqualTo(blueJeans.getId());
     }
 
     @Test
     void searchWithSizeAndColor_requiresBothToMatchSameVariant() {
-        List<Product> results = productService.searchProducts(null, null, null, "M", "Red");
+        Page<Product> results = productService.searchProducts(null, null, null, "M", "Red", PageRequest.of(0, 50));
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo(redDress.getId());
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getId()).isEqualTo(redDress.getId());
     }
 
     @Test
     void searchWithNoFilters_returnsOnlyActiveProductsFromActiveShops() {
-        List<Product> results = productService.searchProducts(null, null, null, null, null);
+        Page<Product> results = productService.searchProducts(null, null, null, null, null, PageRequest.of(0, 50));
 
-        assertThat(results).extracting(Product::getId)
+        assertThat(results.getContent()).extracting(Product::getId)
             .containsExactlyInAnyOrder(redDress.getId(), blueJeans.getId());
     }
 
     @Test
     void search_excludesArchivedProducts() {
-        List<Product> results = productService.searchProducts("shirt", null, null, null, null);
+        Page<Product> results = productService.searchProducts("shirt", null, null, null, null, PageRequest.of(0, 50));
 
-        assertThat(results).isEmpty();
+        assertThat(results.getContent()).isEmpty();
     }
 
     @Test
     void search_excludesProductsFromDeactivatedShops() {
-        List<Product> results = productService.searchProducts("coat", null, null, null, null);
+        Page<Product> results = productService.searchProducts("coat", null, null, null, null, PageRequest.of(0, 50));
 
-        assertThat(results).isEmpty();
+        assertThat(results.getContent()).isEmpty();
     }
 
     // ── PROD-B06: browse by shop ─────────────────────────────────────────────

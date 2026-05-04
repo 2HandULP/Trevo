@@ -57,15 +57,15 @@ public class ProductController {
     // ── Search (public) ──────────────────────────────────────────────────────
 
     @GetMapping("/search")
-    public List<ProductResponse> searchProducts(
+    public Page<ProductResponse> searchProducts(
         @RequestParam(required = false) String q,
         @RequestParam(required = false) BigDecimal minPrice,
         @RequestParam(required = false) BigDecimal maxPrice,
         @RequestParam(required = false) String size,
-        @RequestParam(required = false) String color
+        @RequestParam(required = false) String color,
+        Pageable pageable
     ) {
-        List<Product> products = productService.searchProducts(q, minPrice, maxPrice, size, color);
-        return toProductResponseList(products);
+        return toProductResponsePage(productService.searchProducts(q, minPrice, maxPrice, size, color, pageable));
     }
 
     // ── Browse (public) ──────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ public class ProductController {
         Authentication authentication
     ) {
         Long callerId = securityUtils.requireUserId(authentication);
-        Variant variant = variantService.updateVariant(callerId, variantId, request);
+        Variant variant = variantService.updateVariant(callerId, productId, variantId, request);
         return toVariantResponse(variant);
     }
 
@@ -183,7 +183,7 @@ public class ProductController {
         Authentication authentication
     ) {
         Long callerId = securityUtils.requireUserId(authentication);
-        variantService.removeVariant(callerId, variantId);
+        variantService.removeVariant(callerId, productId, variantId);
     }
 
     @PatchMapping("/{productId}/variants/{variantId}/stock")
@@ -219,16 +219,6 @@ public class ProductController {
             .stream()
             .collect(Collectors.groupingBy(v -> v.getProduct().getId()));
         return products.map(p -> toProductResponse(p, variantsByProductId.getOrDefault(p.getId(), List.of())));
-    }
-
-    private List<ProductResponse> toProductResponseList(List<Product> products) {
-        List<Long> ids = products.stream().map(Product::getId).toList();
-        Map<Long, List<Variant>> variantsByProductId = variantService.findByProductIds(ids)
-            .stream()
-            .collect(Collectors.groupingBy(v -> v.getProduct().getId()));
-        return products.stream()
-            .map(p -> toProductResponse(p, variantsByProductId.getOrDefault(p.getId(), List.of())))
-            .toList();
     }
 
     private ProductResponse toProductResponse(Product product, List<Variant> variants) {

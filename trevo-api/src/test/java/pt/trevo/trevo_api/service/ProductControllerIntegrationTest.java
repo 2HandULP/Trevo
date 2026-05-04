@@ -80,25 +80,26 @@ class ProductControllerIntegrationTest {
         Product product = activeProduct(1L, 10L, "Red Dress", "50.00");
         Variant variant = variant(1L, product, "M", "Red", 5);
 
-        when(productService.searchProducts(eq("dress"), any(), any(), any(), any()))
-            .thenReturn(List.of(product));
+        when(productService.searchProducts(eq("dress"), any(), any(), any(), any(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(product)));
         when(variantService.findByProductIds(any())).thenReturn(List.of(variant));
 
         mockMvc.perform(get("/api/products/search").param("q", "dress"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value(1))
-            .andExpect(jsonPath("$[0].shopId").value(10))
-            .andExpect(jsonPath("$[0].name").value("Red Dress"))
-            .andExpect(jsonPath("$[0].price").value(50.00))
-            .andExpect(jsonPath("$[0].status").value("ACTIVE"))
-            .andExpect(jsonPath("$[0].variants[0].size").value("M"))
-            .andExpect(jsonPath("$[0].variants[0].color").value("Red"))
-            .andExpect(jsonPath("$[0].variants[0].stock").value(5));
+            .andExpect(jsonPath("$.content[0].id").value(1))
+            .andExpect(jsonPath("$.content[0].shopId").value(10))
+            .andExpect(jsonPath("$.content[0].name").value("Red Dress"))
+            .andExpect(jsonPath("$.content[0].price").value(50.00))
+            .andExpect(jsonPath("$.content[0].status").value("ACTIVE"))
+            .andExpect(jsonPath("$.content[0].variants[0].size").value("M"))
+            .andExpect(jsonPath("$.content[0].variants[0].color").value("Red"))
+            .andExpect(jsonPath("$.content[0].variants[0].stock").value(5));
     }
 
     @Test
     void searchProducts_isAccessibleWithoutAuthentication() throws Exception {
-        when(productService.searchProducts(any(), any(), any(), any(), any())).thenReturn(List.of());
+        when(productService.searchProducts(any(), any(), any(), any(), any(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of()));
         when(variantService.findByProductIds(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/products/search"))
@@ -107,8 +108,8 @@ class ProductControllerIntegrationTest {
 
     @Test
     void searchProducts_withAllFilters_passesThemToService() throws Exception {
-        when(productService.searchProducts(eq("shirt"), eq(new BigDecimal("10.00")), eq(new BigDecimal("50.00")), eq("M"), eq("White")))
-            .thenReturn(List.of());
+        when(productService.searchProducts(eq("shirt"), eq(new BigDecimal("10.00")), eq(new BigDecimal("50.00")), eq("M"), eq("White"), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of()));
         when(variantService.findByProductIds(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/products/search")
@@ -119,7 +120,7 @@ class ProductControllerIntegrationTest {
                 .param("color", "White"))
             .andExpect(status().isOk());
 
-        verify(productService).searchProducts("shirt", new BigDecimal("10.00"), new BigDecimal("50.00"), "M", "White");
+        verify(productService).searchProducts(eq("shirt"), eq(new BigDecimal("10.00")), eq(new BigDecimal("50.00")), eq("M"), eq("White"), any(Pageable.class));
     }
 
     // ── Browse ───────────────────────────────────────────────────────────────
@@ -410,7 +411,7 @@ class ProductControllerIntegrationTest {
         Product product = activeProduct(3L, 10L, "Dress", "50.00");
         Variant updated = variant(7L, product, "M", "Black", 5);
 
-        when(variantService.updateVariant(eq(11L), eq(7L), any(UpsertVariantRequest.class))).thenReturn(updated);
+        when(variantService.updateVariant(eq(11L), eq(3L), eq(7L), any(UpsertVariantRequest.class))).thenReturn(updated);
 
         mockMvc.perform(put("/api/products/3/variants/7")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -428,7 +429,7 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(delete("/api/products/3/variants/7"))
             .andExpect(status().isNoContent());
 
-        verify(variantService).removeVariant(11L, 7L);
+        verify(variantService).removeVariant(11L, 3L, 7L);
     }
 
     // ── Update stock ─────────────────────────────────────────────────────────

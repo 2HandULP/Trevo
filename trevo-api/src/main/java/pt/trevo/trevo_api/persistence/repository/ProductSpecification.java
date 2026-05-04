@@ -34,10 +34,14 @@ public final class ProductSpecification {
 
     public static Specification<Product> keywordMatches(String keyword) {
         return (root, query, cb) -> {
-            String pattern = "%" + keyword.toLowerCase() + "%";
+            String escaped = keyword.toLowerCase()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+            String pattern = "%" + escaped + "%";
             return cb.or(
-                cb.like(cb.lower(root.get("name")), pattern),
-                cb.like(cb.lower(root.get("description")), pattern)
+                cb.like(cb.lower(root.get("name")), pattern, '\\'),
+                cb.like(cb.lower(root.get("description")), pattern, '\\')
             );
         };
     }

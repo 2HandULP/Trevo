@@ -16,7 +16,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.Type;
 
 @Entity
 @Table(name = "subscriptions")
@@ -34,7 +33,6 @@ public class Subscription {
     private User buyer;
 
     @Enumerated(EnumType.STRING)
-    @Type(PostgreSQLEnumType.class)
     @Column(nullable = false)
     private SubscriptionStatus status;
 

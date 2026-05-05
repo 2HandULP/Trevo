@@ -1,27 +1,72 @@
 package pt.trevo.trevo_api.service;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashSet;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.dto.CreateProductRequest;
 import pt.trevo.trevo_api.dto.UpdateProductRequest;
 import pt.trevo.trevo_api.persistence.entity.Collection;
 import pt.trevo.trevo_api.persistence.entity.Product;
 import pt.trevo.trevo_api.persistence.entity.ProductStatus;
+import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductRepository;
+import pt.trevo.trevo_api.persistence.repository.ProductSpecification;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 
 @Service
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final CollectionRepository collectionRepository;
+    private final ShopRepository shopRepository;
 
-    public ProductService(ProductRepository productRepository, CollectionRepository collectionRepository) {
+    public ProductService(
+        ProductRepository productRepository,
+        CollectionRepository collectionRepository,
+        ShopRepository shopRepository
+    ) {
         this.productRepository = productRepository;
         this.collectionRepository = collectionRepository;
+        this.shopRepository = shopRepository;
+    }
+
+    @Transactional
+    public Product createProduct(Long callerId, CreateProductRequest request) {
+        if (callerId == null || request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid create product request");
+        }
+
+        Shop shop = shopRepository.findByOwnerId(callerId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found for this owner"));
+
+        Product product = Product.builder()
+            .shop(shop)
+            .name(request.name())
+            .description(request.description())
+            .price(request.price())
+            .brand(request.brand())
+            .materials(request.materials())
+            .status(ProductStatus.ACTIVE)
+            .build();
+
+        return productRepository.save(product);
+    }
+
+    @Transactional(readOnly = true)
+    public Product findProductById(Long productId) {
+        if (productId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid product id");
+        }
+        return productRepository.findById(productId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     }
 
     @Transactional
@@ -96,6 +141,56 @@ public class ProductService {
 
         product.setCollections(new LinkedHashSet<>(collections));
         return productRepository.save(product);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Product> searchProducts(
+        String q,
+        BigDecimal minPrice,
+        BigDecimal maxPrice,
+        String size,
+        String color,
+        Pageable pageable
+    ) {
+        Specification<Product> spec = ProductSpecification.activeOnly()
+            .and(ProductSpecification.activeShopOnly());
+
+        if (q != null && !q.isBlank()) {
+            spec = spec.and(ProductSpecification.keywordMatches(q));
+        }
+        if (minPrice != null) {
+            spec = spec.and(ProductSpecification.minPrice(minPrice));
+        }
+        if (maxPrice != null) {
+            spec = spec.and(ProductSpecification.maxPrice(maxPrice));
+        }
+        if ((size != null && !size.isBlank()) || (color != null && !color.isBlank())) {
+            spec = spec.and(ProductSpecification.hasVariantMatching(size, color));
+        }
+
+        return productRepository.findAll(spec, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Product> findActiveByShop(Long shopId, Pageable pageable) {
+        if (shopId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid shop id");
+        }
+        Specification<Product> spec = ProductSpecification.activeOnly()
+            .and(ProductSpecification.activeShopOnly())
+            .and(ProductSpecification.belongsToShop(shopId));
+        return productRepository.findAll(spec, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Product> findActiveByCollection(Long collectionId, Pageable pageable) {
+        if (collectionId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid collection id");
+        }
+        Specification<Product> spec = ProductSpecification.activeOnly()
+            .and(ProductSpecification.activeShopOnly())
+            .and(ProductSpecification.belongsToCollection(collectionId));
+        return productRepository.findAll(spec, pageable);
     }
 
     private Product findManagedProduct(Long productId) {

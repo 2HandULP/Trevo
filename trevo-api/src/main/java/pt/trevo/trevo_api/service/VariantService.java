@@ -1,5 +1,6 @@
 package pt.trevo.trevo_api.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -49,14 +50,15 @@ public class VariantService {
     }
 
     @Transactional
-    public Variant updateVariant(Long callerId, Long variantId, UpsertVariantRequest request) {
-        if (callerId == null || variantId == null || request == null) {
+    public Variant updateVariant(Long callerId, Long productId, Long variantId, UpsertVariantRequest request) {
+        if (callerId == null || productId == null || variantId == null || request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid update variant request");
         }
         validateStock(request.stock());
 
         Variant variant = findManagedVariant(variantId);
         ensureOwner(variant.getProduct(), callerId);
+        ensureVariantBelongsToProduct(variant, productId);
         String effectiveSize = request.size() != null ? request.size() : variant.getSize();
         String effectiveColor = request.color() != null ? request.color() : variant.getColor();
         validateAttributes(effectiveSize, effectiveColor);
@@ -74,13 +76,14 @@ public class VariantService {
     }
 
     @Transactional
-    public void removeVariant(Long callerId, Long variantId) {
-        if (callerId == null || variantId == null) {
+    public void removeVariant(Long callerId, Long productId, Long variantId) {
+        if (callerId == null || productId == null || variantId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid remove variant request");
         }
 
         Variant variant = findManagedVariant(variantId);
         ensureOwner(variant.getProduct(), callerId);
+        ensureVariantBelongsToProduct(variant, productId);
         variantRepository.delete(variant);
     }
 
@@ -137,6 +140,17 @@ public class VariantService {
         return variantRepository.saveAll(variants);
     }
 
+    @Transactional(readOnly = true)
+    public List<Variant> findByProductId(Long productId) {
+        return variantRepository.findByProductId(productId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Variant> findByProductIds(Collection<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) return List.of();
+        return variantRepository.findByProductIdIn(productIds);
+    }
+
     private Product findManagedProduct(Long productId) {
         return productRepository.findById(productId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
@@ -150,6 +164,12 @@ public class VariantService {
     private void ensureOwner(Product product, Long callerId) {
         if (product.getShop() == null || product.getShop().getOwner() == null || !callerId.equals(product.getShop().getOwner().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owner can manage variants");
+        }
+    }
+
+    private void ensureVariantBelongsToProduct(Variant variant, Long productId) {
+        if (!productId.equals(variant.getProduct().getId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Variant not found for this product");
         }
     }
 

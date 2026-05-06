@@ -148,7 +148,7 @@ public class CartService {
     }
 
     private Cart findOrCreateCart(Long buyerId) {
-        return cartRepository.findByBuyerId(buyerId).orElseGet(() -> {
+        return cartRepository.findByBuyerIdWithItems(buyerId).orElseGet(() -> {
             User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Buyer not found"));
             Cart cart = new Cart();
@@ -158,7 +158,7 @@ public class CartService {
     }
 
     private Cart findCart(Long buyerId) {
-        return cartRepository.findByBuyerId(buyerId)
+        return cartRepository.findByBuyerIdWithItems(buyerId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart not found"));
     }
 

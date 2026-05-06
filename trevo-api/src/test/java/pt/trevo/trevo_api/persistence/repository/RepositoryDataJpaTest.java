@@ -94,7 +94,7 @@ class RepositoryDataJpaTest {
         Cart savedCart = cartRepository.saveAndFlush(cart);
 
         assertThat(savedCart.getId()).isNotNull();
-        assertThat(cartRepository.findByBuyerId(buyer.getId()))
+        assertThat(cartRepository.findByBuyerIdWithItems(buyer.getId()))
                 .isPresent()
                 .get()
                 .extracting(Cart::getId)

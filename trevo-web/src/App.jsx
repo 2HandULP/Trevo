@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import ShopDashboard from "./pages/ShopDashboard";
 import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -23,6 +24,10 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
+        <Route path="/shop/dashboard" element={<ShopDashboard />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>

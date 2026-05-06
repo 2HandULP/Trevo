@@ -3,6 +3,7 @@ package pt.trevo.trevo_api.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.entity.Variant;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
+import pt.trevo.trevo_api.persistence.repository.ProductImageRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
@@ -31,15 +33,18 @@ public class CartService {
     private final CartRepository cartRepository;
     private final VariantRepository variantRepository;
     private final UserRepository userRepository;
+    private final ProductImageRepository productImageRepository;
 
     public CartService(
         CartRepository cartRepository,
         VariantRepository variantRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        ProductImageRepository productImageRepository
     ) {
         this.cartRepository = cartRepository;
         this.variantRepository = variantRepository;
         this.userRepository = userRepository;
+        this.productImageRepository = productImageRepository;
     }
 
     @Transactional
@@ -73,11 +78,12 @@ public class CartService {
             throw badRequest("Invalid cart request");
         }
 
-        Cart cart = cartRepository.findByBuyerId(buyerId).orElse(null);
+        Cart cart = cartRepository.findByBuyerIdWithItems(buyerId).orElse(null);
         if (cart == null) {
             return new CartResponse(List.of(), BigDecimal.ZERO);
         }
 
+        Map<Long, String> primaryImages = loadPrimaryImages(cart);
         Map<Long, ShopGroupAccumulator> groups = new LinkedHashMap<>();
         for (CartItem item : cart.getItems()) {
             Variant variant = item.getVariant();
@@ -96,7 +102,7 @@ public class CartService {
                 variant.getId(),
                 product.getId(),
                 product.getName(),
-                primaryImage(product),
+                primaryImages.get(product.getId()),
                 variant.getSize(),
                 variant.getColor(),
                 item.getQuantity(),
@@ -138,7 +144,6 @@ public class CartService {
         Cart cart = findCart(buyerId);
         CartItem item = findExistingItem(cart, variantId);
         cart.getItems().remove(item);
-        item.setCart(null);
         cartRepository.save(cart);
     }
 
@@ -177,14 +182,35 @@ public class CartService {
             .orElse(null);
     }
 
-    private String primaryImage(Product product) {
-        return product.getImages().stream()
-            .min(Comparator.comparing(
-                ProductImage::getDisplayOrder,
-                Comparator.nullsLast(Integer::compareTo)
-            ))
-            .map(ProductImage::getImageUrl)
-            .orElse(null);
+    private Map<Long, String> loadPrimaryImages(Cart cart) {
+        List<Long> productIds = cart.getItems().stream()
+            .map(CartItem::getVariant)
+            .filter(Objects::nonNull)
+            .map(Variant::getProduct)
+            .filter(Objects::nonNull)
+            .map(Product::getId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+        if (productIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Comparator<ProductImage> imageOrder = Comparator
+            .comparing(ProductImage::getDisplayOrder, Comparator.nullsLast(Integer::compareTo))
+            .thenComparing(ProductImage::getId, Comparator.nullsLast(Long::compareTo));
+        Map<Long, ProductImage> primaryImages = new HashMap<>();
+        for (ProductImage image : productImageRepository.findByProductIdIn(productIds)) {
+            Long productId = image.getProduct().getId();
+            ProductImage current = primaryImages.get(productId);
+            if (current == null || imageOrder.compare(image, current) < 0) {
+                primaryImages.put(productId, image);
+            }
+        }
+
+        Map<Long, String> imageUrls = new HashMap<>();
+        primaryImages.forEach((productId, image) -> imageUrls.put(productId, image.getImageUrl()));
+        return imageUrls;
     }
 
     private void validateCartItemRequest(Long buyerId, Long variantId, Integer quantity, String reason) {

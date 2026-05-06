@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import pt.trevo.trevo_api.BaseUnitTest;
+import pt.trevo.trevo_api.dto.CreateProductRequest;
 import pt.trevo.trevo_api.dto.UpdateProductRequest;
 import pt.trevo.trevo_api.persistence.entity.Product;
 import pt.trevo.trevo_api.persistence.entity.ProductStatus;
@@ -19,6 +20,7 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductRepository;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 
 class ProductServiceTest extends BaseUnitTest {
 
@@ -28,8 +30,34 @@ class ProductServiceTest extends BaseUnitTest {
     @Mock
     private CollectionRepository collectionRepository;
 
+    @Mock
+    private ShopRepository shopRepository;
+
     @InjectMocks
     private ProductService productService;
+
+    @Test
+    void createProductStartsWithEmptyImageList() {
+        Long ownerId = 11L;
+        Shop shop = Shop.builder().id(3L).owner(User.builder().id(ownerId).build()).build();
+        CreateProductRequest request = new CreateProductRequest(
+            "Linen Shirt",
+            "Lightweight shirt",
+            new BigDecimal("39.99"),
+            "Trevo",
+            "Linen"
+        );
+
+        when(shopRepository.findByOwnerId(ownerId)).thenReturn(Optional.of(shop));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Product created = productService.createProduct(ownerId, request);
+
+        assertThat(created.getShop()).isSameAs(shop);
+        assertThat(created.getStatus()).isEqualTo(ProductStatus.ACTIVE);
+        assertThat(created.getImages()).isEmpty();
+        verify(productRepository).save(created);
+    }
 
     @Test
     void updateModifiesTheCorrectFields() {

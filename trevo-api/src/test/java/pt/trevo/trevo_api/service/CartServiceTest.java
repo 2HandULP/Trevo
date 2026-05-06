@@ -26,6 +26,7 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.entity.Variant;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
+import pt.trevo.trevo_api.persistence.repository.ProductImageRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
@@ -39,6 +40,9 @@ class CartServiceTest extends BaseUnitTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private ProductImageRepository productImageRepository;
 
     @InjectMocks
     private CartService cartService;
@@ -103,7 +107,8 @@ class CartServiceTest extends BaseUnitTest {
             item(3L, variant(103L, product(203L, south, "Wool Scarf", "12.00", "scarf.jpg"), "S", "Green", 6), 1)
         );
 
-        when(cartRepository.findByBuyerId(buyerId)).thenReturn(Optional.of(cart));
+        when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(productImageRepository.findByProductIdIn(List.of(201L, 202L, 203L))).thenReturn(productImages(cart));
 
         CartResponse response = cartService.getCart(buyerId);
 
@@ -125,7 +130,8 @@ class CartServiceTest extends BaseUnitTest {
             item(2L, variant(102L, product(202L, south, "Wool Scarf", "12.00", "scarf.jpg"), "S", "Green", 6), 3)
         );
 
-        when(cartRepository.findByBuyerId(buyerId)).thenReturn(Optional.of(cart));
+        when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(productImageRepository.findByProductIdIn(List.of(201L, 202L))).thenReturn(productImages(cart));
 
         CartResponse response = cartService.getCart(buyerId);
 
@@ -142,7 +148,8 @@ class CartServiceTest extends BaseUnitTest {
             item(1L, variant(101L, product(201L, shop(301L, "North Shop"), "Linen Shirt", "29.99", "shirt.jpg"), "M", "Blue", 2), 1)
         );
 
-        when(cartRepository.findByBuyerId(buyerId)).thenReturn(Optional.of(cart));
+        when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(productImageRepository.findByProductIdIn(List.of(201L))).thenReturn(productImages(cart));
 
         CartResponse response = cartService.getCart(buyerId);
 
@@ -217,6 +224,12 @@ class CartServiceTest extends BaseUnitTest {
         item.setVariant(variant);
         item.setQuantity(quantity);
         return item;
+    }
+
+    private List<ProductImage> productImages(Cart cart) {
+        return cart.getItems().stream()
+            .flatMap(item -> item.getVariant().getProduct().getImages().stream())
+            .toList();
     }
 
     private Variant variant(Long id, Product product, String size, String color, Integer stock) {

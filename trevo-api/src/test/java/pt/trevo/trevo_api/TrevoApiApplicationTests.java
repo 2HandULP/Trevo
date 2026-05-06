@@ -3,8 +3,10 @@ package pt.trevo.trevo_api;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import pt.trevo.trevo_api.persistence.repository.CartRepository;
 import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
 import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
+import pt.trevo.trevo_api.persistence.repository.ProductImageRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
@@ -27,6 +29,9 @@ class TrevoApiApplicationTests {
 	private ShopRepository shopRepository;
 
 	@MockitoBean
+	private CartRepository cartRepository;
+
+	@MockitoBean
 	private RefreshTokenRepository refreshTokenRepository;
 
 	@MockitoBean
@@ -37,6 +42,9 @@ class TrevoApiApplicationTests {
 
 	@MockitoBean
 	private ProductRepository productRepository;
+
+	@MockitoBean
+	private ProductImageRepository productImageRepository;
 
 	@MockitoBean
 	private VariantRepository variantRepository;

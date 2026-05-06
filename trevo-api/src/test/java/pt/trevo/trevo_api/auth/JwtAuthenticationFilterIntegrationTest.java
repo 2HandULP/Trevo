@@ -24,15 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pt.trevo.trevo_api.TrevoApiApplication;
 import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.User;
-import pt.trevo.trevo_api.persistence.repository.CartRepository;
-import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
-import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
-import pt.trevo.trevo_api.persistence.repository.ProductRepository;
-import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
-import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
-import pt.trevo.trevo_api.persistence.repository.ShopRepository;
-import pt.trevo.trevo_api.persistence.repository.UserRepository;
-import pt.trevo.trevo_api.persistence.repository.VariantRepository;
+import pt.trevo.trevo_api.persistence.repository.*;
 
 @SpringBootTest(
     classes = TrevoApiApplication.class,
@@ -48,6 +40,9 @@ class JwtAuthenticationFilterIntegrationTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @MockitoBean
+    private ProductImageRepository productImageRepository;
 
     @MockitoBean
     private ShopRepository shopRepository;

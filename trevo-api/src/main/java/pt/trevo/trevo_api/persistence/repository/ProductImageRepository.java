@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pt.trevo.trevo_api.persistence.entity.ProductImage;
 
+
 public interface ProductImageRepository extends JpaRepository<ProductImage, Long> {
 
     @Query("""

@@ -3,6 +3,7 @@ package pt.trevo.trevo_api.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,6 +27,7 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.entity.Variant;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
+import pt.trevo.trevo_api.persistence.repository.ProductImageRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
@@ -39,6 +41,9 @@ class CartServiceTest extends BaseUnitTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private ProductImageRepository productImageRepository;
 
     @InjectMocks
     private CartService cartService;
@@ -67,7 +72,7 @@ class CartServiceTest extends BaseUnitTest {
         when(variantRepository.findById(101L)).thenReturn(Optional.of(variant));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-            cartService.addItem(10L, 101L, 4)
+                cartService.addItem(10L, 101L, 4)
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -97,13 +102,14 @@ class CartServiceTest extends BaseUnitTest {
         Shop north = shop(301L, "North Shop");
         Shop south = shop(302L, "South Shop");
         Cart cart = cart(
-            buyerId,
-            item(1L, variant(101L, product(201L, north, "Linen Shirt", "29.99", "shirt.jpg"), "M", "Blue", 2), 1),
-            item(2L, variant(102L, product(202L, north, "Cotton Hat", "19.50", "hat.jpg"), "One Size", "Black", 4), 2),
-            item(3L, variant(103L, product(203L, south, "Wool Scarf", "12.00", "scarf.jpg"), "S", "Green", 6), 1)
+                buyerId,
+                item(1L, variant(101L, product(201L, north, "Linen Shirt", "29.99", "shirt.jpg"), "M", "Blue", 2), 1),
+                item(2L, variant(102L, product(202L, north, "Cotton Hat", "19.50", "hat.jpg"), "One Size", "Black", 4), 2),
+                item(3L, variant(103L, product(203L, south, "Wool Scarf", "12.00", "scarf.jpg"), "S", "Green", 6), 1)
         );
 
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(productImageRepository.findByProductIdIn(anyList())).thenReturn(List.of());
 
         CartResponse response = cartService.getCart(buyerId);
 
@@ -120,12 +126,13 @@ class CartServiceTest extends BaseUnitTest {
         Shop north = shop(301L, "North Shop");
         Shop south = shop(302L, "South Shop");
         Cart cart = cart(
-            buyerId,
-            item(1L, variant(101L, product(201L, north, "Linen Shirt", "29.99", "shirt.jpg"), "M", "Blue", 2), 2),
-            item(2L, variant(102L, product(202L, south, "Wool Scarf", "12.00", "scarf.jpg"), "S", "Green", 6), 3)
+                buyerId,
+                item(1L, variant(101L, product(201L, north, "Linen Shirt", "29.99", "shirt.jpg"), "M", "Blue", 2), 2),
+                item(2L, variant(102L, product(202L, south, "Wool Scarf", "12.00", "scarf.jpg"), "S", "Green", 6), 3)
         );
 
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(productImageRepository.findByProductIdIn(anyList())).thenReturn(List.of());
 
         CartResponse response = cartService.getCart(buyerId);
 
@@ -137,18 +144,25 @@ class CartServiceTest extends BaseUnitTest {
     @Test
     void getCartItemsIncludeFullVariantDetails() {
         Long buyerId = 10L;
+        Product product = product(201L, shop(301L, "North Shop"), "Linen Shirt", "29.99", "shirt.jpg");
         Cart cart = cart(
-            buyerId,
-            item(1L, variant(101L, product(201L, shop(301L, "North Shop"), "Linen Shirt", "29.99", "shirt.jpg"), "M", "Blue", 2), 1)
+                buyerId,
+                item(1L, variant(101L, product, "M", "Blue", 2), 1)
         );
 
+        ProductImage image = new ProductImage();
+        image.setProduct(product);
+        image.setImageUrl("shirt.jpg");
+        image.setDisplayOrder(0);
+
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(productImageRepository.findByProductIdIn(anyList())).thenReturn(List.of(image));
 
         CartResponse response = cartService.getCart(buyerId);
 
         assertThat(response.shops().getFirst().items().getFirst())
-            .extracting("size", "color", "productName", "image")
-            .containsExactly("M", "Blue", "Linen Shirt", "shirt.jpg");
+                .extracting("size", "color", "productName", "image")
+                .containsExactly("M", "Blue", "Linen Shirt", "shirt.jpg");
     }
 
     @Test
@@ -160,7 +174,7 @@ class CartServiceTest extends BaseUnitTest {
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-            cartService.updateQuantity(buyerId, 101L, 4)
+                cartService.updateQuantity(buyerId, 101L, 4)
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -187,8 +201,8 @@ class CartServiceTest extends BaseUnitTest {
     void removeItemRemovesLastShopGroupFromCartResponse() {
         Long buyerId = 10L;
         Cart cart = cart(
-            buyerId,
-            item(1L, variant(101L, product(201L, shop(301L, "North Shop"), "Linen Shirt", "29.99", "shirt.jpg"), "M", "Blue", 3), 1)
+                buyerId,
+                item(1L, variant(101L, product(201L, shop(301L, "North Shop"), "Linen Shirt", "29.99", "shirt.jpg"), "M", "Blue", 3), 1)
         );
 
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
@@ -221,25 +235,25 @@ class CartServiceTest extends BaseUnitTest {
 
     private Variant variant(Long id, Product product, String size, String color, Integer stock) {
         return Variant.builder()
-            .id(id)
-            .product(product)
-            .size(size)
-            .color(color)
-            .stock(stock)
-            .build();
+                .id(id)
+                .product(product)
+                .size(size)
+                .color(color)
+                .stock(stock)
+                .build();
     }
 
     private Product product(Long id, Shop shop, String name, String price, String imageUrl) {
         Product product = Product.builder()
-            .id(id)
-            .shop(shop)
-            .name(name)
-            .description(name + " description")
-            .price(new BigDecimal(price))
-            .brand("Trevo")
-            .materials("Cotton")
-            .status(ProductStatus.ACTIVE)
-            .build();
+                .id(id)
+                .shop(shop)
+                .name(name)
+                .description(name + " description")
+                .price(new BigDecimal(price))
+                .brand("Trevo")
+                .materials("Cotton")
+                .status(ProductStatus.ACTIVE)
+                .build();
         ProductImage image = new ProductImage();
         image.setProduct(product);
         image.setImageUrl(imageUrl);

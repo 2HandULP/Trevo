@@ -33,6 +33,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/health").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
                 .requestMatchers("/api/auth/sessions/invalidate").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/shops/*").permitAll()

@@ -56,6 +56,7 @@ class EntityMappingReflectionTest extends BaseUnitTest {
         assertIdField(CartItem.class, "id");
         assertManyToOneJoinColumn(CartItem.class, "cart", "cart_id");
         assertManyToOneJoinColumn(CartItem.class, "variant", "variant_id");
+        assertNonNullableColumn(CartItem.class, "quantity");
         assertCheckConstraint(CartItem.class, "quantity > 0");
     }
 
@@ -234,6 +235,12 @@ class EntityMappingReflectionTest extends BaseUnitTest {
         Column column = getField(type, fieldName).getAnnotation(Column.class);
         assertNotNull(column);
         assertEquals(expectedColumnName, column.name());
+    }
+
+    private void assertNonNullableColumn(Class<?> type, String fieldName) {
+        Column column = getField(type, fieldName).getAnnotation(Column.class);
+        assertNotNull(column);
+        assertFalse(column.nullable());
     }
 
     private void assertDatabaseManagedColumn(Class<?> type, String fieldName, String expectedColumnName) {

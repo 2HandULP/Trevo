@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { uploadImage } from "../services/imageUploadService";
 import { createShop } from "../services/shopService";
 
 const initialForm = {
@@ -7,8 +8,23 @@ const initialForm = {
   nif: "",
 };
 
+const initialImages = {
+  logo: {
+    file: null,
+    previewUrl: "",
+    progress: 0,
+  },
+  banner: {
+    file: null,
+    previewUrl: "",
+    progress: 0,
+  },
+};
+
 export default function CreateShop() {
   const [form, setForm] = useState(initialForm);
+  const [images, setImages] = useState(initialImages);
+  const [imageInputResetKey, setImageInputResetKey] = useState(0);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,6 +34,63 @@ export default function CreateShop() {
       ...prev,
       [event.target.name]: event.target.value,
     }));
+  }
+
+  function handleImageChange(event) {
+    const { name, files } = event.target;
+    const file = files?.[0] || null;
+
+    setImages((prev) => {
+      if (prev[name].previewUrl) {
+        URL.revokeObjectURL(prev[name].previewUrl);
+      }
+
+      return {
+        ...prev,
+        [name]: {
+          file,
+          previewUrl: file ? URL.createObjectURL(file) : "",
+          progress: 0,
+        },
+      };
+    });
+  }
+
+  function clearImages() {
+    Object.values(images).forEach((image) => {
+      if (image.previewUrl) {
+        URL.revokeObjectURL(image.previewUrl);
+      }
+    });
+
+    setImages(initialImages);
+    setImageInputResetKey((key) => key + 1);
+  }
+
+  async function uploadSelectedImage(fieldName) {
+    const selectedImage = images[fieldName];
+
+    if (!selectedImage.file) {
+      return undefined;
+    }
+
+    setImages((prev) => ({
+      ...prev,
+      [fieldName]: {
+        ...prev[fieldName],
+        progress: 1,
+      },
+    }));
+
+    return uploadImage(selectedImage.file, (progress) => {
+      setImages((prev) => ({
+        ...prev,
+        [fieldName]: {
+          ...prev[fieldName],
+          progress,
+        },
+      }));
+    });
   }
 
   async function handleSubmit(event) {
@@ -43,9 +116,19 @@ export default function CreateShop() {
 
     try {
       setIsSubmitting(true);
-      await createShop(payload);
+      const [logoUrl, bannerUrl] = await Promise.all([
+        uploadSelectedImage("logo"),
+        uploadSelectedImage("banner"),
+      ]);
+
+      await createShop({
+        ...payload,
+        ...(logoUrl ? { logoUrl } : {}),
+        ...(bannerUrl ? { bannerUrl } : {}),
+      });
       setSuccess("Loja criada com sucesso");
       setForm(initialForm);
+      clearImages();
     } catch (submitError) {
       setError(
         submitError.response?.data?.message ||
@@ -108,7 +191,53 @@ export default function CreateShop() {
           />
         </div>
 
-        {/* TODO: implementar upload de logo/banner quando o backend suportar ficheiros. */}
+        <div>
+          <label htmlFor="shop-logo">Logo</label>
+          <input
+            key={`logo-${imageInputResetKey}`}
+            id="shop-logo"
+            type="file"
+            name="logo"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={handleImageChange}
+          />
+          {images.logo.previewUrl && (
+            <div>
+              <img src={images.logo.previewUrl} alt="Pré-visualização do logo" />
+              {images.logo.progress > 0 && (
+                <progress
+                  aria-label="Progresso do upload do logo"
+                  max="100"
+                  value={images.logo.progress}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="shop-banner">Banner</label>
+          <input
+            key={`banner-${imageInputResetKey}`}
+            id="shop-banner"
+            type="file"
+            name="banner"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={handleImageChange}
+          />
+          {images.banner.previewUrl && (
+            <div>
+              <img src={images.banner.previewUrl} alt="Pré-visualização do banner" />
+              {images.banner.progress > 0 && (
+                <progress
+                  aria-label="Progresso do upload do banner"
+                  max="100"
+                  value={images.banner.progress}
+                />
+              )}
+            </div>
+          )}
+        </div>
 
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "A criar..." : "Criar loja"}

@@ -3,6 +3,7 @@ package pt.trevo.trevo_api.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -60,6 +61,7 @@ class OrderServiceTest extends BaseUnitTest {
         Cart cart = cart(buyer, item(1L, v1, 1), item(2L, v2, 1));
 
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(variantRepository.findByIdsForUpdate(anyList())).thenReturn(List.of(v1, v2));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -79,6 +81,7 @@ class OrderServiceTest extends BaseUnitTest {
         Cart cart = cart(buyer, item(1L, variant, 2));
 
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(variantRepository.findByIdsForUpdate(anyList())).thenReturn(List.of(variant));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -96,6 +99,7 @@ class OrderServiceTest extends BaseUnitTest {
         Cart cart = cart(buyer, item(1L, variant, 1));
 
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(variantRepository.findByIdsForUpdate(anyList())).thenReturn(List.of(variant));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -113,6 +117,7 @@ class OrderServiceTest extends BaseUnitTest {
         Cart cart = cart(buyer, item(1L, variant, 3));
 
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(variantRepository.findByIdsForUpdate(anyList())).thenReturn(List.of(variant));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 orderService.checkout(buyerId, PaymentMethod.MBWAY)

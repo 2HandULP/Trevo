@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -30,6 +31,10 @@ export default function App() {
 
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
         <Route path="/shops/new" element={<CreateShop />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
+        <Route path="/shop/dashboard" element={<ShopDashboard />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>

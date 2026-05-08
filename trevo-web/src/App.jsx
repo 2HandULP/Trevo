@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import CollectionManager from "./pages/CollectionManager";
 import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
 import Profile from "./pages/Profile";
@@ -35,6 +36,10 @@ export default function App() {
 
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
         <Route path="/shop/dashboard" element={<ShopDashboard />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
+        <Route path="/shops/:shopId/collections" element={<CollectionManager />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>

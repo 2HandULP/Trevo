@@ -66,6 +66,9 @@ class JwtAuthenticationFilterIntegrationTest {
     private VariantRepository variantRepository;
 
     @MockitoBean
+    private OrderRepository orderRepository;
+
+    @MockitoBean
     private CollectionRepository collectionRepository;
 
     @Autowired

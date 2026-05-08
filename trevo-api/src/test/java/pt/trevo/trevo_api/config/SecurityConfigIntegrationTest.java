@@ -30,6 +30,7 @@ import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
 import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
+import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductImageRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductRepository;
@@ -86,6 +87,9 @@ class SecurityConfigIntegrationTest {
 
     @MockitoBean
     private VariantRepository variantRepository;
+
+    @MockitoBean
+    private OrderRepository orderRepository;
 
     @MockitoBean
     private CollectionRepository collectionRepository;

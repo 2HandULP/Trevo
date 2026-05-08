@@ -1,6 +1,23 @@
 import { useEffect, useState } from "react";
 import { getShopDashboard } from "../services/shopService";
 
+const statusLabels = {
+  PENDING: "Pendente",
+  ACTIVE: "Ativa",
+  SUSPENDED: "Suspensa",
+};
+
+function getStatusLabel(status) {
+  return statusLabels[status] || "Desconhecido";
+}
+
+function formatRevenue(total, currency) {
+  return new Intl.NumberFormat("pt-PT", {
+    style: "currency",
+    currency,
+  }).format(total);
+}
+
 export default function ShopDashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
@@ -22,8 +39,7 @@ export default function ShopDashboard() {
           setError(
             loadError.response?.data?.message ||
               loadError.response?.data?.detail ||
-              loadError.message ||
-              "Nao foi possivel carregar o dashboard da loja"
+              "Não foi possível carregar o dashboard da loja"
           );
         }
       } finally {
@@ -45,25 +61,27 @@ export default function ShopDashboard() {
   const revenue = dashboard?.revenue || { total: 0, currency: "EUR" };
 
   return (
-    <div style={{ maxWidth: "48rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
+    <div className="mx-auto my-16 max-w-3xl p-8 text-black">
       <h1>Dashboard da loja</h1>
 
-      {isLoading && <p>A carregar dashboard...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {isLoading && <p aria-live="polite">A carregar dashboard...</p>}
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
 
       {!isLoading && !error && shop && (
         <>
           <section>
             <h2>{shop.name}</h2>
             <p>{shop.description}</p>
-            <p>Estado: {shop.status}</p>
+            <p>Estado: {getStatusLabel(shop.status)}</p>
           </section>
 
           <section>
             <h2>Receita</h2>
-            <p>
-              {revenue.total} {revenue.currency}
-            </p>
+            <p>{formatRevenue(revenue.total, revenue.currency)}</p>
           </section>
 
           <section>

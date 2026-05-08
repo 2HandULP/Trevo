@@ -63,9 +63,32 @@ describe("ShopDashboard", () => {
     expect(mockGetShopDashboard).toHaveBeenCalled();
     expect(container.textContent).toContain("Loja Trevo");
     expect(container.textContent).toContain("Moda circular");
-    expect(container.textContent).toContain("Estado: PENDING");
-    expect(container.textContent).toContain("0 EUR");
+    expect(container.textContent).toContain("Estado: Pendente");
+    expect(container.textContent).toContain(
+      new Intl.NumberFormat("pt-PT", {
+        style: "currency",
+        currency: "EUR",
+      }).format(0)
+    );
     expect(container.textContent).toContain("Ainda não existem encomendas.");
+
+    unmount();
+  });
+
+  it("displays the fallback error as an alert", async () => {
+    mockGetShopDashboard.mockRejectedValue(new Error("Network error"));
+
+    const { container, unmount } = renderShopDashboard();
+
+    await flushPromises();
+
+    const alert = container.querySelector('[role="alert"]');
+
+    expect(alert).not.toBeNull();
+    expect(alert.textContent).toContain(
+      "Não foi possível carregar o dashboard da loja"
+    );
+    expect(container.textContent).not.toContain("Network error");
 
     unmount();
   });

@@ -15,6 +15,9 @@ import org.mockito.Mock;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
+import pt.trevo.trevo_api.dto.CreateReviewRequest;
+import pt.trevo.trevo_api.dto.RespondToReviewRequest;
+import pt.trevo.trevo_api.dto.UpdateReviewRequest;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.Review;
 import pt.trevo.trevo_api.persistence.entity.Shop;
@@ -56,7 +59,7 @@ class ReviewServiceTest extends BaseUnitTest {
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review review = reviewService.createReview(buyerId, shopId, 4, "Great shop!");
+        Review review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(4, "Great shop!"));
 
         assertThat(review.getBuyer()).isSameAs(buyer);
         assertThat(review.getShop()).isSameAs(shop);
@@ -73,7 +76,7 @@ class ReviewServiceTest extends BaseUnitTest {
         when(orderRepository.existsByBuyerIdAndShopIdAndStatus(buyerId, shopId, OrderStatus.DELIVERED)).thenReturn(false);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                reviewService.createReview(buyerId, shopId, 5, "Amazing!")
+                reviewService.createReview(buyerId, shopId, new CreateReviewRequest(5, "Amazing!"))
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -89,10 +92,30 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.existsByBuyerIdAndShopId(buyerId, shopId)).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                reviewService.createReview(buyerId, shopId, 3, "Good shop")
+                reviewService.createReview(buyerId, shopId, new CreateReviewRequest(3, "Good shop"))
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void createReviewWithNullRatingThrows400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.createReview(10L, 301L, new CreateReviewRequest(null, "Missing rating"))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void createReviewWithRatingOutOfRangeThrows400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.createReview(10L, 301L, new CreateReviewRequest(6, "Too high"))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(reviewRepository, never()).save(any(Review.class));
     }
 
@@ -106,7 +129,7 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review updated = reviewService.updateReview(1L, buyerId, 5, "Actually great!");
+        Review updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(5, "Actually great!"));
 
         assertThat(updated.getRating()).isEqualTo(5);
         assertThat(updated.getComment()).isEqualTo("Actually great!");
@@ -122,10 +145,20 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                reviewService.updateReview(1L, intruderId, 5, "Changed!")
+                reviewService.updateReview(1L, intruderId, new UpdateReviewRequest(5, "Changed!"))
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void updateReviewWithRatingOutOfRangeThrows400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.updateReview(1L, 10L, new UpdateReviewRequest(0, "Too low"))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(reviewRepository, never()).save(any(Review.class));
     }
 
@@ -157,6 +190,16 @@ class ReviewServiceTest extends BaseUnitTest {
         verify(reviewRepository, never()).delete(any(Review.class));
     }
 
+    @Test
+    void deleteReviewWithNullReviewIdThrows400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.deleteReview(null, 10L)
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(reviewRepository, never()).delete(any(Review.class));
+    }
+
     // REV-B03: respondToReview
 
     @Test
@@ -167,7 +210,7 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review responded = reviewService.respondToReview(1L, shopOwnerId, "Thank you for your feedback!");
+        Review responded = reviewService.respondToReview(1L, shopOwnerId, new RespondToReviewRequest("Thank you for your feedback!"));
 
         assertThat(responded.getResponse()).isEqualTo("Thank you for your feedback!");
         verify(reviewRepository).save(review);
@@ -182,7 +225,7 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                reviewService.respondToReview(1L, intruderId, "Thank you!")
+                reviewService.respondToReview(1L, intruderId, new RespondToReviewRequest("Thank you!"))
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -197,10 +240,20 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                reviewService.respondToReview(1L, shopOwnerId, "Another response")
+                reviewService.respondToReview(1L, shopOwnerId, new RespondToReviewRequest("Another response"))
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void respondToReviewWithBlankResponseThrows400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.respondToReview(1L, 901L, new RespondToReviewRequest("   "))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(reviewRepository, never()).save(any(Review.class));
     }
 

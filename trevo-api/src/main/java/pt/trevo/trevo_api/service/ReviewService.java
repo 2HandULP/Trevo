@@ -5,6 +5,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.dto.CreateReviewRequest;
+import pt.trevo.trevo_api.dto.RespondToReviewRequest;
+import pt.trevo.trevo_api.dto.UpdateReviewRequest;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.Review;
 import pt.trevo.trevo_api.persistence.entity.Shop;
@@ -35,8 +38,9 @@ public class ReviewService {
     }
 
     @Transactional
-    public Review createReview(Long buyerId, Long shopId, Integer rating, String comment) {
-        if (buyerId == null || shopId == null || rating == null || rating < 1 || rating > 5) {
+    public Review createReview(Long buyerId, Long shopId, CreateReviewRequest request) {
+        if (buyerId == null || shopId == null || request == null
+                || request.rating() == null || request.rating() < 1 || request.rating() > 5) {
             throw badRequest("Invalid review request");
         }
 
@@ -56,16 +60,17 @@ public class ReviewService {
         Review review = new Review();
         review.setBuyer(buyer);
         review.setShop(shop);
-        review.setRating(rating);
-        review.setComment(comment);
+        review.setRating(request.rating());
+        review.setComment(request.comment());
         review.setCreatedAt(Instant.now());
 
         return reviewRepository.save(review);
     }
 
     @Transactional
-    public Review updateReview(Long reviewId, Long requesterId, Integer rating, String comment) {
-        if (reviewId == null || requesterId == null || rating == null || rating < 1 || rating > 5) {
+    public Review updateReview(Long reviewId, Long requesterId, UpdateReviewRequest request) {
+        if (reviewId == null || requesterId == null || request == null
+                || request.rating() == null || request.rating() < 1 || request.rating() > 5) {
             throw badRequest("Invalid update review request");
         }
 
@@ -75,8 +80,8 @@ public class ReviewService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the review author can update this review");
         }
 
-        review.setRating(rating);
-        review.setComment(comment);
+        review.setRating(request.rating());
+        review.setComment(request.comment());
         return reviewRepository.save(review);
     }
 
@@ -96,8 +101,9 @@ public class ReviewService {
     }
 
     @Transactional
-    public Review respondToReview(Long reviewId, Long requesterId, String response) {
-        if (reviewId == null || requesterId == null || response == null || response.isBlank()) {
+    public Review respondToReview(Long reviewId, Long requesterId, RespondToReviewRequest request) {
+        if (reviewId == null || requesterId == null || request == null
+                || request.response() == null || request.response().isBlank()) {
             throw badRequest("Invalid respond to review request");
         }
 
@@ -111,7 +117,7 @@ public class ReviewService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Review already has a response");
         }
 
-        review.setResponse(response);
+        review.setResponse(request.response());
         return reviewRepository.save(review);
     }
 

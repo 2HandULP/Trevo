@@ -69,6 +69,35 @@ class ReviewServiceTest extends BaseUnitTest {
     }
 
     @Test
+    void createReviewWithBlockedWordThrows400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.createReview(10L, 301L, new CreateReviewRequest(4, "This shop is a badword."))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void createReviewWithCleanCommentPassesProfanityFilter() {
+        Long buyerId = 10L;
+        Long shopId = 301L;
+        User buyer = User.builder().id(buyerId).build();
+        Shop shop = shop(shopId, 901L, "North Shop");
+
+        when(orderRepository.existsByBuyerIdAndShopIdAndStatus(buyerId, shopId, OrderStatus.DELIVERED)).thenReturn(true);
+        when(reviewRepository.existsByBuyerIdAndShopId(buyerId, shopId)).thenReturn(false);
+        when(userRepository.findById(buyerId)).thenReturn(Optional.of(buyer));
+        when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Review review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(5, "Clean and helpful service."));
+
+        assertThat(review.getComment()).isEqualTo("Clean and helpful service.");
+        verify(reviewRepository).save(any(Review.class));
+    }
+
+    @Test
     void createReviewWithNoDeliveredOrderThrows403() {
         Long buyerId = 10L;
         Long shopId = 301L;
@@ -156,6 +185,16 @@ class ReviewServiceTest extends BaseUnitTest {
     void updateReviewWithRatingOutOfRangeThrows400() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 reviewService.updateReview(1L, 10L, new UpdateReviewRequest(0, "Too low"))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void updateReviewWithBlockedWordThrows400() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.updateReview(1L, 10L, new UpdateReviewRequest(4, "The service was stupid."))
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

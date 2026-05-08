@@ -1,6 +1,8 @@
 package pt.trevo.trevo_api.service;
 
 import java.time.Instant;
+import java.util.Locale;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,18 @@ import pt.trevo.trevo_api.persistence.repository.UserRepository;
 
 @Service
 public class ReviewService {
+
+    private static final Set<String> BLOCKED_WORDS = Set.of(
+        "badword",
+        "idiot",
+        "stupid",
+        "fuck",
+        "shit",
+        "bitch",
+        "asshole",
+        "bastard",
+        "cunt"
+    );
 
     private final ReviewRepository reviewRepository;
     private final OrderRepository orderRepository;
@@ -43,6 +57,7 @@ public class ReviewService {
                 || request.rating() == null || request.rating() < 1 || request.rating() > 5) {
             throw badRequest("Invalid review request");
         }
+        validateCommentIsClean(request.comment());
 
         if (!orderRepository.existsByBuyerIdAndShopIdAndStatus(buyerId, shopId, OrderStatus.DELIVERED)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Buyer has no delivered order from this shop");
@@ -73,6 +88,7 @@ public class ReviewService {
                 || request.rating() == null || request.rating() < 1 || request.rating() > 5) {
             throw badRequest("Invalid update review request");
         }
+        validateCommentIsClean(request.comment());
 
         Review review = findReview(reviewId);
 
@@ -124,6 +140,26 @@ public class ReviewService {
     private Review findReview(Long reviewId) {
         return reviewRepository.findById(reviewId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
+    }
+
+    private void validateCommentIsClean(String comment) {
+        if (containsBlockedWord(comment)) {
+            throw badRequest("Review contains blocked words");
+        }
+    }
+
+    private boolean containsBlockedWord(String comment) {
+        if (comment == null || comment.isBlank()) {
+            return false;
+        }
+
+        String normalized = comment.toLowerCase(Locale.ROOT);
+        for (String word : normalized.split("[^\\p{Alnum}]+")) {
+            if (BLOCKED_WORDS.contains(word)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ResponseStatusException badRequest(String reason) {

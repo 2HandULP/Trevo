@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createShop } from "../services/shopService";
 
 const initialForm = {
@@ -7,62 +7,17 @@ const initialForm = {
   nif: "",
 };
 
-function createImagePreview(file) {
-  if (!file) {
-    return "";
-  }
-
-  return URL.createObjectURL(file);
-}
-
 export default function CreateShop() {
   const [form, setForm] = useState(initialForm);
-  const [logo, setLogo] = useState(null);
-  const [banner, setBanner] = useState(null);
-  const [logoPreview, setLogoPreview] = useState("");
-  const [bannerPreview, setBannerPreview] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const preview = createImagePreview(logo);
-    setLogoPreview(preview);
-
-    return () => {
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
-    };
-  }, [logo]);
-
-  useEffect(() => {
-    const preview = createImagePreview(banner);
-    setBannerPreview(preview);
-
-    return () => {
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
-    };
-  }, [banner]);
-
   function handleChange(event) {
-    setForm({
-      ...form,
+    setForm((prev) => ({
+      ...prev,
       [event.target.name]: event.target.value,
-    });
-  }
-
-  function handleFileChange(event) {
-    const file = event.target.files?.[0] || null;
-
-    if (event.target.name === "logo") {
-      setLogo(file);
-      return;
-    }
-
-    setBanner(file);
+    }));
   }
 
   async function handleSubmit(event) {
@@ -71,7 +26,12 @@ export default function CreateShop() {
     setSuccess("");
 
     if (!form.name.trim() || !form.description.trim() || !form.nif.trim()) {
-      setError("Preenche nome, descricao e NIF");
+      setError("Preenche nome, descrição e NIF");
+      return;
+    }
+
+    if (!/^\d{9}$/.test(form.nif.trim())) {
+      setError("O NIF deve ter exatamente 9 dígitos");
       return;
     }
 
@@ -79,20 +39,18 @@ export default function CreateShop() {
       name: form.name.trim(),
       description: form.description.trim(),
       nif: form.nif.trim(),
-      logoUrl: null,
-      bannerUrl: null,
     };
 
     try {
       setIsSubmitting(true);
       await createShop(payload);
       setSuccess("Loja criada com sucesso");
+      setForm(initialForm);
     } catch (submitError) {
       setError(
         submitError.response?.data?.message ||
           submitError.response?.data?.detail ||
-          submitError.message ||
-          "Nao foi possivel criar a loja"
+          "Não foi possível criar a loja"
       );
     } finally {
       setIsSubmitting(false);
@@ -100,15 +58,25 @@ export default function CreateShop() {
   }
 
   return (
-    <div style={{ maxWidth: "32rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
+    <div className="mx-auto my-16 max-w-lg p-8 text-black">
       <h1>Criar loja</h1>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
+      {error && (
+        <p className="text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className="text-green-600" role="status" aria-live="polite">
+          {success}
+        </p>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div>
+          <label htmlFor="shop-name">Nome da loja</label>
           <input
+            id="shop-name"
             type="text"
             name="name"
             placeholder="Nome da loja"
@@ -118,16 +86,20 @@ export default function CreateShop() {
         </div>
 
         <div>
+          <label htmlFor="shop-description">Descrição</label>
           <textarea
+            id="shop-description"
             name="description"
-            placeholder="Descricao"
+            placeholder="Descrição"
             value={form.description}
             onChange={handleChange}
           />
         </div>
 
         <div>
+          <label htmlFor="shop-nif">NIF</label>
           <input
+            id="shop-nif"
             type="text"
             name="nif"
             placeholder="NIF"
@@ -136,27 +108,7 @@ export default function CreateShop() {
           />
         </div>
 
-        <div>
-          <input type="file" name="logo" accept="image/*" onChange={handleFileChange} />
-          {logoPreview && (
-            <img
-              src={logoPreview}
-              alt="Pre-visualizacao do logo"
-              style={{ display: "block", maxWidth: "8rem", marginTop: "0.5rem" }}
-            />
-          )}
-        </div>
-
-        <div>
-          <input type="file" name="banner" accept="image/*" onChange={handleFileChange} />
-          {bannerPreview && (
-            <img
-              src={bannerPreview}
-              alt="Pre-visualizacao do banner"
-              style={{ display: "block", maxWidth: "16rem", marginTop: "0.5rem" }}
-            />
-          )}
-        </div>
+        {/* TODO: implementar upload de logo/banner quando o backend suportar ficheiros. */}
 
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "A criar..." : "Criar loja"}

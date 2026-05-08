@@ -43,17 +43,6 @@ function changeField(field, value) {
   });
 }
 
-function changeFile(input, file) {
-  Object.defineProperty(input, "files", {
-    configurable: true,
-    value: [file],
-  });
-
-  act(() => {
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-}
-
 async function submitForm(container) {
   await act(async () => {
     container.querySelector("form").dispatchEvent(
@@ -68,40 +57,47 @@ async function submitForm(container) {
 describe("CreateShop", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("URL", {
-      createObjectURL: vi.fn((file) => `blob:${file.name}`),
-      revokeObjectURL: vi.fn(),
-    });
   });
 
-  it("validates required fields, previews images, and submits shop data", async () => {
-    mockCreateShop.mockResolvedValue({ id: 1 });
+  it("validates required fields", async () => {
     const { container, unmount } = renderCreateShop();
 
     await submitForm(container);
 
     expect(mockCreateShop).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("Preenche nome, descricao e NIF");
+    expect(container.textContent).toContain("Preenche nome, descrição e NIF");
+
+    unmount();
+  });
+
+  it("validates NIF format before submitting", async () => {
+    const { container, unmount } = renderCreateShop();
 
     changeField(container.querySelector('input[name="name"]'), "Loja Trevo");
     changeField(container.querySelector('textarea[name="description"]'), "Moda circular");
-    changeField(container.querySelector('input[name="nif"]'), "123456789");
+    changeField(container.querySelector('input[name="nif"]'), "123");
 
-    changeFile(
-      container.querySelector('input[name="logo"]'),
-      new File(["logo"], "logo.png", { type: "image/png" })
-    );
-    changeFile(
-      container.querySelector('input[name="banner"]'),
-      new File(["banner"], "banner.png", { type: "image/png" })
+    await submitForm(container);
+
+    expect(mockCreateShop).not.toHaveBeenCalled();
+    expect(container.textContent).toContain(
+      "O NIF deve ter exatamente 9 dígitos"
     );
 
-    expect(container.querySelector('img[alt="Pre-visualizacao do logo"]').src).toBe(
-      "blob:logo.png"
-    );
-    expect(container.querySelector('img[alt="Pre-visualizacao do banner"]').src).toBe(
-      "blob:banner.png"
-    );
+    unmount();
+  });
+
+  it("submits valid shop data and resets the form after success", async () => {
+    mockCreateShop.mockResolvedValue({ id: 1 });
+    const { container, unmount } = renderCreateShop();
+
+    const nameInput = container.querySelector('input[name="name"]');
+    const descriptionInput = container.querySelector('textarea[name="description"]');
+    const nifInput = container.querySelector('input[name="nif"]');
+
+    changeField(nameInput, "Loja Trevo");
+    changeField(descriptionInput, "Moda circular");
+    changeField(nifInput, "123456789");
 
     await submitForm(container);
 
@@ -109,9 +105,11 @@ describe("CreateShop", () => {
       name: "Loja Trevo",
       description: "Moda circular",
       nif: "123456789",
-      logoUrl: null,
-      bannerUrl: null,
     });
+    expect(container.textContent).toContain("Loja criada com sucesso");
+    expect(nameInput.value).toBe("");
+    expect(descriptionInput.value).toBe("");
+    expect(nifInput.value).toBe("");
 
     unmount();
   });

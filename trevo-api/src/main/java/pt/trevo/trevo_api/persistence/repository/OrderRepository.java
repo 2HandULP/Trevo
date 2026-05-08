@@ -9,6 +9,8 @@ import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    boolean existsByBuyerIdAndShopIdAndStatus(Long buyerId, Long shopId, OrderStatus status);
+
     List<Order> findAllByBuyerIdOrderByCreatedAtDesc(Long buyerId);
 
     List<Order> findAllByShopIdOrderByCreatedAtDesc(Long shopId);

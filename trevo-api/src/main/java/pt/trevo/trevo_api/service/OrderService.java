@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,10 +56,20 @@ public class OrderService {
             throw badRequest("Cart is empty");
         }
 
+        // Acquire pessimistic write locks on all variants before validating stock to prevent concurrent over-selling.
+        // ORDER BY v.id ensures a consistent lock acquisition order across transactions, preventing deadlocks.
+        List<Long> variantIds = cart.getItems().stream()
+            .map(ci -> ci.getVariant().getId())
+            .sorted()
+            .toList();
+        Map<Long, Variant> lockedVariants = variantRepository.findByIdsForUpdate(variantIds)
+            .stream()
+            .collect(Collectors.toMap(Variant::getId, v -> v));
+
         // Validate stock for all items before creating any order
         List<Long> conflictingVariantIds = new ArrayList<>();
         for (CartItem cartItem : cart.getItems()) {
-            Variant variant = cartItem.getVariant();
+            Variant variant = lockedVariants.get(cartItem.getVariant().getId());
             if (variant.getStock() < cartItem.getQuantity()) {
                 conflictingVariantIds.add(variant.getId());
             }
@@ -89,8 +100,8 @@ public class OrderService {
 
             BigDecimal total = BigDecimal.ZERO;
             for (CartItem cartItem : shopItems) {
-                Variant variant = cartItem.getVariant();
-                BigDecimal unitPrice = variant.getProduct().getPrice();
+                Variant variant = lockedVariants.get(cartItem.getVariant().getId());
+                BigDecimal unitPrice = cartItem.getVariant().getProduct().getPrice();
 
                 OrderItem orderItem = new OrderItem();
                 orderItem.setOrder(order);

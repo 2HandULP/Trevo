@@ -128,7 +128,7 @@ describe("CollectionManager", () => {
     });
 
     expect(container.querySelector('[role="dialog"]').textContent).toContain(
-      "Apagar a colecao Vestidos?"
+      "Apagar a coleção Vestidos?"
     );
 
     act(() => {
@@ -141,6 +141,25 @@ describe("CollectionManager", () => {
 
     expect(mockDeleteCollection).toHaveBeenCalledWith("1", 1);
     expect(collectionNames(container)).toEqual(["Casacos", "Novidades"]);
+
+    unmount();
+  });
+
+  it("shows an empty state when the shop has no collections", async () => {
+    mockGetShopProfile.mockResolvedValue({
+      name: "Loja Trevo",
+      collections: [],
+    });
+
+    const { container, unmount } = renderCollectionManager();
+
+    await flushPromises();
+
+    expect(container.textContent).toContain("Gerir coleções");
+    expect(container.textContent).toContain("Esta loja ainda não tem coleções.");
+    expect(container.querySelector('input[name="collectionName"]').placeholder).toBe(
+      "Nome da coleção"
+    );
 
     unmount();
   });

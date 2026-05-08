@@ -1,6 +1,7 @@
 package pt.trevo.trevo_api.persistence.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -16,4 +17,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findAllByShopIdOrderByCreatedAtDesc(Long shopId);
 
     List<Order> findAllByShopIdAndStatusOrderByCreatedAtDesc(Long shopId, OrderStatus status);
+
+    Optional<Order> findByPaymentReference(String paymentReference);
 }

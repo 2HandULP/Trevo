@@ -1,0 +1,215 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import {
+  getCurrentUserProfile,
+  updateCurrentUserProfile,
+} from "../services/userService";
+
+const initialForm = {
+  fullName: "",
+  email: "",
+  phone: "",
+  currentPassword: "",
+  newPassword: "",
+};
+
+function getErrorMessage(error, fallback) {
+  return (
+    error.response?.data?.message ||
+    error.response?.data?.detail ||
+    fallback
+  );
+}
+
+export default function Profile() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState(initialForm);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfile() {
+      try {
+        const profile = await getCurrentUserProfile();
+
+        if (active) {
+          setForm({
+            fullName: profile.fullName || "",
+            email: profile.email || "",
+            phone: profile.phone || "",
+            currentPassword: "",
+            newPassword: "",
+          });
+          setError("");
+        }
+      } catch (loadError) {
+        if (active) {
+          setError(getErrorMessage(loadError, "Não foi possível carregar o perfil"));
+
+          if (loadError.response?.status === 401) {
+            logout();
+            navigate("/login", { replace: true });
+          }
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [logout, navigate]);
+
+  function handleChange(event) {
+    setForm((prev) => ({
+      ...prev,
+      [event.target.name]: event.target.value,
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!form.fullName.trim() || !form.email.trim()) {
+      setError("Preenche nome e email");
+      return;
+    }
+
+    if (
+      (form.currentPassword && !form.newPassword) ||
+      (!form.currentPassword && form.newPassword)
+    ) {
+      setError("Preenche a password atual e a nova password");
+      return;
+    }
+
+    if (form.newPassword && form.newPassword.length < 8) {
+      setError("A nova password deve ter pelo menos 8 caracteres");
+      return;
+    }
+
+    const payload = {
+      fullName: form.fullName.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim() || null,
+    };
+
+    // TODO: adicionar verificação de email quando o backend suportar este fluxo.
+    if (form.currentPassword || form.newPassword) {
+      payload.currentPassword = form.currentPassword;
+      payload.newPassword = form.newPassword;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const updatedProfile = await updateCurrentUserProfile(payload);
+
+      setForm({
+        fullName: updatedProfile.fullName || "",
+        email: updatedProfile.email || "",
+        phone: updatedProfile.phone || "",
+        currentPassword: "",
+        newPassword: "",
+      });
+      setSuccess("Perfil atualizado com sucesso");
+    } catch (updateError) {
+      setError(getErrorMessage(updateError, "Não foi possível atualizar o perfil"));
+
+      if (updateError.response?.status === 401) {
+        logout();
+        navigate("/login", { replace: true });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto my-16 max-w-lg p-8 text-black">
+      <h1>Perfil</h1>
+
+      {isLoading && <p>A carregar perfil...</p>}
+      {error && (
+        <p className="text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className="text-green-600" role="status" aria-live="polite">
+          {success}
+        </p>
+      )}
+
+      {!isLoading && (
+        <form onSubmit={handleSubmit}>
+          <div>
+            <input
+              type="text"
+              name="fullName"
+              placeholder="Nome"
+              value={form.fullName}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div>
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div>
+            <input
+              type="text"
+              name="phone"
+              placeholder="Telefone"
+              value={form.phone}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div>
+            <input
+              type="password"
+              name="currentPassword"
+              placeholder="Password atual"
+              value={form.currentPassword}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div>
+            <input
+              type="password"
+              name="newPassword"
+              placeholder="Nova password"
+              value={form.newPassword}
+              onChange={handleChange}
+            />
+          </div>
+
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "A guardar..." : "Guardar alterações"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}

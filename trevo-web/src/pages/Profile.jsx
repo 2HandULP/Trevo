@@ -18,7 +18,6 @@ function getErrorMessage(error, fallback) {
   return (
     error.response?.data?.message ||
     error.response?.data?.detail ||
-    error.message ||
     fallback
   );
 }
@@ -51,7 +50,7 @@ export default function Profile() {
         }
       } catch (loadError) {
         if (active) {
-          setError(getErrorMessage(loadError, "Nao foi possivel carregar o perfil"));
+          setError(getErrorMessage(loadError, "Não foi possível carregar o perfil"));
 
           if (loadError.response?.status === 401) {
             logout();
@@ -73,10 +72,10 @@ export default function Profile() {
   }, [logout, navigate]);
 
   function handleChange(event) {
-    setForm({
-      ...form,
+    setForm((prev) => ({
+      ...prev,
       [event.target.name]: event.target.value,
-    });
+    }));
   }
 
   async function handleSubmit(event) {
@@ -97,12 +96,18 @@ export default function Profile() {
       return;
     }
 
+    if (form.newPassword && form.newPassword.length < 8) {
+      setError("A nova password deve ter pelo menos 8 caracteres");
+      return;
+    }
+
     const payload = {
       fullName: form.fullName.trim(),
       email: form.email.trim(),
       phone: form.phone.trim() || null,
     };
 
+    // TODO: adicionar verificação de email quando o backend suportar este fluxo.
     if (form.currentPassword || form.newPassword) {
       payload.currentPassword = form.currentPassword;
       payload.newPassword = form.newPassword;
@@ -121,7 +126,7 @@ export default function Profile() {
       });
       setSuccess("Perfil atualizado com sucesso");
     } catch (updateError) {
-      setError(getErrorMessage(updateError, "Nao foi possivel atualizar o perfil"));
+      setError(getErrorMessage(updateError, "Não foi possível atualizar o perfil"));
 
       if (updateError.response?.status === 401) {
         logout();
@@ -133,12 +138,20 @@ export default function Profile() {
   }
 
   return (
-    <div style={{ maxWidth: "32rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
+    <div className="mx-auto my-16 max-w-lg p-8 text-black">
       <h1>Perfil</h1>
 
       {isLoading && <p>A carregar perfil...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
+      {error && (
+        <p className="text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className="text-green-600" role="status" aria-live="polite">
+          {success}
+        </p>
+      )}
 
       {!isLoading && (
         <form onSubmit={handleSubmit}>
@@ -193,7 +206,7 @@ export default function Profile() {
           </div>
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "A guardar..." : "Guardar alteracoes"}
+            {isSubmitting ? "A guardar..." : "Guardar alterações"}
           </button>
         </form>
       )}

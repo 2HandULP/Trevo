@@ -119,4 +119,40 @@ describe("Profile", () => {
 
     unmount();
   });
+
+  it("does not submit password updates with a short new password", async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: {
+        fullName: "Buyer User",
+        email: "buyer@trevo.pt",
+        phone: "912345678",
+      },
+    });
+
+    const { container, unmount } = renderProfile();
+
+    await flushPromises();
+
+    changeInput(
+      container.querySelector('input[name="currentPassword"]'),
+      "password-atual"
+    );
+    changeInput(container.querySelector('input[name="newPassword"]'), "curta");
+
+    await act(async () => {
+      container.querySelector("form").dispatchEvent(
+        new Event("submit", {
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+    });
+
+    expect(mockApiClient.put).not.toHaveBeenCalled();
+    expect(container.textContent).toContain(
+      "A nova password deve ter pelo menos 8 caracteres"
+    );
+
+    unmount();
+  });
 });

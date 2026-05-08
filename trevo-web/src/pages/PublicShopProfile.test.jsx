@@ -62,7 +62,7 @@ describe("PublicShopProfile", () => {
       description: "Roupa vintage curada.",
       logoUrl: "https://example.com/logo.png",
       bannerUrl: "https://example.com/banner.png",
-      averageRating: 4.5,
+      averageRating: 4.5555,
       collections: [
         { id: 2, shopId: 1, name: "Casacos", displayOrder: 2 },
         { id: 1, shopId: 1, name: "Vestidos", displayOrder: 1 },
@@ -83,7 +83,7 @@ describe("PublicShopProfile", () => {
     expect(logo.src).toBe("https://example.com/logo.png");
     expect(banner.src).toBe("https://example.com/banner.png");
     expect(container.textContent).toContain("Roupa vintage curada.");
-    expect(container.textContent).toContain("Rating: 4.5");
+    expect(container.textContent).toContain("Avaliação: 4.6");
     expect(collectionNames(container)).toEqual(["Vestidos", "Casacos"]);
     expect(allProductsLink.getAttribute("href")).toBe("/products?shopId=1");
     expect(
@@ -96,7 +96,7 @@ describe("PublicShopProfile", () => {
     unmount();
   });
 
-  it("shows a no-rating message when averageRating is null", async () => {
+  it("shows no-rating and no-collections messages when there is no rating or collections", async () => {
     mockGetShopProfile.mockResolvedValue({
       id: 1,
       name: "Vintage Porto",
@@ -112,6 +112,9 @@ describe("PublicShopProfile", () => {
     await flushPromises();
 
     expect(container.textContent).toContain("Sem avaliações");
+    expect(container.textContent).toContain("Coleções");
+    expect(container.textContent).toContain("Sem coleções.");
+    expect(container.querySelector("section ul")).toBeNull();
 
     unmount();
   });

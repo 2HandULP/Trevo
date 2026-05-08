@@ -6,6 +6,14 @@ function sortCollections(collections) {
   return [...collections].sort((a, b) => a.displayOrder - b.displayOrder);
 }
 
+function formatRating(averageRating) {
+  if (averageRating == null) {
+    return "Sem avaliações";
+  }
+
+  return `Avaliação: ${Number(averageRating).toFixed(1)}`;
+}
+
 export default function PublicShopProfile() {
   const { shopId } = useParams();
   const [shop, setShop] = useState(null);
@@ -28,7 +36,11 @@ export default function PublicShopProfile() {
         }
       } catch (loadError) {
         if (active) {
-          setError(loadError.message || "Nao foi possivel carregar a loja");
+          setError(
+            loadError.response?.data?.message ||
+              loadError.response?.data?.detail ||
+              "Não foi possível carregar a loja"
+          );
         }
       } finally {
         if (active) {
@@ -45,9 +57,13 @@ export default function PublicShopProfile() {
   }, [shopId]);
 
   return (
-    <div style={{ maxWidth: "48rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
-      {isLoading && <p>A carregar loja...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <div className="mx-auto my-16 max-w-3xl p-8 text-black">
+      {isLoading && <p aria-live="polite">A carregar loja...</p>}
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
 
       {!isLoading && !error && shop && (
         <>
@@ -55,7 +71,7 @@ export default function PublicShopProfile() {
             <img
               src={shop.bannerUrl}
               alt={`Banner da loja ${shop.name}`}
-              style={{ display: "block", width: "100%", maxHeight: "16rem", objectFit: "cover" }}
+              className="block max-h-64 w-full object-cover"
             />
           )}
 
@@ -63,29 +79,33 @@ export default function PublicShopProfile() {
             <img
               src={shop.logoUrl}
               alt={`Logo da loja ${shop.name}`}
-              style={{ display: "block", width: "6rem", height: "6rem", objectFit: "cover" }}
+              className="mt-4 block h-24 w-24 object-cover"
             />
           )}
 
           <h1>{shop.name}</h1>
           <p>{shop.description}</p>
-          <p>{shop.averageRating == null ? "Sem avaliações" : `Rating: ${shop.averageRating}`}</p>
+          <p>{formatRating(shop.averageRating)}</p>
 
           <p>
             <Link to={`/products?shopId=${shopId}`}>Ver todos os produtos</Link>
           </p>
 
           <section>
-            <h2>Colecoes</h2>
-            <ul>
-              {shop.collections.map((collection) => (
-                <li key={collection.id}>
-                  <Link to={`/products?collectionId=${collection.id}`}>
-                    {collection.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <h2>Coleções</h2>
+            {shop.collections.length === 0 ? (
+              <p>Sem coleções.</p>
+            ) : (
+              <ul>
+                {shop.collections.map((collection) => (
+                  <li key={collection.id}>
+                    <Link to={`/products?collectionId=${collection.id}`}>
+                      {collection.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </>
       )}

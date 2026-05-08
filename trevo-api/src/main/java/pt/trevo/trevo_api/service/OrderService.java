@@ -32,15 +32,18 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
     private final VariantRepository variantRepository;
+    private final NotificationService notificationService;
 
     public OrderService(
         CartRepository cartRepository,
         OrderRepository orderRepository,
-        VariantRepository variantRepository
+        VariantRepository variantRepository,
+        NotificationService notificationService
     ) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
         this.variantRepository = variantRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -118,7 +121,9 @@ public class OrderService {
 
             order.setTotalAmount(total);
             order.setCommissionAmount(total.multiply(COMMISSION_RATE).setScale(2, RoundingMode.HALF_UP));
-            orders.add(orderRepository.save(order));
+            Order savedOrder = orderRepository.save(order);
+            notificationService.createNewOrderNotification(savedOrder);
+            orders.add(savedOrder);
         }
 
         // Clear the cart

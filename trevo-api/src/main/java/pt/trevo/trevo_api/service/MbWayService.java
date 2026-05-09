@@ -4,9 +4,15 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionOperations;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.MbWayCallbackRequest;
 import pt.trevo.trevo_api.dto.MbWayPaymentRequestResponse;
@@ -17,19 +23,43 @@ import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 @Service
 public class MbWayService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(MbWayService.class);
     private static final String EUR_CURRENCY = "EUR";
     private static final Set<String> SUCCESS_STATUSES = Set.of("PAID", "COMPLETED", "SUCCESS");
     private static final Pattern PORTUGUESE_MOBILE_PHONE = Pattern.compile("^(?:\\+351|00351)?9\\d{8}$");
 
     private final MbWayPaymentsClient mbWayPaymentsClient;
     private final OrderRepository orderRepository;
+    private final MbWayCallbackVerifier callbackVerifier;
+    private final TransactionOperations transactionOperations;
 
-    public MbWayService(MbWayPaymentsClient mbWayPaymentsClient, OrderRepository orderRepository) {
-        this.mbWayPaymentsClient = mbWayPaymentsClient;
-        this.orderRepository = orderRepository;
+    @Autowired
+    public MbWayService(
+        MbWayPaymentsClient mbWayPaymentsClient,
+        OrderRepository orderRepository,
+        MbWayCallbackVerifier callbackVerifier,
+        ObjectProvider<PlatformTransactionManager> transactionManagerProvider
+    ) {
+        this(
+            mbWayPaymentsClient,
+            orderRepository,
+            callbackVerifier,
+            transactionOperations(transactionManagerProvider)
+        );
     }
 
-    @Transactional
+    MbWayService(
+        MbWayPaymentsClient mbWayPaymentsClient,
+        OrderRepository orderRepository,
+        MbWayCallbackVerifier callbackVerifier,
+        TransactionOperations transactionOperations
+    ) {
+        this.mbWayPaymentsClient = mbWayPaymentsClient;
+        this.orderRepository = orderRepository;
+        this.callbackVerifier = callbackVerifier;
+        this.transactionOperations = transactionOperations;
+    }
+
     public MbWayPaymentRequestResponse createPaymentRequest(Order order, String phoneNumber) {
         if (order == null || order.getId() == null || order.getTotalAmount() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid MB WAY payment request");
@@ -45,14 +75,20 @@ public class MbWayService {
             normalizePhoneNumber(phoneNumber)
         );
 
-        order.setPaymentReference(response.reference());
-        orderRepository.save(order);
+        transactionOperations.executeWithoutResult(status -> {
+            order.setPaymentReference(response.reference());
+            orderRepository.save(order);
+        });
 
         return response;
     }
 
-    @Transactional
-    public void handleCallback(MbWayCallbackRequest callback) {
+    public void handleCallback(MbWayCallbackRequest callback, String rawPayload, String signature) {
+        callbackVerifier.verify(rawPayload, signature);
+        handleVerifiedCallback(callback);
+    }
+
+    void handleVerifiedCallback(MbWayCallbackRequest callback) {
         if (callback == null || callback.reference() == null || callback.reference().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid MB WAY callback");
         }
@@ -64,8 +100,20 @@ public class MbWayService {
         Order order = orderRepository.findByPaymentReference(callback.reference())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
-        order.setStatus(OrderStatus.PLACED);
-        orderRepository.save(order);
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            LOGGER.info(
+                "Skipping MB WAY callback {} for order {} because status is {}",
+                callback.reference(),
+                order.getId(),
+                order.getStatus()
+            );
+            return;
+        }
+
+        transactionOperations.executeWithoutResult(status -> {
+            order.setStatus(OrderStatus.PLACED);
+            orderRepository.save(order);
+        });
     }
 
     private BigDecimal eurAmount(BigDecimal amount) {
@@ -93,5 +141,16 @@ public class MbWayService {
 
     private String normalizeStatus(String status) {
         return status == null ? "" : status.trim().toUpperCase();
+    }
+
+    private static TransactionOperations transactionOperations(
+        ObjectProvider<PlatformTransactionManager> transactionManagerProvider
+    ) {
+        PlatformTransactionManager transactionManager = transactionManagerProvider.getIfAvailable();
+        if (transactionManager == null) {
+            return TransactionOperations.withoutTransaction();
+        }
+
+        return new TransactionTemplate(transactionManager);
     }
 }

@@ -2,8 +2,14 @@ package pt.trevo.trevo_api.service;
 
 import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.NotificationResponse;
 import pt.trevo.trevo_api.dto.NotificationsResponse;
 import pt.trevo.trevo_api.persistence.entity.AppNotification;
@@ -21,7 +27,9 @@ public class NotificationService {
         this.notificationRepository = notificationRepository;
     }
 
-    @Transactional
+    private static final int MAX_PAGE_SIZE = 100;
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AppNotification createNewOrderNotification(Order order) {
         Shop shop = order.getShop();
 
@@ -37,15 +45,48 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public NotificationsResponse getNotifications(Long recipientId) {
+    public NotificationsResponse getNotifications(Long recipientId, int page, int size) {
+        if (recipientId == null || page < 0 || size < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid notification page request");
+        }
+
+        int pageSize = Math.min(size, MAX_PAGE_SIZE);
         long unreadCount = notificationRepository.countByRecipientIdAndReadAtIsNull(recipientId);
-        List<NotificationResponse> notifications = notificationRepository
-            .findByRecipientIdOrderByCreatedAtDesc(recipientId)
+        Page<AppNotification> notificationPage = notificationRepository
+            .findByRecipientId(
+                recipientId,
+                PageRequest.of(page, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"))
+            );
+        List<NotificationResponse> notifications = notificationPage
             .stream()
             .map(this::toResponse)
             .toList();
 
-        return new NotificationsResponse(unreadCount, notifications);
+        return new NotificationsResponse(
+            unreadCount,
+            notificationPage.getNumber(),
+            notificationPage.getSize(),
+            notificationPage.getTotalElements(),
+            notificationPage.getTotalPages(),
+            notifications
+        );
+    }
+
+    @Transactional
+    public NotificationResponse markAsRead(Long notificationId, Long recipientId) {
+        if (notificationId == null || recipientId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid notification read request");
+        }
+
+        AppNotification notification = notificationRepository.findByIdAndRecipientId(notificationId, recipientId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));
+
+        if (notification.getReadAt() == null) {
+            notification.setReadAt(Instant.now());
+            notification = notificationRepository.save(notification);
+        }
+
+        return toResponse(notification);
     }
 
     private NotificationResponse toResponse(AppNotification notification) {

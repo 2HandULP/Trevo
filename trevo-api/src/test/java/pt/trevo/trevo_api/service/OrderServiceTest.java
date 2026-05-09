@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -136,6 +137,29 @@ class OrderServiceTest extends BaseUnitTest {
                 .map(order -> order.getShop().getOwner().getId())
                 .toList())
             .containsExactlyInAnyOrder(901L, 902L);
+    }
+
+    @Test
+    void checkoutStillSucceedsWhenNotificationCreationFails() {
+        Long buyerId = 10L;
+        User buyer = User.builder().id(buyerId).build();
+        Variant variant = variant(101L, product(201L, shop(301L, 901L, "North Shop"), "Linen Shirt", "29.99"), "M", "Blue", 5);
+        Cart cart = cart(buyer, item(1L, variant, 1));
+
+        when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(variantRepository.findByIdsForUpdate(anyList())).thenReturn(List.of(variant));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("notification DB unavailable"))
+            .when(notificationService).createNewOrderNotification(any(Order.class));
+
+        List<Order> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY);
+
+        assertThat(orders).hasSize(1);
+        assertThat(cart.getItems()).isEmpty();
+        assertThat(variant.getStock()).isEqualTo(4);
+        verify(orderRepository).save(any(Order.class));
+        verify(cartRepository).save(cart);
     }
 
     @Test

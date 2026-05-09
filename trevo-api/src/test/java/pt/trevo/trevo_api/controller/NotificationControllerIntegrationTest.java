@@ -2,6 +2,7 @@ package pt.trevo.trevo_api.controller;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -54,6 +55,10 @@ class NotificationControllerIntegrationTest {
     void getNotificationsReturnsUnreadCountAndListForShopOwner() throws Exception {
         NotificationsResponse response = new NotificationsResponse(
             1L,
+            1,
+            10,
+            25L,
+            3,
             List.of(new NotificationResponse(
                 10L,
                 77L,
@@ -66,11 +71,15 @@ class NotificationControllerIntegrationTest {
             ))
         );
 
-        when(notificationService.getNotifications(901L)).thenReturn(response);
+        when(notificationService.getNotifications(901L, 1, 10)).thenReturn(response);
 
-        mockMvc.perform(get("/api/notifications"))
+        mockMvc.perform(get("/api/notifications?page=1&size=10"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.unreadCount").value(1))
+            .andExpect(jsonPath("$.page").value(1))
+            .andExpect(jsonPath("$.size").value(10))
+            .andExpect(jsonPath("$.totalElements").value(25))
+            .andExpect(jsonPath("$.totalPages").value(3))
             .andExpect(jsonPath("$.notifications[0].id").value(10))
             .andExpect(jsonPath("$.notifications[0].orderId").value(77))
             .andExpect(jsonPath("$.notifications[0].type").value("NEW_ORDER"))
@@ -88,5 +97,33 @@ class NotificationControllerIntegrationTest {
     void getNotificationsReturnsUnauthorizedWhenAnonymous() throws Exception {
         mockMvc.perform(get("/api/notifications"))
             .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "901", roles = "SHOP_OWNER")
+    void markAsReadReturnsUpdatedNotificationForShopOwner() throws Exception {
+        when(notificationService.markAsRead(10L, 901L)).thenReturn(new NotificationResponse(
+            10L,
+            77L,
+            "NEW_ORDER",
+            "Nova encomenda recebida",
+            "Recebeste uma nova encomenda na loja North Shop.",
+            true,
+            Instant.parse("2026-05-08T10:00:00Z"),
+            Instant.parse("2026-05-08T11:00:00Z")
+        ));
+
+        mockMvc.perform(patch("/api/notifications/10/read"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(10))
+            .andExpect(jsonPath("$.read").value(true))
+            .andExpect(jsonPath("$.readAt").value("2026-05-08T11:00:00Z"));
+    }
+
+    @Test
+    @WithMockUser(username = "10", roles = "BUYER")
+    void markAsReadReturnsForbiddenWhenCallerIsNotShopOwner() throws Exception {
+        mockMvc.perform(patch("/api/notifications/10/read"))
+            .andExpect(status().isForbidden());
     }
 }

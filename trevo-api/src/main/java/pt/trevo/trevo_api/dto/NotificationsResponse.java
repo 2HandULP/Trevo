@@ -4,6 +4,10 @@ import java.util.List;
 
 public record NotificationsResponse(
     long unreadCount,
+    int page,
+    int size,
+    long totalElements,
+    int totalPages,
     List<NotificationResponse> notifications
 ) {
 }

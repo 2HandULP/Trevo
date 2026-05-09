@@ -9,6 +9,7 @@ import PublicShopProfile from "./pages/PublicShopProfile";
 import CollectionManager from "./pages/CollectionManager";
 import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
+import ProductForm from "./pages/ProductForm";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
@@ -42,6 +43,11 @@ export default function App() {
 
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
         <Route path="/shops/:shopId/collections" element={<CollectionManager />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
+        <Route path="/products/new" element={<ProductForm mode="create" />} />
+        <Route path="/products/:productId/edit" element={<ProductForm mode="edit" />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>

@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import PublicShopProfile from "./pages/PublicShopProfile";
 import CollectionManager from "./pages/CollectionManager";
 import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="/shops/:shopId" element={<PublicShopProfile />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />

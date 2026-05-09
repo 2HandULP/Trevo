@@ -1,10 +1,17 @@
 package pt.trevo.trevo_api.service;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -15,31 +22,55 @@ import pt.trevo.trevo_api.dto.PayPalOrderResponse;
 @Component
 public class PayPalRestOrdersClient implements PayPalOrdersClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PayPalRestOrdersClient.class);
     private static final String CAPTURE_INTENT = "CAPTURE";
     private static final String APPROVE_REL = "approve";
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration TOKEN_EXPIRY_SAFETY_WINDOW = Duration.ofMinutes(5);
+    private static final Duration MAX_TOKEN_TTL = Duration.ofHours(8);
 
     private final RestClient restClient;
     private final String clientId;
     private final String clientSecret;
+    private final Clock clock;
 
+    private String cachedAccessToken;
+    private Instant cachedAccessTokenExpiresAt = Instant.EPOCH;
+
+    @Autowired
     public PayPalRestOrdersClient(
         @Value("${PAYPAL_BASE_URL:https://api-m.sandbox.paypal.com}") String baseUrl,
         @Value("${PAYPAL_CLIENT_ID:}") String clientId,
         @Value("${PAYPAL_CLIENT_SECRET:}") String clientSecret
     ) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+        this(payPalRestClientBuilder(), baseUrl, clientId, clientSecret, Clock.systemUTC());
+    }
+
+    PayPalRestOrdersClient(
+        RestClient.Builder restClientBuilder,
+        String baseUrl,
+        String clientId,
+        String clientSecret,
+        Clock clock
+    ) {
+        this.restClient = restClientBuilder.baseUrl(baseUrl).build();
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.clock = clock;
     }
 
     @Override
-    public PayPalOrderResponse createOrder(Long orderId, BigDecimal amount, String currency) {
+    public PayPalOrderResponse createOrder(Long orderId, BigDecimal amount, String currency, String requestId) {
         assertConfigured();
 
         try {
             PayPalCreateOrderApiResponse response = restClient.post()
                 .uri("/v2/checkout/orders")
-                .headers(headers -> headers.setBearerAuth(accessToken()))
+                .headers(headers -> {
+                    headers.setBearerAuth(accessToken());
+                    headers.set("PayPal-Request-Id", requestId);
+                })
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new PayPalCreateOrderRequest(
                     CAPTURE_INTENT,
@@ -57,18 +88,22 @@ public class PayPalRestOrdersClient implements PayPalOrdersClient {
 
             return new PayPalOrderResponse(response.id(), response.status(), approveUrl(response.links()));
         } catch (RestClientException ex) {
+            LOGGER.warn("PayPal create order failed for local order {}: {}", orderId, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal create order failed", ex);
         }
     }
 
     @Override
-    public PayPalCaptureResponse captureOrder(String paypalOrderId) {
+    public PayPalCaptureResponse captureOrder(String paypalOrderId, String requestId) {
         assertConfigured();
 
         try {
             PayPalCaptureApiResponse response = restClient.post()
                 .uri("/v2/checkout/orders/{id}/capture", paypalOrderId)
-                .headers(headers -> headers.setBearerAuth(accessToken()))
+                .headers(headers -> {
+                    headers.setBearerAuth(accessToken());
+                    headers.set("PayPal-Request-Id", requestId);
+                })
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{}")
                 .retrieve()
@@ -80,30 +115,63 @@ public class PayPalRestOrdersClient implements PayPalOrdersClient {
 
             return new PayPalCaptureResponse(response.id(), response.status());
         } catch (RestClientException ex) {
+            LOGGER.warn("PayPal capture failed for PayPal order {}: {}", paypalOrderId, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal capture failed", ex);
         }
     }
 
-    private String accessToken() {
-        PayPalAccessTokenResponse response = restClient.post()
-            .uri("/v1/oauth2/token")
-            .headers(headers -> headers.setBasicAuth(clientId, clientSecret))
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body("grant_type=client_credentials")
-            .retrieve()
-            .body(PayPalAccessTokenResponse.class);
+    private synchronized String accessToken() {
+        Instant now = Instant.now(clock);
+        if (cachedAccessToken != null && now.isBefore(cachedAccessTokenExpiresAt)) {
+            return cachedAccessToken;
+        }
+
+        PayPalAccessTokenResponse response;
+        try {
+            response = restClient.post()
+                .uri("/v1/oauth2/token")
+                .headers(headers -> headers.setBasicAuth(clientId, clientSecret))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body("grant_type=client_credentials")
+                .retrieve()
+                .body(PayPalAccessTokenResponse.class);
+        } catch (RestClientException ex) {
+            LOGGER.warn("PayPal access token request failed: {}", ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal access token request failed", ex);
+        }
 
         if (response == null || response.accessToken() == null || response.accessToken().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal access token request failed");
         }
 
-        return response.accessToken();
+        cachedAccessToken = response.accessToken();
+        cachedAccessTokenExpiresAt = now.plus(tokenTtl(response.expiresIn()));
+        return cachedAccessToken;
     }
 
     private void assertConfigured() {
         if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "PayPal credentials are not configured");
         }
+    }
+
+    private Duration tokenTtl(Long expiresIn) {
+        long seconds = expiresIn == null ? MAX_TOKEN_TTL.toSeconds() : expiresIn;
+        Duration ttl = Duration.ofSeconds(seconds)
+            .minus(TOKEN_EXPIRY_SAFETY_WINDOW);
+
+        if (ttl.isNegative() || ttl.isZero()) {
+            return Duration.ofMinutes(1);
+        }
+
+        return ttl.compareTo(MAX_TOKEN_TTL) > 0 ? MAX_TOKEN_TTL : ttl;
+    }
+
+    private static RestClient.Builder payPalRestClientBuilder() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+        requestFactory.setReadTimeout(READ_TIMEOUT);
+        return RestClient.builder().requestFactory(requestFactory);
     }
 
     private String approveUrl(List<PayPalLink> links) {
@@ -119,7 +187,8 @@ public class PayPalRestOrdersClient implements PayPalOrdersClient {
     }
 
     private record PayPalAccessTokenResponse(
-        @com.fasterxml.jackson.annotation.JsonProperty("access_token") String accessToken
+        @com.fasterxml.jackson.annotation.JsonProperty("access_token") String accessToken,
+        @com.fasterxml.jackson.annotation.JsonProperty("expires_in") Long expiresIn
     ) {
     }
 

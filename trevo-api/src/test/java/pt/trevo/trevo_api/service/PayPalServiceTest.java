@@ -3,6 +3,7 @@ package pt.trevo.trevo_api.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +12,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
 import pt.trevo.trevo_api.dto.PayPalCaptureResponse;
@@ -29,13 +33,14 @@ class PayPalServiceTest extends BaseUnitTest {
 
     @Test
     void createOrderCreatesPayPalOrderAndStoresReference() {
-        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository);
+        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository, testTransactions());
         Order order = order(77L, "29.995");
 
         when(payPalOrdersClient.createOrder(
             eq(77L),
             eq(new BigDecimal("30.00")),
-            eq("EUR")
+            eq("EUR"),
+            eq("trevo-order-create-77")
         )).thenReturn(new PayPalOrderResponse(
             "PAYPAL-ORDER-123",
             "CREATED",
@@ -54,14 +59,14 @@ class PayPalServiceTest extends BaseUnitTest {
 
     @Test
     void capturePaymentCompletesFlowAndMarksOrderPlaced() {
-        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository);
+        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository, testTransactions());
         Order order = order(77L, "29.99");
-        order.setStatus(OrderStatus.CANCELLED);
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
         order.setPaymentReference("PAYPAL-ORDER-123");
 
-        when(payPalOrdersClient.captureOrder("PAYPAL-ORDER-123"))
+        when(payPalOrdersClient.captureOrder("PAYPAL-ORDER-123", "trevo-order-capture-77"))
             .thenReturn(new PayPalCaptureResponse("PAYPAL-ORDER-123", "COMPLETED"));
-        when(orderRepository.findByPaymentReference("PAYPAL-ORDER-123")).thenReturn(Optional.of(order));
+        when(orderRepository.findByPaymentReference("PAYPAL-ORDER-123")).thenReturn(Optional.of(order), Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
         PayPalCaptureResponse response = payPalService.capturePayment("PAYPAL-ORDER-123");
@@ -72,10 +77,35 @@ class PayPalServiceTest extends BaseUnitTest {
     }
 
     @Test
-    void failedCaptureThrows() {
-        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository);
+    void capturePaymentDoesNotMutateCancelledOrder() {
+        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository, testTransactions());
+        Order order = order(77L, "29.99");
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setPaymentReference("PAYPAL-ORDER-123");
 
-        when(payPalOrdersClient.captureOrder("PAYPAL-ORDER-123"))
+        when(orderRepository.findByPaymentReference("PAYPAL-ORDER-123")).thenReturn(Optional.of(order));
+
+        PayPalCaptureResponse response = payPalService.capturePayment("PAYPAL-ORDER-123");
+
+        assertThat(response.id()).isEqualTo("PAYPAL-ORDER-123");
+        assertThat(response.status()).isEqualTo("SKIPPED");
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        verify(payPalOrdersClient, never()).captureOrder(
+            eq("PAYPAL-ORDER-123"),
+            eq("trevo-order-capture-77")
+        );
+        verify(orderRepository, never()).save(order);
+    }
+
+    @Test
+    void failedCaptureThrows() {
+        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository, testTransactions());
+        Order order = order(77L, "29.99");
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
+        order.setPaymentReference("PAYPAL-ORDER-123");
+
+        when(orderRepository.findByPaymentReference("PAYPAL-ORDER-123")).thenReturn(Optional.of(order));
+        when(payPalOrdersClient.captureOrder("PAYPAL-ORDER-123", "trevo-order-capture-77"))
             .thenReturn(new PayPalCaptureResponse("PAYPAL-ORDER-123", "DECLINED"));
 
         Throwable thrown = catchThrowable(() -> payPalService.capturePayment("PAYPAL-ORDER-123"));
@@ -87,8 +117,26 @@ class PayPalServiceTest extends BaseUnitTest {
     }
 
     @Test
+    void capturePaymentThrowsWhenLocalOrderIsNotFound() {
+        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository, testTransactions());
+
+        when(orderRepository.findByPaymentReference("PAYPAL-ORDER-123")).thenReturn(Optional.empty());
+
+        Throwable thrown = catchThrowable(() -> payPalService.capturePayment("PAYPAL-ORDER-123"));
+
+        assertThat(thrown).isInstanceOf(ResponseStatusException.class);
+        ResponseStatusException exception = (ResponseStatusException) thrown;
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(exception.getReason()).isEqualTo("Order not found");
+        verify(payPalOrdersClient, never()).captureOrder(
+            eq("PAYPAL-ORDER-123"),
+            eq("trevo-order-capture-77")
+        );
+    }
+
+    @Test
     void createOrderRejectsInvalidAmount() {
-        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository);
+        PayPalService payPalService = new PayPalService(payPalOrdersClient, orderRepository, testTransactions());
 
         Throwable thrown = catchThrowable(() -> payPalService.createOrder(order(77L, "0.00")));
 
@@ -103,5 +151,14 @@ class PayPalServiceTest extends BaseUnitTest {
         order.setId(id);
         order.setTotalAmount(new BigDecimal(totalAmount));
         return order;
+    }
+
+    private TransactionOperations testTransactions() {
+        return new TransactionOperations() {
+            @Override
+            public <T> T execute(TransactionCallback<T> action) {
+                return action.doInTransaction(new SimpleTransactionStatus());
+            }
+        };
     }
 }

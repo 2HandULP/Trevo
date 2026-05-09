@@ -6,7 +6,7 @@ import pt.trevo.trevo_api.dto.PayPalOrderResponse;
 
 public interface PayPalOrdersClient {
 
-    PayPalOrderResponse createOrder(Long orderId, BigDecimal amount, String currency);
+    PayPalOrderResponse createOrder(Long orderId, BigDecimal amount, String currency, String requestId);
 
-    PayPalCaptureResponse captureOrder(String paypalOrderId);
+    PayPalCaptureResponse captureOrder(String paypalOrderId, String requestId);
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.http.HttpStatus;
@@ -44,6 +46,9 @@ class OrderServiceTest extends BaseUnitTest {
 
     @Mock
     private VariantRepository variantRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private OrderService orderService;
@@ -110,6 +115,54 @@ class OrderServiceTest extends BaseUnitTest {
     }
 
     @Test
+    void checkoutCreatesNewOrderNotificationsForShopOwners() {
+        Long buyerId = 10L;
+        User buyer = User.builder().id(buyerId).build();
+        Shop north = shop(301L, 901L, "North Shop");
+        Shop south = shop(302L, 902L, "South Shop");
+        Variant v1 = variant(101L, product(201L, north, "Linen Shirt", "29.99"), "M", "Blue", 5);
+        Variant v2 = variant(102L, product(202L, south, "Wool Scarf", "12.00"), "S", "Green", 6);
+        Cart cart = cart(buyer, item(1L, v1, 1), item(2L, v2, 1));
+
+        when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(variantRepository.findByIdsForUpdate(anyList())).thenReturn(List.of(v1, v2));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.checkout(buyerId, PaymentMethod.MBWAY);
+
+        ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
+        verify(notificationService, times(2)).createNewOrderNotification(orderCaptor.capture());
+        assertThat(orderCaptor.getAllValues().stream()
+                .map(order -> order.getShop().getOwner().getId())
+                .toList())
+            .containsExactlyInAnyOrder(901L, 902L);
+    }
+
+    @Test
+    void checkoutStillSucceedsWhenNotificationCreationFails() {
+        Long buyerId = 10L;
+        User buyer = User.builder().id(buyerId).build();
+        Variant variant = variant(101L, product(201L, shop(301L, 901L, "North Shop"), "Linen Shirt", "29.99"), "M", "Blue", 5);
+        Cart cart = cart(buyer, item(1L, variant, 1));
+
+        when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
+        when(variantRepository.findByIdsForUpdate(anyList())).thenReturn(List.of(variant));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("notification DB unavailable"))
+            .when(notificationService).createNewOrderNotification(any(Order.class));
+
+        List<Order> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY);
+
+        assertThat(orders).hasSize(1);
+        assertThat(cart.getItems()).isEmpty();
+        assertThat(variant.getStock()).isEqualTo(4);
+        verify(orderRepository).save(any(Order.class));
+        verify(cartRepository).save(cart);
+    }
+
+    @Test
     void checkoutWithStockConflictReturns400ListingAffectedVariants() {
         Long buyerId = 10L;
         User buyer = User.builder().id(buyerId).build();
@@ -126,6 +179,7 @@ class OrderServiceTest extends BaseUnitTest {
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(ex.getReason()).contains("101");
         verify(orderRepository, never()).save(any(Order.class));
+        verify(notificationService, never()).createNewOrderNotification(any());
     }
 
     // CART-B05: updateStatus

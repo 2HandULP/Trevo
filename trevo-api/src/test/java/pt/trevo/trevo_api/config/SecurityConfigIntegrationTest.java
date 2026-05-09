@@ -40,6 +40,7 @@ import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
+import pt.trevo.trevo_api.service.UserPhotoService;
 
 @SpringBootTest(
         classes = TrevoApiApplication.class,
@@ -97,6 +98,9 @@ class SecurityConfigIntegrationTest {
 
     @MockitoBean
     private NotificationRepository notificationRepository;
+
+    @MockitoBean
+    private UserPhotoService userPhotoService;
 
     @Autowired
     private WebApplicationContext context;

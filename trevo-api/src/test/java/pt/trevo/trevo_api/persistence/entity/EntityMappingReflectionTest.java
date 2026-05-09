@@ -161,6 +161,16 @@ class EntityMappingReflectionTest extends BaseUnitTest {
     }
 
     @Test
+    void shouldMapUserPhotoEntity() {
+        assertEntityTable(UserPhoto.class, "user_photos");
+        assertFieldNames(UserPhoto.class, "id", "buyer", "photoUrl", "uploadedAt");
+        assertIdField(UserPhoto.class, "id");
+        assertManyToOneJoinColumn(UserPhoto.class, "buyer", "buyer_id");
+        assertColumnName(UserPhoto.class, "photoUrl", "photo_url");
+        assertColumnName(UserPhoto.class, "uploadedAt", "uploaded_at");
+    }
+
+    @Test
     void shouldMapRefreshTokenEntity() {
         assertEntityTable(RefreshToken.class, "refresh_tokens");
         assertFieldNames(RefreshToken.class, "id", "user", "token", "expiresAt", "revoked", "createdAt");

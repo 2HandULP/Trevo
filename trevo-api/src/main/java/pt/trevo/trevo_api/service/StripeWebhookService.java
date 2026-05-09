@@ -9,6 +9,8 @@ import com.stripe.net.Webhook;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +21,7 @@ import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 @Service
 public class StripeWebhookService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(StripeWebhookService.class);
     private static final String PAYMENT_INTENT_SUCCEEDED = "payment_intent.succeeded";
     private static final String ORDER_ID_METADATA_KEY = "orderId";
 
@@ -50,6 +53,16 @@ public class StripeWebhookService {
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            LOGGER.info(
+                "Skipping Stripe PaymentIntent {} for order {} because status is {}",
+                paymentIntent.getId(),
+                order.getId(),
+                order.getStatus()
+            );
+            return;
+        }
+
         order.setStatus(OrderStatus.PLACED);
         order.setPaymentReference(paymentIntent.getId());
         orderRepository.save(order);
@@ -78,7 +91,7 @@ public class StripeWebhookService {
             return event.getDataObjectDeserializer()
                 .getObject()
                 .orElseGet(() -> deserializeUnsafe(event));
-        } catch (RuntimeException ex) {
+        } catch (IllegalStateException | NullPointerException ex) {
             return deserializeUnsafe(event);
         }
     }

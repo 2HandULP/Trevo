@@ -6,6 +6,10 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import PublicShopProfile from "./pages/PublicShopProfile";
+import CollectionManager from "./pages/CollectionManager";
+import ShopDashboard from "./pages/ShopDashboard";
+import CreateShop from "./pages/CreateShop";
+import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -25,6 +29,19 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
+        <Route path="/shops/new" element={<CreateShop />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
+        <Route path="/shop/dashboard" element={<ShopDashboard />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
+        <Route path="/shops/:shopId/collections" element={<CollectionManager />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>

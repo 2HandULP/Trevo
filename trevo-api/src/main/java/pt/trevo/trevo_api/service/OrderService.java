@@ -8,6 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,20 +29,24 @@ import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 @Service
 public class OrderService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(OrderService.class);
     private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.10");
 
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
     private final VariantRepository variantRepository;
+    private final NotificationService notificationService;
 
     public OrderService(
         CartRepository cartRepository,
         OrderRepository orderRepository,
-        VariantRepository variantRepository
+        VariantRepository variantRepository,
+        NotificationService notificationService
     ) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
         this.variantRepository = variantRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -118,7 +124,13 @@ public class OrderService {
 
             order.setTotalAmount(total);
             order.setCommissionAmount(total.multiply(COMMISSION_RATE).setScale(2, RoundingMode.HALF_UP));
-            orders.add(orderRepository.save(order));
+            Order savedOrder = orderRepository.save(order);
+            try {
+                notificationService.createNewOrderNotification(savedOrder);
+            } catch (RuntimeException ex) {
+                LOGGER.warn("Failed to create notification for order {}: {}", savedOrder.getId(), ex.getMessage(), ex);
+            }
+            orders.add(savedOrder);
         }
 
         // Clear the cart

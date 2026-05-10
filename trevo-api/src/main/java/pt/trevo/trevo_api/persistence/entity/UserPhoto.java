@@ -32,6 +32,9 @@ public class UserPhoto {
     @Column(name = "photo_url", nullable = false, length = 512)
     private String photoUrl;
 
+    @Column(name = "cloudinary_public_id", length = 255)
+    private String cloudinaryPublicId;
+
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
 }

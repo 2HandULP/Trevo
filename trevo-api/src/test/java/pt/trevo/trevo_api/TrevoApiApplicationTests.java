@@ -5,6 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
 import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
+import pt.trevo.trevo_api.persistence.repository.NotificationRepository;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductImageRepository;
@@ -55,6 +56,9 @@ class TrevoApiApplicationTests {
 
 	@MockitoBean
 	private CollectionRepository collectionRepository;
+
+	@MockitoBean
+	private NotificationRepository notificationRepository;
 
 	@Test
 	void contextLoads() {

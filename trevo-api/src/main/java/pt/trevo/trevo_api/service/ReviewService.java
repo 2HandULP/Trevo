@@ -1,8 +1,6 @@
 package pt.trevo.trevo_api.service;
 
 import java.time.Instant;
-import java.util.Locale;
-import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,33 +20,24 @@ import pt.trevo.trevo_api.persistence.repository.UserRepository;
 @Service
 public class ReviewService {
 
-    private static final Set<String> BLOCKED_WORDS = Set.of(
-        "badword",
-        "idiot",
-        "stupid",
-        "fuck",
-        "shit",
-        "bitch",
-        "asshole",
-        "bastard",
-        "cunt"
-    );
-
     private final ReviewRepository reviewRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ShopRepository shopRepository;
+    private final ProfanityFilter profanityFilter;
 
     public ReviewService(
         ReviewRepository reviewRepository,
         OrderRepository orderRepository,
         UserRepository userRepository,
-        ShopRepository shopRepository
+        ShopRepository shopRepository,
+        ProfanityFilter profanityFilter
     ) {
         this.reviewRepository = reviewRepository;
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.shopRepository = shopRepository;
+        this.profanityFilter = profanityFilter;
     }
 
     @Transactional
@@ -143,23 +132,9 @@ public class ReviewService {
     }
 
     private void validateCommentIsClean(String comment) {
-        if (containsBlockedWord(comment)) {
+        if (profanityFilter.containsBlockedWord(comment)) {
             throw badRequest("Review contains blocked words");
         }
-    }
-
-    private boolean containsBlockedWord(String comment) {
-        if (comment == null || comment.isBlank()) {
-            return false;
-        }
-
-        String normalized = comment.toLowerCase(Locale.ROOT);
-        for (String word : normalized.split("[^\\p{Alnum}]+")) {
-            if (BLOCKED_WORDS.contains(word)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private ResponseStatusException badRequest(String reason) {

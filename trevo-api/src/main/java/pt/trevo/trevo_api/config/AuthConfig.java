@@ -11,9 +11,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import pt.trevo.trevo_api.auth.AuthProperties;
+import pt.trevo.trevo_api.service.ProfanityFilterProperties;
 
 @Configuration
-@EnableConfigurationProperties(AuthProperties.class)
+@EnableConfigurationProperties({AuthProperties.class, ProfanityFilterProperties.class})
 public class AuthConfig {
 
     @Bean

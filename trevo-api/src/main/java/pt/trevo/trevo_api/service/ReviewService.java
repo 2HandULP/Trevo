@@ -24,17 +24,20 @@ public class ReviewService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ShopRepository shopRepository;
+    private final ProfanityFilter profanityFilter;
 
     public ReviewService(
         ReviewRepository reviewRepository,
         OrderRepository orderRepository,
         UserRepository userRepository,
-        ShopRepository shopRepository
+        ShopRepository shopRepository,
+        ProfanityFilter profanityFilter
     ) {
         this.reviewRepository = reviewRepository;
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.shopRepository = shopRepository;
+        this.profanityFilter = profanityFilter;
     }
 
     @Transactional
@@ -43,6 +46,7 @@ public class ReviewService {
                 || request.rating() == null || request.rating() < 1 || request.rating() > 5) {
             throw badRequest("Invalid review request");
         }
+        validateCommentIsClean(request.comment());
 
         if (!orderRepository.existsByBuyerIdAndShopIdAndStatus(buyerId, shopId, OrderStatus.DELIVERED)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Buyer has no delivered order from this shop");
@@ -73,6 +77,7 @@ public class ReviewService {
                 || request.rating() == null || request.rating() < 1 || request.rating() > 5) {
             throw badRequest("Invalid update review request");
         }
+        validateCommentIsClean(request.comment());
 
         Review review = findReview(reviewId);
 
@@ -124,6 +129,12 @@ public class ReviewService {
     private Review findReview(Long reviewId) {
         return reviewRepository.findById(reviewId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
+    }
+
+    private void validateCommentIsClean(String comment) {
+        if (profanityFilter.containsBlockedWord(comment)) {
+            throw badRequest("Review contains blocked words");
+        }
     }
 
     private ResponseStatusException badRequest(String reason) {

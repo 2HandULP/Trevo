@@ -41,6 +41,9 @@ class ReviewServiceTest extends BaseUnitTest {
     @Mock
     private ShopRepository shopRepository;
 
+    @Mock
+    private ProfanityFilter profanityFilter;
+
     @InjectMocks
     private ReviewService reviewService;
 
@@ -65,6 +68,37 @@ class ReviewServiceTest extends BaseUnitTest {
         assertThat(review.getShop()).isSameAs(shop);
         assertThat(review.getRating()).isEqualTo(4);
         assertThat(review.getComment()).isEqualTo("Great shop!");
+        verify(reviewRepository).save(any(Review.class));
+    }
+
+    @Test
+    void createReviewWithBlockedWordThrows400() {
+        when(profanityFilter.containsBlockedWord("This shop is a badword.")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.createReview(10L, 301L, new CreateReviewRequest(4, "This shop is a badword."))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void createReviewWithCleanCommentPassesProfanityFilter() {
+        Long buyerId = 10L;
+        Long shopId = 301L;
+        User buyer = User.builder().id(buyerId).build();
+        Shop shop = shop(shopId, 901L, "North Shop");
+
+        when(orderRepository.existsByBuyerIdAndShopIdAndStatus(buyerId, shopId, OrderStatus.DELIVERED)).thenReturn(true);
+        when(reviewRepository.existsByBuyerIdAndShopId(buyerId, shopId)).thenReturn(false);
+        when(userRepository.findById(buyerId)).thenReturn(Optional.of(buyer));
+        when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Review review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(5, "Clean and helpful service."));
+
+        assertThat(review.getComment()).isEqualTo("Clean and helpful service.");
         verify(reviewRepository).save(any(Review.class));
     }
 
@@ -137,6 +171,21 @@ class ReviewServiceTest extends BaseUnitTest {
     }
 
     @Test
+    void updateReviewWithCleanCommentPassesProfanityFilter() {
+        Long buyerId = 10L;
+        Review review = review(1L, User.builder().id(buyerId).build(), shop(301L, 901L, "North Shop"), 3, "Ok", null);
+
+        when(profanityFilter.containsBlockedWord("Helpful and clean update.")).thenReturn(false);
+        when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Review updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(4, "Helpful and clean update."));
+
+        assertThat(updated.getComment()).isEqualTo("Helpful and clean update.");
+        verify(reviewRepository).save(review);
+    }
+
+    @Test
     void updateReviewByNonAuthorThrows403() {
         Long authorId = 10L;
         Long intruderId = 99L;
@@ -156,6 +205,18 @@ class ReviewServiceTest extends BaseUnitTest {
     void updateReviewWithRatingOutOfRangeThrows400() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 reviewService.updateReview(1L, 10L, new UpdateReviewRequest(0, "Too low"))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void updateReviewWithBlockedWordThrows400() {
+        when(profanityFilter.containsBlockedWord("The service was stupid.")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.updateReview(1L, 10L, new UpdateReviewRequest(4, "The service was stupid."))
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

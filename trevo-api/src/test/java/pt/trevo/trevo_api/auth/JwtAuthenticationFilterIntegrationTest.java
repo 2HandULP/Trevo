@@ -74,6 +74,9 @@ class JwtAuthenticationFilterIntegrationTest {
     @MockitoBean
     private NotificationRepository notificationRepository;
 
+    @MockitoBean
+    private UserPhotoRepository userPhotoRepository;
+
     @Autowired
     private WebApplicationContext context;
 

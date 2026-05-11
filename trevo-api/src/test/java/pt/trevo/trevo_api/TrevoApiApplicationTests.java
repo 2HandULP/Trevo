@@ -13,6 +13,7 @@ import pt.trevo.trevo_api.persistence.repository.ProductRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
+import pt.trevo.trevo_api.persistence.repository.UserPhotoRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
@@ -59,6 +60,9 @@ class TrevoApiApplicationTests {
 
 	@MockitoBean
 	private NotificationRepository notificationRepository;
+
+	@MockitoBean
+	private UserPhotoRepository userPhotoRepository;
 
 	@Test
 	void contextLoads() {

@@ -1,12 +1,17 @@
 package pt.trevo.trevo_api.service;
 
 import java.time.Instant;
+import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.CreateReviewRequest;
 import pt.trevo.trevo_api.dto.RespondToReviewRequest;
+import pt.trevo.trevo_api.dto.ReviewPageResponse;
+import pt.trevo.trevo_api.dto.ReviewResponse;
 import pt.trevo.trevo_api.dto.UpdateReviewRequest;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.Review;
@@ -124,6 +129,42 @@ public class ReviewService {
 
         review.setResponse(request.response());
         return reviewRepository.save(review);
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewPageResponse getReviewsByShop(Long shopId, Pageable pageable) {
+        if (shopId == null) {
+            throw badRequest("Invalid shop id");
+        }
+        shopRepository.findById(shopId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
+
+        Page<Review> page = reviewRepository.findAllByShopIdOrderByCreatedAtDesc(shopId, pageable);
+        Double averageRating = reviewRepository.findAverageRatingByShopId(shopId);
+        List<ReviewResponse> reviews = page.getContent().stream().map(this::toResponse).toList();
+
+        return new ReviewPageResponse(
+            averageRating,
+            page.getTotalElements(),
+            page.getTotalPages(),
+            page.getNumber(),
+            page.getSize(),
+            reviews
+        );
+    }
+
+    public ReviewResponse toResponse(Review review) {
+        return new ReviewResponse(
+            review.getId(),
+            review.getBuyer().getId(),
+            review.getBuyer().getFullName(),
+            review.getShop().getId(),
+            review.getRating(),
+            review.getComment(),
+            review.getResponse(),
+            review.getCreatedAt(),
+            review.getUpdatedAt()
+        );
     }
 
     private Review findReview(Long reviewId) {

@@ -2,6 +2,7 @@ package pt.trevo.trevo_api.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,7 +43,7 @@ public class ReviewController {
         Authentication authentication
     ) {
         Long buyerId = securityUtils.requireUserId(authentication);
-        return reviewService.toResponse(reviewService.createReview(buyerId, shopId, request));
+        return reviewService.createReview(buyerId, shopId, request);
     }
 
     @PutMapping("/api/buyer/reviews/{reviewId}")
@@ -53,7 +54,7 @@ public class ReviewController {
         Authentication authentication
     ) {
         Long buyerId = securityUtils.requireUserId(authentication);
-        return reviewService.toResponse(reviewService.updateReview(reviewId, buyerId, request));
+        return reviewService.updateReview(reviewId, buyerId, request);
     }
 
     @DeleteMapping("/api/buyer/reviews/{reviewId}")
@@ -75,13 +76,13 @@ public class ReviewController {
         Authentication authentication
     ) {
         Long ownerId = securityUtils.requireUserId(authentication);
-        return reviewService.toResponse(reviewService.respondToReview(reviewId, ownerId, request));
+        return reviewService.respondToReview(reviewId, ownerId, request);
     }
 
     @GetMapping("/api/shops/{shopId}/reviews")
     public ReviewPageResponse getReviewsByShop(
         @PathVariable Long shopId,
-        @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
+        @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return reviewService.getReviewsByShop(shopId, pageable);
     }

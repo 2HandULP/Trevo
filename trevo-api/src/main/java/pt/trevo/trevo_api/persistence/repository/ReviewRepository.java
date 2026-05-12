@@ -15,7 +15,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     List<Review> findAllByShopIdOrderByCreatedAtDesc(Long shopId);
 
-    Page<Review> findAllByShopIdOrderByCreatedAtDesc(Long shopId, Pageable pageable);
+    Page<Review> findAllByShopId(Long shopId, Pageable pageable);
 
     @Query("select avg(r.rating) from Review r where r.shop.id = :shopId")
     Double findAverageRatingByShopId(Long shopId);

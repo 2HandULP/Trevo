@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
+import pt.trevo.trevo_api.dto.OrderResponse;
 import pt.trevo.trevo_api.persistence.entity.Cart;
 import pt.trevo.trevo_api.persistence.entity.CartItem;
 import pt.trevo.trevo_api.persistence.entity.Order;
@@ -34,6 +35,7 @@ import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.entity.Variant;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
 class OrderServiceTest extends BaseUnitTest {
@@ -46,6 +48,9 @@ class OrderServiceTest extends BaseUnitTest {
 
     @Mock
     private VariantRepository variantRepository;
+
+    @Mock
+    private ShopRepository shopRepository;
 
     @Mock
     private NotificationService notificationService;
@@ -70,10 +75,10 @@ class OrderServiceTest extends BaseUnitTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        List<Order> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY);
+        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY);
 
         assertThat(orders).hasSize(2);
-        assertThat(orders.stream().map(o -> o.getShop().getId()).toList())
+        assertThat(orders.stream().map(OrderResponse::shopId).toList())
                 .containsExactlyInAnyOrder(301L, 302L);
         verify(orderRepository, times(2)).save(any(Order.class));
     }
@@ -153,7 +158,7 @@ class OrderServiceTest extends BaseUnitTest {
         doThrow(new RuntimeException("notification DB unavailable"))
             .when(notificationService).createNewOrderNotification(any(Order.class));
 
-        List<Order> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY);
+        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY);
 
         assertThat(orders).hasSize(1);
         assertThat(cart.getItems()).isEmpty();
@@ -194,9 +199,9 @@ class OrderServiceTest extends BaseUnitTest {
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Order updated = orderService.updateStatus(orderId, OrderStatus.CONFIRMED, shopOwnerId);
+        OrderResponse updated = orderService.updateStatus(orderId, OrderStatus.CONFIRMED, shopOwnerId);
 
-        assertThat(updated.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        assertThat(updated.status()).isEqualTo(OrderStatus.CONFIRMED);
         verify(orderRepository).save(order);
     }
 
@@ -249,9 +254,9 @@ class OrderServiceTest extends BaseUnitTest {
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Order cancelled = orderService.cancelOrder(orderId, buyerId);
+        OrderResponse cancelled = orderService.cancelOrder(orderId, buyerId);
 
-        assertThat(cancelled.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(cancelled.status()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(variant.getStock()).isEqualTo(5);
         verify(variantRepository).save(variant);
     }

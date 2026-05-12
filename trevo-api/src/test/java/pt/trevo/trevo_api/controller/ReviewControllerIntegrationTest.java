@@ -94,8 +94,7 @@ class ReviewControllerIntegrationTest {
         ReviewResponse review = sampleReview(10L, null);
 
         when(reviewService.createReview(eq(1L), eq(5L), any(CreateReviewRequest.class)))
-            .thenReturn(null);
-        when(reviewService.toResponse(null)).thenReturn(review);
+            .thenReturn(review);
 
         mockMvc.perform(post("/api/buyer/reviews/shops/5")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -174,8 +173,7 @@ class ReviewControllerIntegrationTest {
         ReviewResponse updated = sampleReview(10L, null);
 
         when(reviewService.updateReview(eq(10L), eq(1L), any(UpdateReviewRequest.class)))
-            .thenReturn(null);
-        when(reviewService.toResponse(null)).thenReturn(updated);
+            .thenReturn(updated);
 
         mockMvc.perform(put("/api/buyer/reviews/10")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -273,8 +271,7 @@ class ReviewControllerIntegrationTest {
         ReviewResponse responded = sampleReview(10L, "Thank you!");
 
         when(reviewService.respondToReview(eq(10L), eq(2L), any(RespondToReviewRequest.class)))
-            .thenReturn(null);
-        when(reviewService.toResponse(null)).thenReturn(responded);
+            .thenReturn(responded);
 
         mockMvc.perform(post("/api/reviews/10/response")
                 .contentType(MediaType.APPLICATION_JSON)

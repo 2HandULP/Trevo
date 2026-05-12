@@ -57,11 +57,14 @@ class CartServiceTest extends BaseUnitTest {
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.empty());
         when(userRepository.findById(buyerId)).thenReturn(Optional.of(User.builder().id(buyerId).build()));
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productImageRepository.findByProductIdIn(anyList())).thenReturn(List.of());
 
-        CartItem item = cartService.addItem(buyerId, 101L, 2);
+        CartResponse response = cartService.addItem(buyerId, 101L, 2);
 
-        assertThat(item.getVariant()).isSameAs(variant);
-        assertThat(item.getQuantity()).isEqualTo(2);
+        assertThat(response.shops()).hasSize(1);
+        assertThat(response.shops().getFirst().items()).hasSize(1);
+        assertThat(response.shops().getFirst().items().getFirst().variantId()).isEqualTo(101L);
+        assertThat(response.shops().getFirst().items().getFirst().quantity()).isEqualTo(2);
         verify(cartRepository).save(any(Cart.class));
     }
 
@@ -88,12 +91,13 @@ class CartServiceTest extends BaseUnitTest {
         when(variantRepository.findById(101L)).thenReturn(Optional.of(variant));
         when(cartRepository.findByBuyerIdWithItems(buyerId)).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productImageRepository.findByProductIdIn(anyList())).thenReturn(List.of());
 
-        CartItem updatedItem = cartService.addItem(buyerId, 101L, 2);
+        CartResponse response = cartService.addItem(buyerId, 101L, 2);
 
-        assertThat(updatedItem.getQuantity()).isEqualTo(4);
         assertThat(cart.getItems()).hasSize(1);
-        assertThat(cart.getItems().getFirst()).isSameAs(updatedItem);
+        assertThat(cart.getItems().getFirst().getQuantity()).isEqualTo(4);
+        assertThat(response.shops().getFirst().items().getFirst().quantity()).isEqualTo(4);
     }
 
     @Test

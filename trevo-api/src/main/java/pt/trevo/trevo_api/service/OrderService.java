@@ -10,10 +10,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.dto.OrderItemResponse;
+import pt.trevo.trevo_api.dto.OrderPageResponse;
+import pt.trevo.trevo_api.dto.OrderResponse;
 import pt.trevo.trevo_api.persistence.entity.Cart;
 import pt.trevo.trevo_api.persistence.entity.CartItem;
 import pt.trevo.trevo_api.persistence.entity.Order;
@@ -24,6 +31,7 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.Variant;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
 @Service
@@ -35,6 +43,7 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
     private final VariantRepository variantRepository;
+    private final ShopRepository shopRepository;
     private final NotificationService notificationService;
     private final PayoutService payoutService;
 
@@ -42,18 +51,20 @@ public class OrderService {
         CartRepository cartRepository,
         OrderRepository orderRepository,
         VariantRepository variantRepository,
+        ShopRepository shopRepository,
         NotificationService notificationService,
         PayoutService payoutService
     ) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
         this.variantRepository = variantRepository;
+        this.shopRepository = shopRepository;
         this.notificationService = notificationService;
         this.payoutService = payoutService;
     }
 
     @Transactional
-    public List<Order> checkout(Long buyerId, PaymentMethod paymentMethod) {
+    public List<OrderResponse> checkout(Long buyerId, PaymentMethod paymentMethod) {
         if (buyerId == null || paymentMethod == null) {
             throw badRequest("Invalid checkout request");
         }
@@ -95,7 +106,7 @@ public class OrderService {
         }
 
         // Create one order per shop
-        List<Order> orders = new ArrayList<>();
+        List<OrderResponse> orders = new ArrayList<>();
         for (Map.Entry<Long, List<CartItem>> entry : byShop.entrySet()) {
             List<CartItem> shopItems = entry.getValue();
             Shop shop = shopItems.get(0).getVariant().getProduct().getShop();
@@ -133,7 +144,7 @@ public class OrderService {
             } catch (RuntimeException ex) {
                 LOGGER.warn("Failed to create notification for order {}: {}", savedOrder.getId(), ex.getMessage(), ex);
             }
-            orders.add(savedOrder);
+            orders.add(toResponse(savedOrder));
         }
 
         // Clear the cart
@@ -144,7 +155,7 @@ public class OrderService {
     }
 
     @Transactional
-    public Order updateStatus(Long orderId, OrderStatus newStatus, Long requesterId) {
+    public OrderResponse updateStatus(Long orderId, OrderStatus newStatus, Long requesterId) {
         if (orderId == null || newStatus == null || requesterId == null) {
             throw badRequest("Invalid update status request");
         }
@@ -165,11 +176,11 @@ public class OrderService {
         if (newStatus == OrderStatus.DELIVERED) {
             payoutService.createPayout(savedOrder);
         }
-        return savedOrder;
+        return toResponse(savedOrder);
     }
 
     @Transactional
-    public Order cancelOrder(Long orderId, Long requesterId) {
+    public OrderResponse cancelOrder(Long orderId, Long requesterId) {
         if (orderId == null || requesterId == null) {
             throw badRequest("Invalid cancel request");
         }
@@ -192,7 +203,83 @@ public class OrderService {
         }
 
         order.setStatus(OrderStatus.CANCELLED);
-        return orderRepository.save(order);
+        return toResponse(orderRepository.save(order));
+    }
+
+    @Transactional(readOnly = true)
+    public OrderPageResponse getBuyerOrders(Long buyerId, Pageable pageable) {
+        if (buyerId == null) {
+            throw badRequest("Invalid buyer id");
+        }
+        Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+            Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Order> page = orderRepository.findAllByBuyerId(buyerId, sorted);
+        return toPageResponse(page);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderResponse getBuyerOrder(Long orderId, Long buyerId) {
+        if (orderId == null || buyerId == null) {
+            throw badRequest("Invalid request");
+        }
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        if (!order.getBuyer().getId().equals(buyerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        return toResponse(order);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderPageResponse getShopOrders(Long ownerId, Pageable pageable) {
+        if (ownerId == null) {
+            throw badRequest("Invalid owner id");
+        }
+        Shop shop = shopRepository.findByOwnerId(ownerId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
+        Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+            Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Order> page = orderRepository.findAllByShopId(shop.getId(), sorted);
+        return toPageResponse(page);
+    }
+
+    private OrderPageResponse toPageResponse(Page<Order> page) {
+        List<OrderResponse> orders = page.getContent().stream().map(this::toResponse).toList();
+        return new OrderPageResponse(page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize(), orders);
+    }
+
+    private OrderResponse toResponse(Order order) {
+        List<OrderItemResponse> items = order.getItems().stream().map(this::toItemResponse).toList();
+        return new OrderResponse(
+            order.getId(),
+            order.getShop().getId(),
+            order.getShop().getName(),
+            order.getStatus(),
+            order.getTrackingNumber(),
+            order.getTotalAmount(),
+            order.getCommissionAmount(),
+            order.getPaymentMethod(),
+            order.getPaymentReference(),
+            order.getCreatedAt(),
+            order.getUpdatedAt(),
+            items
+        );
+    }
+
+    private OrderItemResponse toItemResponse(OrderItem item) {
+        Variant variant = item.getVariant();
+        BigDecimal subtotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+        return new OrderItemResponse(
+            item.getId(),
+            variant.getId(),
+            variant.getProduct().getId(),
+            variant.getProduct().getName(),
+            variant.getSize(),
+            variant.getColor(),
+            item.getQuantity(),
+            item.getUnitPrice(),
+            subtotal
+        );
     }
 
     private boolean isValidTransition(OrderStatus from, OrderStatus to) {

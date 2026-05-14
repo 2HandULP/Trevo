@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
 import pt.trevo.trevo_api.dto.CreateReviewRequest;
 import pt.trevo.trevo_api.dto.RespondToReviewRequest;
+import pt.trevo.trevo_api.dto.ReviewResponse;
 import pt.trevo.trevo_api.dto.UpdateReviewRequest;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.Review;
@@ -62,12 +63,12 @@ class ReviewServiceTest extends BaseUnitTest {
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(4, "Great shop!"));
+        ReviewResponse review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(4, "Great shop!"));
 
-        assertThat(review.getBuyer()).isSameAs(buyer);
-        assertThat(review.getShop()).isSameAs(shop);
-        assertThat(review.getRating()).isEqualTo(4);
-        assertThat(review.getComment()).isEqualTo("Great shop!");
+        assertThat(review.buyerId()).isEqualTo(buyerId);
+        assertThat(review.shopId()).isEqualTo(shopId);
+        assertThat(review.rating()).isEqualTo(4);
+        assertThat(review.comment()).isEqualTo("Great shop!");
         verify(reviewRepository).save(any(Review.class));
     }
 
@@ -96,9 +97,9 @@ class ReviewServiceTest extends BaseUnitTest {
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(5, "Clean and helpful service."));
+        ReviewResponse review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(5, "Clean and helpful service."));
 
-        assertThat(review.getComment()).isEqualTo("Clean and helpful service.");
+        assertThat(review.comment()).isEqualTo("Clean and helpful service.");
         verify(reviewRepository).save(any(Review.class));
     }
 
@@ -163,10 +164,10 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(5, "Actually great!"));
+        ReviewResponse updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(5, "Actually great!"));
 
-        assertThat(updated.getRating()).isEqualTo(5);
-        assertThat(updated.getComment()).isEqualTo("Actually great!");
+        assertThat(updated.rating()).isEqualTo(5);
+        assertThat(updated.comment()).isEqualTo("Actually great!");
         verify(reviewRepository).save(review);
     }
 
@@ -179,9 +180,9 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(4, "Helpful and clean update."));
+        ReviewResponse updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(4, "Helpful and clean update."));
 
-        assertThat(updated.getComment()).isEqualTo("Helpful and clean update.");
+        assertThat(updated.comment()).isEqualTo("Helpful and clean update.");
         verify(reviewRepository).save(review);
     }
 
@@ -271,9 +272,9 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review responded = reviewService.respondToReview(1L, shopOwnerId, new RespondToReviewRequest("Thank you for your feedback!"));
+        ReviewResponse responded = reviewService.respondToReview(1L, shopOwnerId, new RespondToReviewRequest("Thank you for your feedback!"));
 
-        assertThat(responded.getResponse()).isEqualTo("Thank you for your feedback!");
+        assertThat(responded.response()).isEqualTo("Thank you for your feedback!");
         verify(reviewRepository).save(review);
     }
 

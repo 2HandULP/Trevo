@@ -8,5 +8,4 @@ public record OrderPageResponse(
     int page,
     int size,
     List<OrderResponse> orders
-) {
-}
+) {}

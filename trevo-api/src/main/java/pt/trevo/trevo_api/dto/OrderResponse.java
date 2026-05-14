@@ -3,7 +3,6 @@ package pt.trevo.trevo_api.dto;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.PaymentMethod;
 
@@ -20,5 +19,4 @@ public record OrderResponse(
     Instant createdAt,
     Instant updatedAt,
     List<OrderItemResponse> items
-) {
-}
+) {}

@@ -1,12 +1,19 @@
 package pt.trevo.trevo_api.service;
 
 import java.time.Instant;
+import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.CreateReviewRequest;
 import pt.trevo.trevo_api.dto.RespondToReviewRequest;
+import pt.trevo.trevo_api.dto.ReviewPageResponse;
+import pt.trevo.trevo_api.dto.ReviewResponse;
 import pt.trevo.trevo_api.dto.UpdateReviewRequest;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.Review;
@@ -41,7 +48,7 @@ public class ReviewService {
     }
 
     @Transactional
-    public Review createReview(Long buyerId, Long shopId, CreateReviewRequest request) {
+    public ReviewResponse createReview(Long buyerId, Long shopId, CreateReviewRequest request) {
         if (buyerId == null || shopId == null || request == null
                 || request.rating() == null || request.rating() < 1 || request.rating() > 5) {
             throw badRequest("Invalid review request");
@@ -68,11 +75,11 @@ public class ReviewService {
         review.setComment(request.comment());
         review.setCreatedAt(Instant.now());
 
-        return reviewRepository.save(review);
+        return toResponse(reviewRepository.save(review));
     }
 
     @Transactional
-    public Review updateReview(Long reviewId, Long requesterId, UpdateReviewRequest request) {
+    public ReviewResponse updateReview(Long reviewId, Long requesterId, UpdateReviewRequest request) {
         if (reviewId == null || requesterId == null || request == null
                 || request.rating() == null || request.rating() < 1 || request.rating() > 5) {
             throw badRequest("Invalid update review request");
@@ -87,7 +94,7 @@ public class ReviewService {
 
         review.setRating(request.rating());
         review.setComment(request.comment());
-        return reviewRepository.save(review);
+        return toResponse(reviewRepository.save(review));
     }
 
     @Transactional
@@ -106,7 +113,7 @@ public class ReviewService {
     }
 
     @Transactional
-    public Review respondToReview(Long reviewId, Long requesterId, RespondToReviewRequest request) {
+    public ReviewResponse respondToReview(Long reviewId, Long requesterId, RespondToReviewRequest request) {
         if (reviewId == null || requesterId == null || request == null
                 || request.response() == null || request.response().isBlank()) {
             throw badRequest("Invalid respond to review request");
@@ -123,7 +130,47 @@ public class ReviewService {
         }
 
         review.setResponse(request.response());
-        return reviewRepository.save(review);
+        return toResponse(reviewRepository.save(review));
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewPageResponse getReviewsByShop(Long shopId, Pageable pageable) {
+        if (shopId == null) {
+            throw badRequest("Invalid shop id");
+        }
+        shopRepository.findById(shopId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
+
+        Pageable sortedPageable = PageRequest.of(
+            pageable.getPageNumber(), pageable.getPageSize(),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        Page<Review> page = reviewRepository.findAllByShopId(shopId, sortedPageable);
+        Double averageRating = reviewRepository.findAverageRatingByShopId(shopId);
+        List<ReviewResponse> reviews = page.getContent().stream().map(this::toResponse).toList();
+
+        return new ReviewPageResponse(
+            averageRating,
+            page.getTotalElements(),
+            page.getTotalPages(),
+            page.getNumber(),
+            page.getSize(),
+            reviews
+        );
+    }
+
+    private ReviewResponse toResponse(Review review) {
+        return new ReviewResponse(
+            review.getId(),
+            review.getBuyer().getId(),
+            review.getBuyer().getFullName(),
+            review.getShop().getId(),
+            review.getRating(),
+            review.getComment(),
+            review.getResponse(),
+            review.getCreatedAt(),
+            review.getUpdatedAt()
+        );
     }
 
     private Review findReview(Long reviewId) {

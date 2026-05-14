@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.dto.OrderItemResponse;
+import pt.trevo.trevo_api.dto.OrderResponse;
 import pt.trevo.trevo_api.persistence.entity.Cart;
 import pt.trevo.trevo_api.persistence.entity.CartItem;
 import pt.trevo.trevo_api.persistence.entity.Order;
@@ -24,6 +26,7 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.Variant;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
 @Service
@@ -35,22 +38,25 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
     private final VariantRepository variantRepository;
+    private final ShopRepository shopRepository;
     private final NotificationService notificationService;
 
     public OrderService(
         CartRepository cartRepository,
         OrderRepository orderRepository,
         VariantRepository variantRepository,
+        ShopRepository shopRepository,
         NotificationService notificationService
     ) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
         this.variantRepository = variantRepository;
+        this.shopRepository = shopRepository;
         this.notificationService = notificationService;
     }
 
     @Transactional
-    public List<Order> checkout(Long buyerId, PaymentMethod paymentMethod) {
+    public List<OrderResponse> checkout(Long buyerId, PaymentMethod paymentMethod) {
         if (buyerId == null || paymentMethod == null) {
             throw badRequest("Invalid checkout request");
         }
@@ -137,11 +143,11 @@ public class OrderService {
         cart.getItems().clear();
         cartRepository.save(cart);
 
-        return orders;
+        return orders.stream().map(this::toResponse).toList();
     }
 
     @Transactional
-    public Order updateStatus(Long orderId, OrderStatus newStatus, Long requesterId) {
+    public OrderResponse updateStatus(Long orderId, OrderStatus newStatus, Long requesterId) {
         if (orderId == null || newStatus == null || requesterId == null) {
             throw badRequest("Invalid update status request");
         }
@@ -158,11 +164,11 @@ public class OrderService {
         }
 
         order.setStatus(newStatus);
-        return orderRepository.save(order);
+        return toResponse(orderRepository.save(order));
     }
 
     @Transactional
-    public Order cancelOrder(Long orderId, Long requesterId) {
+    public OrderResponse cancelOrder(Long orderId, Long requesterId) {
         if (orderId == null || requesterId == null) {
             throw badRequest("Invalid cancel request");
         }
@@ -185,7 +191,66 @@ public class OrderService {
         }
 
         order.setStatus(OrderStatus.CANCELLED);
-        return orderRepository.save(order);
+        return toResponse(orderRepository.save(order));
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getBuyerOrders(Long buyerId) {
+        return orderRepository.findAllByBuyerIdOrderByCreatedAtDesc(buyerId)
+            .stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrderResponse getBuyerOrder(Long orderId, Long buyerId) {
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        if (!order.getBuyer().getId().equals(buyerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        return toResponse(order);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getShopOrders(Long ownerId) {
+        Shop shop = shopRepository.findByOwnerId(ownerId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
+        return orderRepository.findAllByShopIdOrderByCreatedAtDesc(shop.getId())
+            .stream().map(this::toResponse).toList();
+    }
+
+    private OrderResponse toResponse(Order order) {
+        List<OrderItemResponse> items = order.getItems().stream()
+            .map(this::toItemResponse)
+            .toList();
+        return new OrderResponse(
+            order.getId(),
+            order.getShop().getId(),
+            order.getShop().getName(),
+            order.getStatus(),
+            order.getTrackingNumber(),
+            order.getTotalAmount(),
+            order.getCommissionAmount(),
+            order.getPaymentMethod(),
+            order.getPaymentReference(),
+            order.getCreatedAt(),
+            order.getUpdatedAt(),
+            items
+        );
+    }
+
+    private OrderItemResponse toItemResponse(OrderItem item) {
+        Variant variant = item.getVariant();
+        return new OrderItemResponse(
+            item.getId(),
+            variant.getId(),
+            variant.getProduct().getId(),
+            variant.getProduct().getName(),
+            variant.getSize(),
+            variant.getColor(),
+            item.getQuantity(),
+            item.getUnitPrice(),
+            item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
+        );
     }
 
     private boolean isValidTransition(OrderStatus from, OrderStatus to) {

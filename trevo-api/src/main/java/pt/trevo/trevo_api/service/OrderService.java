@@ -10,11 +10,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.OrderItemResponse;
+import pt.trevo.trevo_api.dto.OrderPageResponse;
 import pt.trevo.trevo_api.dto.OrderResponse;
 import pt.trevo.trevo_api.persistence.entity.Cart;
 import pt.trevo.trevo_api.persistence.entity.CartItem;
@@ -98,7 +103,7 @@ public class OrderService {
         }
 
         // Create one order per shop
-        List<Order> orders = new ArrayList<>();
+        List<OrderResponse> orders = new ArrayList<>();
         for (Map.Entry<Long, List<CartItem>> entry : byShop.entrySet()) {
             List<CartItem> shopItems = entry.getValue();
             Shop shop = shopItems.get(0).getVariant().getProduct().getShop();
@@ -136,14 +141,14 @@ public class OrderService {
             } catch (RuntimeException ex) {
                 LOGGER.warn("Failed to create notification for order {}: {}", savedOrder.getId(), ex.getMessage(), ex);
             }
-            orders.add(savedOrder);
+            orders.add(toResponse(savedOrder));
         }
 
         // Clear the cart
         cart.getItems().clear();
         cartRepository.save(cart);
 
-        return orders.stream().map(this::toResponse).toList();
+        return orders;
     }
 
     @Transactional
@@ -195,13 +200,21 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getBuyerOrders(Long buyerId) {
-        return orderRepository.findAllByBuyerIdOrderByCreatedAtDesc(buyerId)
-            .stream().map(this::toResponse).toList();
+    public OrderPageResponse getBuyerOrders(Long buyerId, Pageable pageable) {
+        if (buyerId == null) {
+            throw badRequest("Invalid buyer id");
+        }
+        Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+            Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Order> page = orderRepository.findAllByBuyerId(buyerId, sorted);
+        return toPageResponse(page);
     }
 
     @Transactional(readOnly = true)
     public OrderResponse getBuyerOrder(Long orderId, Long buyerId) {
+        if (orderId == null || buyerId == null) {
+            throw badRequest("Invalid request");
+        }
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         if (!order.getBuyer().getId().equals(buyerId)) {
@@ -211,17 +224,25 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getShopOrders(Long ownerId) {
+    public OrderPageResponse getShopOrders(Long ownerId, Pageable pageable) {
+        if (ownerId == null) {
+            throw badRequest("Invalid owner id");
+        }
         Shop shop = shopRepository.findByOwnerId(ownerId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
-        return orderRepository.findAllByShopIdOrderByCreatedAtDesc(shop.getId())
-            .stream().map(this::toResponse).toList();
+        Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+            Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Order> page = orderRepository.findAllByShopId(shop.getId(), sorted);
+        return toPageResponse(page);
+    }
+
+    private OrderPageResponse toPageResponse(Page<Order> page) {
+        List<OrderResponse> orders = page.getContent().stream().map(this::toResponse).toList();
+        return new OrderPageResponse(page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize(), orders);
     }
 
     private OrderResponse toResponse(Order order) {
-        List<OrderItemResponse> items = order.getItems().stream()
-            .map(this::toItemResponse)
-            .toList();
+        List<OrderItemResponse> items = order.getItems().stream().map(this::toItemResponse).toList();
         return new OrderResponse(
             order.getId(),
             order.getShop().getId(),
@@ -240,6 +261,7 @@ public class OrderService {
 
     private OrderItemResponse toItemResponse(OrderItem item) {
         Variant variant = item.getVariant();
+        BigDecimal subtotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
         return new OrderItemResponse(
             item.getId(),
             variant.getId(),
@@ -249,7 +271,7 @@ public class OrderService {
             variant.getColor(),
             item.getQuantity(),
             item.getUnitPrice(),
-            item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
+            subtotal
         );
     }
 

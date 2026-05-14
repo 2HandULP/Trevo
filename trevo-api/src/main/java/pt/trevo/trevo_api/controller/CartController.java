@@ -45,8 +45,7 @@ public class CartController {
         Authentication authentication
     ) {
         Long buyerId = securityUtils.requireUserId(authentication);
-        cartService.addItem(buyerId, request.variantId(), request.quantity());
-        return cartService.getCart(buyerId);
+        return cartService.addItem(buyerId, request.variantId(), request.quantity());
     }
 
     @PutMapping("/items/{variantId}")
@@ -56,8 +55,7 @@ public class CartController {
         Authentication authentication
     ) {
         Long buyerId = securityUtils.requireUserId(authentication);
-        cartService.updateQuantity(buyerId, variantId, request.quantity());
-        return cartService.getCart(buyerId);
+        return cartService.updateQuantity(buyerId, variantId, request.quantity());
     }
 
     @DeleteMapping("/items/{variantId}")

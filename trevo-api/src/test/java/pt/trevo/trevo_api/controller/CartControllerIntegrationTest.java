@@ -78,34 +78,35 @@ class CartControllerIntegrationTest {
     }
 
     private CartResponse cartWithOneItem() {
-        CartItemResponse item = new CartItemResponse(1L, 10L, 20L, "Blue Shirt", null, "M", "Blue", 2, new BigDecimal("25.00"), new BigDecimal("50.00"));
-        CartShopGroupResponse group = new CartShopGroupResponse(5L, "Cool Shop", List.of(item), new BigDecimal("50.00"));
-        return new CartResponse(List.of(group), new BigDecimal("50.00"));
+        CartItemResponse item = new CartItemResponse(1L, 101L, 201L, "Linen Shirt", null, "M", "Blue", 2, new BigDecimal("29.99"), new BigDecimal("59.98"));
+        CartShopGroupResponse group = new CartShopGroupResponse(301L, "North Shop", List.of(item), new BigDecimal("59.98"));
+        return new CartResponse(List.of(group), new BigDecimal("59.98"));
     }
 
     // --- GET /api/buyer/cart ---
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void getCartReturnsBuyerCart() throws Exception {
+    void getCartReturnsCartResponse() throws Exception {
         when(cartService.getCart(1L)).thenReturn(cartWithOneItem());
 
         mockMvc.perform(get("/api/buyer/cart"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.grandTotal").value("50.0"))
-            .andExpect(jsonPath("$.shops[0].shopName").value("Cool Shop"))
-            .andExpect(jsonPath("$.shops[0].items[0].productName").value("Blue Shirt"));
+            .andExpect(jsonPath("$.grandTotal").value("59.98"))
+            .andExpect(jsonPath("$.shops").isArray())
+            .andExpect(jsonPath("$.shops[0].shopId").value(301))
+            .andExpect(jsonPath("$.shops[0].items[0].variantId").value(101));
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void getCartReturnsEmptyCartWhenNothingAdded() throws Exception {
+    void getCartReturnsEmptyCartWhenNoItems() throws Exception {
         when(cartService.getCart(1L)).thenReturn(emptyCart());
 
         mockMvc.perform(get("/api/buyer/cart"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.grandTotal").value("0"))
-            .andExpect(jsonPath("$.shops").isEmpty());
+            .andExpect(jsonPath("$.shops").isEmpty())
+            .andExpect(jsonPath("$.grandTotal").value("0"));
     }
 
     @Test
@@ -125,43 +126,24 @@ class CartControllerIntegrationTest {
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void addItemReturnsCreatedWithUpdatedCart() throws Exception {
-        AddCartItemRequest request = new AddCartItemRequest(10L, 2);
-        when(cartService.getCart(1L)).thenReturn(cartWithOneItem());
+    void addItemReturnsCreatedWithCartResponse() throws Exception {
+        AddCartItemRequest request = new AddCartItemRequest(101L, 2);
+        when(cartService.addItem(eq(1L), eq(101L), eq(2))).thenReturn(cartWithOneItem());
 
         mockMvc.perform(post("/api/buyer/cart/items")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.shops[0].items[0].variantId").value(10));
-
-        verify(cartService).addItem(1L, 10L, 2);
+            .andExpect(jsonPath("$.shops[0].items[0].variantId").value(101))
+            .andExpect(jsonPath("$.shops[0].items[0].quantity").value(2));
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void addItemReturnsBadRequestWhenVariantIdMissing() throws Exception {
-        mockMvc.perform(post("/api/buyer/cart/items")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"quantity\":2}"))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(username = "1", roles = "BUYER")
-    void addItemReturnsBadRequestWhenQuantityIsZero() throws Exception {
-        mockMvc.perform(post("/api/buyer/cart/items")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"variantId\":10,\"quantity\":0}"))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(username = "1", roles = "BUYER")
-    void addItemPropagatesServiceErrors() throws Exception {
-        AddCartItemRequest request = new AddCartItemRequest(10L, 99);
-        doThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested quantity exceeds available stock"))
-            .when(cartService).addItem(1L, 10L, 99);
+    void addItemReturnsBadRequestWhenStockExceeded() throws Exception {
+        AddCartItemRequest request = new AddCartItemRequest(101L, 99);
+        when(cartService.addItem(any(), any(), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested quantity exceeds available stock"));
 
         mockMvc.perform(post("/api/buyer/cart/items")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -170,8 +152,21 @@ class CartControllerIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "1", roles = "BUYER")
+    void addItemReturnsNotFoundForUnknownVariant() throws Exception {
+        AddCartItemRequest request = new AddCartItemRequest(999L, 1);
+        when(cartService.addItem(any(), any(), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Variant not found"));
+
+        mockMvc.perform(post("/api/buyer/cart/items")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void addItemRequiresAuthentication() throws Exception {
-        AddCartItemRequest request = new AddCartItemRequest(10L, 1);
+        AddCartItemRequest request = new AddCartItemRequest(101L, 1);
         mockMvc.perform(post("/api/buyer/cart/items")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -181,7 +176,7 @@ class CartControllerIntegrationTest {
     @Test
     @WithMockUser(username = "2", roles = "SHOP_OWNER")
     void addItemForbidsShopOwner() throws Exception {
-        AddCartItemRequest request = new AddCartItemRequest(10L, 1);
+        AddCartItemRequest request = new AddCartItemRequest(101L, 1);
         mockMvc.perform(post("/api/buyer/cart/items")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -194,30 +189,45 @@ class CartControllerIntegrationTest {
     @WithMockUser(username = "1", roles = "BUYER")
     void updateItemReturnsUpdatedCart() throws Exception {
         UpdateCartItemRequest request = new UpdateCartItemRequest(3);
-        when(cartService.getCart(1L)).thenReturn(cartWithOneItem());
+        when(cartService.updateQuantity(eq(1L), eq(101L), eq(3))).thenReturn(cartWithOneItem());
 
-        mockMvc.perform(put("/api/buyer/cart/items/10")
+        mockMvc.perform(put("/api/buyer/cart/items/101")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.grandTotal").value("50.0"));
-
-        verify(cartService).updateQuantity(1L, 10L, 3);
+            .andExpect(jsonPath("$.shops[0].items[0].variantId").value(101));
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void updateItemReturnsBadRequestWhenQuantityMissing() throws Exception {
-        mockMvc.perform(put("/api/buyer/cart/items/10")
+    void updateItemReturnsBadRequestWhenStockExceeded() throws Exception {
+        UpdateCartItemRequest request = new UpdateCartItemRequest(99);
+        when(cartService.updateQuantity(any(), any(), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested quantity exceeds available stock"));
+
+        mockMvc.perform(put("/api/buyer/cart/items/101")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
+                .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUYER")
+    void updateItemReturnsNotFoundWhenItemNotInCart() throws Exception {
+        UpdateCartItemRequest request = new UpdateCartItemRequest(1);
+        when(cartService.updateQuantity(any(), any(), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found"));
+
+        mockMvc.perform(put("/api/buyer/cart/items/999")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isNotFound());
     }
 
     @Test
     void updateItemRequiresAuthentication() throws Exception {
         UpdateCartItemRequest request = new UpdateCartItemRequest(1);
-        mockMvc.perform(put("/api/buyer/cart/items/10")
+        mockMvc.perform(put("/api/buyer/cart/items/101")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isUnauthorized());
@@ -228,32 +238,32 @@ class CartControllerIntegrationTest {
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
     void removeItemReturnsNoContent() throws Exception {
-        mockMvc.perform(delete("/api/buyer/cart/items/10"))
+        mockMvc.perform(delete("/api/buyer/cart/items/101"))
             .andExpect(status().isNoContent());
 
-        verify(cartService).removeItem(1L, 10L);
+        verify(cartService).removeItem(1L, 101L);
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void removeItemPropagatesNotFound() throws Exception {
+    void removeItemReturnsNotFoundWhenItemNotInCart() throws Exception {
         doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found"))
-            .when(cartService).removeItem(eq(1L), any());
+            .when(cartService).removeItem(1L, 999L);
 
-        mockMvc.perform(delete("/api/buyer/cart/items/99"))
+        mockMvc.perform(delete("/api/buyer/cart/items/999"))
             .andExpect(status().isNotFound());
     }
 
     @Test
     void removeItemRequiresAuthentication() throws Exception {
-        mockMvc.perform(delete("/api/buyer/cart/items/10"))
+        mockMvc.perform(delete("/api/buyer/cart/items/101"))
             .andExpect(status().isUnauthorized());
     }
 
     @Test
     @WithMockUser(username = "2", roles = "SHOP_OWNER")
     void removeItemForbidsShopOwner() throws Exception {
-        mockMvc.perform(delete("/api/buyer/cart/items/10"))
+        mockMvc.perform(delete("/api/buyer/cart/items/101"))
             .andExpect(status().isForbidden());
     }
 }

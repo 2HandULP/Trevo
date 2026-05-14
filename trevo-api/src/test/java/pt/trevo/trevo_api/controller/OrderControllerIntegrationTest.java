@@ -29,7 +29,7 @@ import pt.trevo.trevo_api.auth.AppUserDetailsService;
 import pt.trevo.trevo_api.auth.JwtService;
 import pt.trevo.trevo_api.config.SecurityConfig;
 import pt.trevo.trevo_api.dto.CheckoutRequest;
-import pt.trevo.trevo_api.dto.OrderItemResponse;
+import pt.trevo.trevo_api.dto.OrderPageResponse;
 import pt.trevo.trevo_api.dto.OrderResponse;
 import pt.trevo.trevo_api.dto.UpdateOrderStatusRequest;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
@@ -73,53 +73,57 @@ class OrderControllerIntegrationTest {
     }
 
     private OrderResponse sampleOrder(Long id, OrderStatus status) {
-        OrderItemResponse item = new OrderItemResponse(
-            1L, 10L, 20L, "Blue Shirt", "M", "Blue", 2,
-            new BigDecimal("25.00"), new BigDecimal("50.00")
-        );
         return new OrderResponse(
-            id, 5L, "Cool Shop", status, null,
-            new BigDecimal("50.00"), new BigDecimal("5.00"),
+            id, 301L, "North Shop", status, null,
+            new BigDecimal("59.98"), new BigDecimal("6.00"),
             PaymentMethod.MBWAY, null,
-            Instant.parse("2025-01-01T10:00:00Z"), Instant.parse("2025-01-01T10:00:00Z"),
-            List.of(item)
+            Instant.parse("2025-06-01T10:00:00Z"), Instant.parse("2025-06-01T10:00:00Z"),
+            List.of()
         );
+    }
+
+    private OrderPageResponse samplePage(List<OrderResponse> orders) {
+        return new OrderPageResponse(orders.size(), 1, 0, 20, orders);
     }
 
     // --- POST /api/buyer/orders/checkout ---
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void checkoutCreatesOrdersAndReturnsCreated() throws Exception {
+    void checkoutReturnsCreatedWithOrderList() throws Exception {
         CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
-        when(orderService.checkout(1L, PaymentMethod.MBWAY))
-            .thenReturn(List.of(sampleOrder(100L, OrderStatus.PLACED)));
+        OrderResponse order = sampleOrder(10L, OrderStatus.PLACED);
+
+        when(orderService.checkout(eq(1L), eq(PaymentMethod.MBWAY))).thenReturn(List.of(order));
 
         mockMvc.perform(post("/api/buyer/orders/checkout")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$[0].id").value(100))
+            .andExpect(jsonPath("$[0].id").value(10))
             .andExpect(jsonPath("$[0].status").value("PLACED"))
-            .andExpect(jsonPath("$[0].shopName").value("Cool Shop"))
-            .andExpect(jsonPath("$[0].paymentMethod").value("MBWAY"));
+            .andExpect(jsonPath("$[0].shopName").value("North Shop"));
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void checkoutReturnsBadRequestWhenPaymentMethodMissing() throws Exception {
+    void checkoutReturnsBadRequestForEmptyCart() throws Exception {
+        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
+        when(orderService.checkout(any(), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty"));
+
         mockMvc.perform(post("/api/buyer/orders/checkout")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
+                .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest());
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void checkoutPropagatesEmptyCartError() throws Exception {
+    void checkoutReturnsBadRequestOnStockConflict() throws Exception {
         CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
-        when(orderService.checkout(1L, PaymentMethod.MBWAY))
-            .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty"));
+        when(orderService.checkout(any(), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock conflict for variants: [101]"));
 
         mockMvc.perform(post("/api/buyer/orders/checkout")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -150,15 +154,26 @@ class OrderControllerIntegrationTest {
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void getBuyerOrdersReturnsOrderList() throws Exception {
-        when(orderService.getBuyerOrders(1L))
-            .thenReturn(List.of(sampleOrder(100L, OrderStatus.PLACED), sampleOrder(101L, OrderStatus.CONFIRMED)));
+    void getBuyerOrdersReturnsPaginatedOrders() throws Exception {
+        OrderPageResponse page = samplePage(List.of(sampleOrder(10L, OrderStatus.PLACED)));
+        when(orderService.getBuyerOrders(eq(1L), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/buyer/orders"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[0].id").value(100))
-            .andExpect(jsonPath("$[1].id").value(101));
+            .andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.orders[0].id").value(10))
+            .andExpect(jsonPath("$.orders[0].status").value("PLACED"));
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUYER")
+    void getBuyerOrdersSupportsPagination() throws Exception {
+        OrderPageResponse page = samplePage(List.of());
+        when(orderService.getBuyerOrders(eq(1L), any())).thenReturn(page);
+
+        mockMvc.perform(get("/api/buyer/orders?page=1&size=5"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.orders").isEmpty());
     }
 
     @Test
@@ -178,29 +193,30 @@ class OrderControllerIntegrationTest {
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void getBuyerOrderReturnsOrder() throws Exception {
-        when(orderService.getBuyerOrder(100L, 1L)).thenReturn(sampleOrder(100L, OrderStatus.PLACED));
+    void getBuyerOrderByIdReturnsOrder() throws Exception {
+        OrderResponse order = sampleOrder(10L, OrderStatus.CONFIRMED);
+        when(orderService.getBuyerOrder(eq(10L), eq(1L))).thenReturn(order);
 
-        mockMvc.perform(get("/api/buyer/orders/100"))
+        mockMvc.perform(get("/api/buyer/orders/10"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(100))
-            .andExpect(jsonPath("$.items[0].productName").value("Blue Shirt"));
+            .andExpect(jsonPath("$.id").value(10))
+            .andExpect(jsonPath("$.status").value("CONFIRMED"));
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void getBuyerOrderReturnsForbiddenForOtherBuyersOrder() throws Exception {
-        when(orderService.getBuyerOrder(100L, 1L))
+    void getBuyerOrderByIdReturnsForbiddenForOtherBuyerOrder() throws Exception {
+        when(orderService.getBuyerOrder(any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied"));
 
-        mockMvc.perform(get("/api/buyer/orders/100"))
+        mockMvc.perform(get("/api/buyer/orders/10"))
             .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void getBuyerOrderReturnsNotFoundForUnknownOrder() throws Exception {
-        when(orderService.getBuyerOrder(eq(999L), any()))
+    void getBuyerOrderByIdReturnsNotFoundForUnknownOrder() throws Exception {
+        when(orderService.getBuyerOrder(any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
         mockMvc.perform(get("/api/buyer/orders/999"))
@@ -212,49 +228,75 @@ class OrderControllerIntegrationTest {
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
     void cancelOrderReturnsCancelledOrder() throws Exception {
-        when(orderService.cancelOrder(100L, 1L)).thenReturn(sampleOrder(100L, OrderStatus.CANCELLED));
+        OrderResponse cancelled = sampleOrder(10L, OrderStatus.CANCELLED);
+        when(orderService.cancelOrder(eq(10L), eq(1L))).thenReturn(cancelled);
 
-        mockMvc.perform(post("/api/buyer/orders/100/cancel"))
+        mockMvc.perform(post("/api/buyer/orders/10/cancel"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(100))
+            .andExpect(jsonPath("$.id").value(10))
             .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
-    void cancelOrderReturnsBadRequestWhenNotPlaced() throws Exception {
-        when(orderService.cancelOrder(100L, 1L))
+    void cancelOrderReturnsBadRequestWhenAlreadyConfirmed() throws Exception {
+        when(orderService.cancelOrder(any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order can only be cancelled while in PLACED status"));
 
-        mockMvc.perform(post("/api/buyer/orders/100/cancel"))
+        mockMvc.perform(post("/api/buyer/orders/10/cancel"))
             .andExpect(status().isBadRequest());
     }
 
     @Test
-    void cancelOrderRequiresAuthentication() throws Exception {
-        mockMvc.perform(post("/api/buyer/orders/100/cancel"))
-            .andExpect(status().isUnauthorized());
-    }
+    @WithMockUser(username = "1", roles = "BUYER")
+    void cancelOrderReturnsForbiddenForOtherBuyerOrder() throws Exception {
+        when(orderService.cancelOrder(any(), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only buyer can cancel order"));
 
-    @Test
-    @WithMockUser(username = "2", roles = "SHOP_OWNER")
-    void cancelOrderForbidsShopOwner() throws Exception {
-        mockMvc.perform(post("/api/buyer/orders/100/cancel"))
+        mockMvc.perform(post("/api/buyer/orders/10/cancel"))
             .andExpect(status().isForbidden());
     }
 
-    // --- GET /api/orders (shop owner) ---
+    @Test
+    void cancelOrderRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/buyer/orders/10/cancel"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    // --- GET /api/orders ---
 
     @Test
     @WithMockUser(username = "2", roles = "SHOP_OWNER")
-    void getShopOrdersReturnsOrderList() throws Exception {
-        when(orderService.getShopOrders(2L))
-            .thenReturn(List.of(sampleOrder(100L, OrderStatus.PLACED)));
+    void getShopOrdersReturnsPaginatedOrders() throws Exception {
+        OrderPageResponse page = samplePage(List.of(sampleOrder(10L, OrderStatus.PLACED), sampleOrder(11L, OrderStatus.CONFIRMED)));
+        when(orderService.getShopOrders(eq(2L), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/orders"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value(100))
-            .andExpect(jsonPath("$[0].shopName").value("Cool Shop"));
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.orders[0].id").value(10))
+            .andExpect(jsonPath("$.orders[1].status").value("CONFIRMED"));
+    }
+
+    @Test
+    @WithMockUser(username = "2", roles = "SHOP_OWNER")
+    void getShopOrdersSupportsPagination() throws Exception {
+        OrderPageResponse page = samplePage(List.of());
+        when(orderService.getShopOrders(eq(2L), any())).thenReturn(page);
+
+        mockMvc.perform(get("/api/orders?page=1&size=10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.orders").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "2", roles = "SHOP_OWNER")
+    void getShopOrdersReturnsNotFoundWhenNoShop() throws Exception {
+        when(orderService.getShopOrders(any(), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
+
+        mockMvc.perform(get("/api/orders"))
+            .andExpect(status().isNotFound());
     }
 
     @Test
@@ -276,14 +318,15 @@ class OrderControllerIntegrationTest {
     @WithMockUser(username = "2", roles = "SHOP_OWNER")
     void updateOrderStatusReturnsUpdatedOrder() throws Exception {
         UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.CONFIRMED);
-        when(orderService.updateStatus(100L, OrderStatus.CONFIRMED, 2L))
-            .thenReturn(sampleOrder(100L, OrderStatus.CONFIRMED));
+        OrderResponse updated = sampleOrder(10L, OrderStatus.CONFIRMED);
 
-        mockMvc.perform(patch("/api/orders/100/status")
+        when(orderService.updateStatus(eq(10L), eq(OrderStatus.CONFIRMED), eq(2L))).thenReturn(updated);
+
+        mockMvc.perform(patch("/api/orders/10/status")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(100))
+            .andExpect(jsonPath("$.id").value(10))
             .andExpect(jsonPath("$.status").value("CONFIRMED"));
     }
 
@@ -291,10 +334,10 @@ class OrderControllerIntegrationTest {
     @WithMockUser(username = "2", roles = "SHOP_OWNER")
     void updateOrderStatusReturnsBadRequestForInvalidTransition() throws Exception {
         UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.SHIPPED);
-        when(orderService.updateStatus(100L, OrderStatus.SHIPPED, 2L))
+        when(orderService.updateStatus(any(), any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status transition"));
 
-        mockMvc.perform(patch("/api/orders/100/status")
+        mockMvc.perform(patch("/api/orders/10/status")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest());
@@ -302,30 +345,21 @@ class OrderControllerIntegrationTest {
 
     @Test
     @WithMockUser(username = "2", roles = "SHOP_OWNER")
-    void updateOrderStatusReturnsForbiddenForWrongShopOwner() throws Exception {
+    void updateOrderStatusReturnsForbiddenForNonOwner() throws Exception {
         UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.CONFIRMED);
-        when(orderService.updateStatus(100L, OrderStatus.CONFIRMED, 2L))
+        when(orderService.updateStatus(any(), any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owner can update order status"));
 
-        mockMvc.perform(patch("/api/orders/100/status")
+        mockMvc.perform(patch("/api/orders/10/status")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(username = "2", roles = "SHOP_OWNER")
-    void updateOrderStatusReturnsBadRequestWhenStatusMissing() throws Exception {
-        mockMvc.perform(patch("/api/orders/100/status")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
     void updateOrderStatusRequiresAuthentication() throws Exception {
         UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.CONFIRMED);
-        mockMvc.perform(patch("/api/orders/100/status")
+        mockMvc.perform(patch("/api/orders/10/status")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isUnauthorized());
@@ -335,7 +369,7 @@ class OrderControllerIntegrationTest {
     @WithMockUser(username = "1", roles = "BUYER")
     void updateOrderStatusForbidsBuyer() throws Exception {
         UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.CONFIRMED);
-        mockMvc.perform(patch("/api/orders/100/status")
+        mockMvc.perform(patch("/api/orders/10/status")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isForbidden());

@@ -2,6 +2,9 @@ package pt.trevo.trevo_api.controller;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pt.trevo.trevo_api.dto.CheckoutRequest;
+import pt.trevo.trevo_api.dto.OrderPageResponse;
 import pt.trevo.trevo_api.dto.OrderResponse;
 import pt.trevo.trevo_api.dto.UpdateOrderStatusRequest;
 import pt.trevo.trevo_api.security.SecurityUtils;
@@ -42,9 +46,12 @@ public class OrderController {
 
     @GetMapping("/api/buyer/orders")
     @PreAuthorize("hasRole('BUYER')")
-    public List<OrderResponse> getBuyerOrders(Authentication authentication) {
+    public OrderPageResponse getBuyerOrders(
+        Authentication authentication,
+        @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
         Long buyerId = securityUtils.requireUserId(authentication);
-        return orderService.getBuyerOrders(buyerId);
+        return orderService.getBuyerOrders(buyerId, pageable);
     }
 
     @GetMapping("/api/buyer/orders/{orderId}")
@@ -69,9 +76,12 @@ public class OrderController {
 
     @GetMapping("/api/orders")
     @PreAuthorize("hasRole('SHOP_OWNER')")
-    public List<OrderResponse> getShopOrders(Authentication authentication) {
+    public OrderPageResponse getShopOrders(
+        Authentication authentication,
+        @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
         Long ownerId = securityUtils.requireUserId(authentication);
-        return orderService.getShopOrders(ownerId);
+        return orderService.getShopOrders(ownerId, pageable);
     }
 
     @PatchMapping("/api/orders/{orderId}/status")

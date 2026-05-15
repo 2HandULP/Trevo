@@ -48,7 +48,7 @@ public class CartService {
     }
 
     @Transactional
-    public CartItem addItem(Long buyerId, Long variantId, Integer quantity) {
+    public CartResponse addItem(Long buyerId, Long variantId, Integer quantity) {
         validateCartItemRequest(buyerId, variantId, quantity, "Invalid add item request");
 
         Variant variant = findVariant(variantId);
@@ -69,7 +69,7 @@ public class CartService {
         }
 
         cartRepository.save(cart);
-        return item;
+        return toCartResponse(cart);
     }
 
     @Transactional(readOnly = true)
@@ -83,6 +83,35 @@ public class CartService {
             return new CartResponse(List.of(), BigDecimal.ZERO);
         }
 
+        return toCartResponse(cart);
+    }
+
+    @Transactional
+    public CartResponse updateQuantity(Long buyerId, Long variantId, Integer quantity) {
+        validateCartItemRequest(buyerId, variantId, quantity, "Invalid update quantity request");
+
+        Cart cart = findCart(buyerId);
+        CartItem item = findExistingItem(cart, variantId);
+        validateStock(item.getVariant(), quantity);
+        item.setQuantity(quantity);
+
+        cartRepository.save(cart);
+        return toCartResponse(cart);
+    }
+
+    @Transactional
+    public void removeItem(Long buyerId, Long variantId) {
+        if (buyerId == null || variantId == null) {
+            throw badRequest("Invalid remove item request");
+        }
+
+        Cart cart = findCart(buyerId);
+        CartItem item = findExistingItem(cart, variantId);
+        cart.getItems().remove(item);
+        cartRepository.save(cart);
+    }
+
+    private CartResponse toCartResponse(Cart cart) {
         Map<Long, String> primaryImages = loadPrimaryImages(cart);
         Map<Long, ShopGroupAccumulator> groups = new LinkedHashMap<>();
         for (CartItem item : cart.getItems()) {
@@ -113,38 +142,13 @@ public class CartService {
         }
 
         List<CartShopGroupResponse> shops = groups.values().stream()
-            .map(group -> new CartShopGroupResponse(group.shopId, group.shopName, List.copyOf(group.items), group.subtotal))
+            .map(g -> new CartShopGroupResponse(g.shopId, g.shopName, List.copyOf(g.items), g.subtotal))
             .toList();
         BigDecimal grandTotal = shops.stream()
             .map(CartShopGroupResponse::subtotal)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new CartResponse(shops, grandTotal);
-    }
-
-    @Transactional
-    public CartItem updateQuantity(Long buyerId, Long variantId, Integer quantity) {
-        validateCartItemRequest(buyerId, variantId, quantity, "Invalid update quantity request");
-
-        Cart cart = findCart(buyerId);
-        CartItem item = findExistingItem(cart, variantId);
-        validateStock(item.getVariant(), quantity);
-        item.setQuantity(quantity);
-
-        cartRepository.save(cart);
-        return item;
-    }
-
-    @Transactional
-    public void removeItem(Long buyerId, Long variantId) {
-        if (buyerId == null || variantId == null) {
-            throw badRequest("Invalid remove item request");
-        }
-
-        Cart cart = findCart(buyerId);
-        CartItem item = findExistingItem(cart, variantId);
-        cart.getItems().remove(item);
-        cartRepository.save(cart);
     }
 
     private Cart findOrCreateCart(Long buyerId) {

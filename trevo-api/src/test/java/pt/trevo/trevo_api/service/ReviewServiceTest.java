@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
 import pt.trevo.trevo_api.dto.CreateReviewRequest;
 import pt.trevo.trevo_api.dto.RespondToReviewRequest;
+import pt.trevo.trevo_api.dto.ReviewResponse;
 import pt.trevo.trevo_api.dto.UpdateReviewRequest;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.Review;
@@ -41,6 +42,9 @@ class ReviewServiceTest extends BaseUnitTest {
     @Mock
     private ShopRepository shopRepository;
 
+    @Mock
+    private ProfanityFilter profanityFilter;
+
     @InjectMocks
     private ReviewService reviewService;
 
@@ -59,12 +63,43 @@ class ReviewServiceTest extends BaseUnitTest {
         when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(4, "Great shop!"));
+        ReviewResponse review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(4, "Great shop!"));
 
-        assertThat(review.getBuyer()).isSameAs(buyer);
-        assertThat(review.getShop()).isSameAs(shop);
-        assertThat(review.getRating()).isEqualTo(4);
-        assertThat(review.getComment()).isEqualTo("Great shop!");
+        assertThat(review.buyerId()).isEqualTo(buyerId);
+        assertThat(review.shopId()).isEqualTo(shopId);
+        assertThat(review.rating()).isEqualTo(4);
+        assertThat(review.comment()).isEqualTo("Great shop!");
+        verify(reviewRepository).save(any(Review.class));
+    }
+
+    @Test
+    void createReviewWithBlockedWordThrows400() {
+        when(profanityFilter.containsBlockedWord("This shop is a badword.")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.createReview(10L, 301L, new CreateReviewRequest(4, "This shop is a badword."))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void createReviewWithCleanCommentPassesProfanityFilter() {
+        Long buyerId = 10L;
+        Long shopId = 301L;
+        User buyer = User.builder().id(buyerId).build();
+        Shop shop = shop(shopId, 901L, "North Shop");
+
+        when(orderRepository.existsByBuyerIdAndShopIdAndStatus(buyerId, shopId, OrderStatus.DELIVERED)).thenReturn(true);
+        when(reviewRepository.existsByBuyerIdAndShopId(buyerId, shopId)).thenReturn(false);
+        when(userRepository.findById(buyerId)).thenReturn(Optional.of(buyer));
+        when(shopRepository.findById(shopId)).thenReturn(Optional.of(shop));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ReviewResponse review = reviewService.createReview(buyerId, shopId, new CreateReviewRequest(5, "Clean and helpful service."));
+
+        assertThat(review.comment()).isEqualTo("Clean and helpful service.");
         verify(reviewRepository).save(any(Review.class));
     }
 
@@ -129,10 +164,25 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(5, "Actually great!"));
+        ReviewResponse updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(5, "Actually great!"));
 
-        assertThat(updated.getRating()).isEqualTo(5);
-        assertThat(updated.getComment()).isEqualTo("Actually great!");
+        assertThat(updated.rating()).isEqualTo(5);
+        assertThat(updated.comment()).isEqualTo("Actually great!");
+        verify(reviewRepository).save(review);
+    }
+
+    @Test
+    void updateReviewWithCleanCommentPassesProfanityFilter() {
+        Long buyerId = 10L;
+        Review review = review(1L, User.builder().id(buyerId).build(), shop(301L, 901L, "North Shop"), 3, "Ok", null);
+
+        when(profanityFilter.containsBlockedWord("Helpful and clean update.")).thenReturn(false);
+        when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ReviewResponse updated = reviewService.updateReview(1L, buyerId, new UpdateReviewRequest(4, "Helpful and clean update."));
+
+        assertThat(updated.comment()).isEqualTo("Helpful and clean update.");
         verify(reviewRepository).save(review);
     }
 
@@ -156,6 +206,18 @@ class ReviewServiceTest extends BaseUnitTest {
     void updateReviewWithRatingOutOfRangeThrows400() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 reviewService.updateReview(1L, 10L, new UpdateReviewRequest(0, "Too low"))
+        );
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void updateReviewWithBlockedWordThrows400() {
+        when(profanityFilter.containsBlockedWord("The service was stupid.")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                reviewService.updateReview(1L, 10L, new UpdateReviewRequest(4, "The service was stupid."))
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -210,9 +272,9 @@ class ReviewServiceTest extends BaseUnitTest {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Review responded = reviewService.respondToReview(1L, shopOwnerId, new RespondToReviewRequest("Thank you for your feedback!"));
+        ReviewResponse responded = reviewService.respondToReview(1L, shopOwnerId, new RespondToReviewRequest("Thank you for your feedback!"));
 
-        assertThat(responded.getResponse()).isEqualTo("Thank you for your feedback!");
+        assertThat(responded.response()).isEqualTo("Thank you for your feedback!");
         verify(reviewRepository).save(review);
     }
 

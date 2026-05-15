@@ -5,10 +5,12 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import PublicShopProfile from "./pages/PublicShopProfile";
 import CollectionManager from "./pages/CollectionManager";
 import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
 import ProductDetail from "./pages/ProductDetail";
+import ProductForm from "./pages/ProductForm";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
@@ -26,6 +28,7 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/products/:productId" element={<ProductDetail />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="/shops/:shopId" element={<PublicShopProfile />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
@@ -42,6 +45,11 @@ export default function App() {
 
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
         <Route path="/shops/:shopId/collections" element={<CollectionManager />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
+        <Route path="/products/new" element={<ProductForm mode="create" />} />
+        <Route path="/products/:productId/edit" element={<ProductForm mode="edit" />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>

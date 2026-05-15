@@ -30,6 +30,7 @@ import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.CartRepository;
 import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
+import pt.trevo.trevo_api.persistence.repository.NotificationRepository;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductImageRepository;
@@ -39,6 +40,7 @@ import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
+import pt.trevo.trevo_api.service.UserPhotoService;
 
 @SpringBootTest(
         classes = TrevoApiApplication.class,
@@ -94,6 +96,11 @@ class SecurityConfigIntegrationTest {
     @MockitoBean
     private CollectionRepository collectionRepository;
 
+    @MockitoBean
+    private NotificationRepository notificationRepository;
+
+    @MockitoBean
+    private UserPhotoService userPhotoService;
 
     @Autowired
     private WebApplicationContext context;

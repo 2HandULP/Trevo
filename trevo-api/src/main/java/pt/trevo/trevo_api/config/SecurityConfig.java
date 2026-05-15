@@ -33,9 +33,11 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/health").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
                 .requestMatchers("/api/auth/sessions/invalidate").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/shops/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/shops/*/reviews").permitAll()
                 .requestMatchers("/api/shops/**").hasAnyRole("SHOP_OWNER", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                 .requestMatchers("/api/users/**").authenticated()

@@ -176,10 +176,10 @@ INSERT INTO tryon_images (usage_id, image_url, generated_at) VALUES
 -- 13. USER PHOTOS ("See it on yourself" — buyer1 Pro)
 -- ============================================================
 
-INSERT INTO user_photos (buyer_id, photo_url, uploaded_at) VALUES
-(1, 'https://res.cloudinary.com/trevo/image/upload/v1/user_photos/buyer1_photo1.jpg', NOW()),
-(1, 'https://res.cloudinary.com/trevo/image/upload/v1/user_photos/buyer1_photo2.jpg', NOW()),
-(1, 'https://res.cloudinary.com/trevo/image/upload/v1/user_photos/buyer1_photo3.jpg', NOW());
+INSERT INTO user_photos (buyer_id, photo_url, cloudinary_public_id, uploaded_at) VALUES
+(1, 'https://res.cloudinary.com/trevo/image/upload/v1/user_photos/buyer1_photo1.jpg', 'user_photos/buyer1_photo1', NOW()),
+(1, 'https://res.cloudinary.com/trevo/image/upload/v1/user_photos/buyer1_photo2.jpg', 'user_photos/buyer1_photo2', NOW()),
+(1, 'https://res.cloudinary.com/trevo/image/upload/v1/user_photos/buyer1_photo3.jpg', 'user_photos/buyer1_photo3', NOW());
 
 -- ============================================================
 -- Nota: refresh_tokens e password_reset_tokens não são

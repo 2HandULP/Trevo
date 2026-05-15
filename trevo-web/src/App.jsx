@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import CollectionManager from "./pages/CollectionManager";
 import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
+import ProductDetail from "./pages/ProductDetail";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/products/:productId" element={<ProductDetail />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       <Route element={<ProtectedRoute />}>

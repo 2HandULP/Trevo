@@ -3,21 +3,25 @@ package pt.trevo.trevo_api.service;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
+import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.persistence.entity.Order;
 import pt.trevo.trevo_api.persistence.entity.Payout;
 import pt.trevo.trevo_api.persistence.entity.PayoutStatus;
+import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.repository.PayoutRepository;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 
 @Service
 public class PayoutService {
 
     private final PayoutRepository payoutRepository;
+    private final ShopRepository shopRepository;
 
-    public PayoutService(PayoutRepository payoutRepository) {
+    public PayoutService(PayoutRepository payoutRepository, ShopRepository shopRepository) {
         this.payoutRepository = payoutRepository;
+        this.shopRepository = shopRepository;
     }
 
     public Payout createPayout(Order order) {
@@ -35,7 +39,26 @@ public class PayoutService {
         return sum != null ? sum : BigDecimal.ZERO;
     }
 
+    public BigDecimal getPendingBalanceForOwner(Long ownerId) {
+        Shop shop = requireShopByOwnerId(ownerId);
+        return getPendingBalance(shop.getId());
+    }
+
     public List<Payout> getPayoutHistory(Long shopId) {
         return payoutRepository.findByOrderShopIdAndStatusOrderByReleasedAtDesc(shopId, PayoutStatus.RELEASED);
+    }
+
+    public List<Payout> getPayoutHistoryForOwner(Long ownerId) {
+        Shop shop = requireShopByOwnerId(ownerId);
+        return getPayoutHistory(shop.getId());
+    }
+
+    private Shop requireShopByOwnerId(Long ownerId) {
+        if (ownerId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid owner id");
+        }
+
+        return shopRepository.findByOwnerId(ownerId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
     }
 }

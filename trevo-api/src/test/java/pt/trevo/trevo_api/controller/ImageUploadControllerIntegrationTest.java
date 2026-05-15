@@ -4,10 +4,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -20,9 +22,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import pt.trevo.trevo_api.auth.AppUserDetailsService;
 import pt.trevo.trevo_api.auth.JwtService;
 import pt.trevo.trevo_api.config.SecurityConfig;
+import pt.trevo.trevo_api.dto.AsyncImageUploadAcceptedResponse;
+import pt.trevo.trevo_api.dto.AsyncImageUploadStatusResponse;
 import pt.trevo.trevo_api.dto.CloudinaryUploadResult;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
-import pt.trevo.trevo_api.service.CloudinaryService;
+import pt.trevo.trevo_api.service.AsyncImageUploadService;
+import pt.trevo.trevo_api.service.AsyncImageUploadStatus;
 
 @WebMvcTest(ImageUploadController.class)
 @Import({SecurityConfig.class, ImageUploadValidator.class})
@@ -32,7 +37,7 @@ class ImageUploadControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CloudinaryService cloudinaryService;
+    private AsyncImageUploadService asyncImageUploadService;
 
     @MockitoBean
     private AppUserDetailsService appUserDetailsService;
@@ -45,7 +50,7 @@ class ImageUploadControllerIntegrationTest {
 
     @Test
     @WithMockUser(username = "11", roles = "SHOP_OWNER")
-    void uploadImageReturnsCloudinaryUrl() throws Exception {
+    void uploadImageReturnsAcceptedJobWithoutWaitingForCloudinaryUrl() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
             "file",
             "logo.png",
@@ -53,14 +58,19 @@ class ImageUploadControllerIntegrationTest {
             new byte[] {1, 2, 3}
         );
 
-        when(cloudinaryService.uploadImage(any())).thenReturn(
-            new CloudinaryUploadResult("trevo/logo", "https://res.cloudinary.com/demo/image/upload/logo.png")
+        when(asyncImageUploadService.startUpload(any())).thenReturn(
+            new AsyncImageUploadAcceptedResponse(
+                "upload-123",
+                AsyncImageUploadStatus.PENDING,
+                "/uploads/images/upload-123"
+            )
         );
 
         mockMvc.perform(multipart("/api/uploads/images").file(file))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.publicId").value("trevo/logo"))
-            .andExpect(jsonPath("$.url").value("https://res.cloudinary.com/demo/image/upload/logo.png"));
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.uploadId").value("upload-123"))
+            .andExpect(jsonPath("$.status").value("PENDING"))
+            .andExpect(jsonPath("$.statusUrl").value("/uploads/images/upload-123"));
     }
 
     @Test
@@ -76,7 +86,7 @@ class ImageUploadControllerIntegrationTest {
         mockMvc.perform(multipart("/api/uploads/images").file(file))
             .andExpect(status().isBadRequest());
 
-        verify(cloudinaryService, never()).uploadImage(any());
+        verify(asyncImageUploadService, never()).startUpload(any());
     }
 
     @Test
@@ -90,5 +100,27 @@ class ImageUploadControllerIntegrationTest {
 
         mockMvc.perform(multipart("/api/uploads/images").file(file))
             .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "11", roles = "SHOP_OWNER")
+    void getUploadStatusReturnsCompletedCloudinaryResult() throws Exception {
+        when(asyncImageUploadService.getStatus("upload-123")).thenReturn(
+            new AsyncImageUploadStatusResponse(
+                "upload-123",
+                AsyncImageUploadStatus.COMPLETED,
+                new CloudinaryUploadResult("trevo/logo", "https://res.cloudinary.com/demo/image/upload/logo.png"),
+                null,
+                Instant.parse("2026-05-15T10:00:00Z"),
+                Instant.parse("2026-05-15T10:00:02Z")
+            )
+        );
+
+        mockMvc.perform(get("/api/uploads/images/upload-123"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.uploadId").value("upload-123"))
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.result.publicId").value("trevo/logo"))
+            .andExpect(jsonPath("$.result.url").value("https://res.cloudinary.com/demo/image/upload/logo.png"));
     }
 }

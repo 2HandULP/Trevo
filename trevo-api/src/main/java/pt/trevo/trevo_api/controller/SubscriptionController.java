@@ -46,4 +46,12 @@ public class SubscriptionController {
         Long buyerId = securityUtils.requireUserId(authentication);
         return Map.of("pro", subscriptionService.isProUser(buyerId));
     }
+
+    @GetMapping("/api/buyer/subscription/status")
+    @PreAuthorize("hasRole('BUYER')")
+    public Map<String, String> status(Authentication authentication) {
+        Long buyerId = securityUtils.requireUserId(authentication);
+        String plan = subscriptionService.isProUser(buyerId) ? "PRO" : "FREE";
+        return Map.of("plan", plan);
+    }
 }

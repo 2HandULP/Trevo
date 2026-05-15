@@ -1,5 +1,7 @@
 package pt.trevo.trevo_api.auth;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -8,7 +10,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final Duration WINDOW = Duration.ofMinutes(1);
     private static final String AUTH_PREFIX = "/api/auth/";
 
-    private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
+        .maximumSize(10_000)
+        .expireAfterAccess(Duration.ofMinutes(5))
+        .build();
 
     @Override
     protected void doFilterInternal(
@@ -35,7 +39,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
 
         String ip = extractClientIp(request);
-        Bucket bucket = buckets.computeIfAbsent(ip, k -> newBucket());
+        Bucket bucket = buckets.get(ip, k -> newBucket());
 
         if (bucket.tryConsume(1)) {
             chain.doFilter(request, response);
@@ -55,15 +59,18 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             .build();
     }
 
+    // Uses the rightmost X-Forwarded-For value (set by the trusted proxy) to prevent
+    // client IP spoofing via a forged XFF header.
     private String extractClientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
+            String[] parts = xff.split(",");
+            return parts[parts.length - 1].trim();
         }
         return request.getRemoteAddr();
     }
 
     void resetBuckets() {
-        buckets.clear();
+        buckets.invalidateAll();
     }
 }

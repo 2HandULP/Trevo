@@ -52,7 +52,8 @@ public class OrderService {
         OrderRepository orderRepository,
         VariantRepository variantRepository,
         ShopRepository shopRepository,
-        NotificationService notificationService
+        NotificationService notificationService,
+        PayoutService payoutService
     ) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
@@ -171,7 +172,13 @@ public class OrderService {
         }
 
         order.setStatus(newStatus);
-        return toResponse(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+
+        if (newStatus == OrderStatus.DELIVERED) {
+            payoutService.createPayout(saved);
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional

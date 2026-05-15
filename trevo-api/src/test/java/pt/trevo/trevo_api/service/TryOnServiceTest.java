@@ -68,14 +68,15 @@ class TryOnServiceTest extends BaseUnitTest {
     }
 
     @Test
-    void generateTryOnRejectsSecondFreeGenerationForSameProductWithPaymentRequired() {
+    void generateTryOnRejectsSecondFreeGenerationForSameProductWhenCacheMisses() {
         TryOnUsage existingUsage = usage(buyer(10L), product(20L), 1);
         when(subscriptionService.isProUser(10L)).thenReturn(false);
         when(userRepository.findById(10L)).thenReturn(Optional.of(existingUsage.getBuyer()));
         when(productRepository.findById(20L)).thenReturn(Optional.of(existingUsage.getProduct()));
         when(tryOnUsageRepository.findByBuyerIdAndProductId(10L, 20L)).thenReturn(Optional.of(existingUsage));
+        when(tryOnImageRepository.findFirstCached(20L, "new-model")).thenReturn(Optional.empty());
 
-        Throwable thrown = catchThrowable(() -> service().generateTryOn(10L, 20L, "classic-model"));
+        Throwable thrown = catchThrowable(() -> service().generateTryOn(10L, 20L, "new-model"));
 
         assertThat(thrown).isInstanceOf(ResponseStatusException.class);
         ResponseStatusException exception = (ResponseStatusException) thrown;
@@ -192,13 +193,14 @@ class TryOnServiceTest extends BaseUnitTest {
         when(productRepository.findById(20L)).thenReturn(Optional.of(product));
         when(tryOnUsageRepository.findByBuyerIdAndProductId(10L, 20L)).thenReturn(Optional.of(usage));
         when(tryOnImageRepository.findFirstCached(20L, "model-a")).thenReturn(Optional.of(cachedImage));
-        when(tryOnUsageRepository.save(any(TryOnUsage.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(tryOnImageRepository.save(any(TryOnImage.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         TryOnImageResponse response = service().generateTryOn(10L, 20L, "model-a");
 
         assertThat(response.imageUrl()).isEqualTo("https://ai.example/cached.png");
+        assertThat(usage.getGenerationCount()).isEqualTo(1);
         verify(aiImageGenerationClient, never()).generateTryOn(any(), any());
+        verify(tryOnUsageRepository, never()).save(any());
+        verify(tryOnImageRepository, never()).save(any());
     }
 
     private TryOnService service() {

@@ -21,7 +21,7 @@ import pt.trevo.trevo_api.service.TryOnService;
 import pt.trevo.trevo_api.service.UserPhotoInput;
 
 @RestController
-@RequestMapping("/try-on")
+@RequestMapping("/api/buyer/try-on")
 @PreAuthorize("hasRole('BUYER')")
 public class TryOnController {
 

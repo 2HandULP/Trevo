@@ -2,6 +2,7 @@ package pt.trevo.trevo_api.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,12 +54,13 @@ public class TryOnService {
         Product product = findProduct(productId);
         TryOnUsage usage = findOrCreateUsage(buyer, product);
 
+        Optional<TryOnImage> cachedImage = tryOnImageRepository.findFirstCached(productId, normalizedModelIdentifier);
+        if (cachedImage.isPresent()) {
+            return new TryOnImageResponse(cachedImage.get().getImageUrl());
+        }
+
         enforceFreeTierLimit(proUser, usage);
-
-        String imageUrl = tryOnImageRepository.findFirstCached(productId, normalizedModelIdentifier)
-            .map(TryOnImage::getImageUrl)
-            .orElseGet(() -> aiImageGenerationClient.generateTryOn(product, normalizedModelIdentifier));
-
+        String imageUrl = aiImageGenerationClient.generateTryOn(product, normalizedModelIdentifier);
         incrementUsage(usage);
         persistImage(usage, imageUrl, normalizedModelIdentifier);
 

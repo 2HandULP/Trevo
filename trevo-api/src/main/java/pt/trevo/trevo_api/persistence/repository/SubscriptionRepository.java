@@ -8,7 +8,7 @@ import pt.trevo.trevo_api.persistence.entity.Subscription;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
 
-    Optional<Subscription> findByBuyerId(Long buyerId);
+    Optional<Subscription> findFirstByBuyerIdOrderByCreatedAtDesc(Long buyerId);
 
     Optional<Subscription> findByStripeSubscriptionId(String stripeSubscriptionId);
 }

@@ -169,7 +169,7 @@ class RepositoryDataJpaTest {
         Subscription savedSubscription = subscriptionRepository.saveAndFlush(subscription);
 
         assertThat(savedSubscription.getId()).isNotNull();
-        assertThat(subscriptionRepository.findByBuyerId(buyer.getId())).isPresent();
+        assertThat(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(buyer.getId())).isPresent();
         assertThat(subscriptionRepository.findByStripeSubscriptionId("sub_123")).isPresent();
     }
 

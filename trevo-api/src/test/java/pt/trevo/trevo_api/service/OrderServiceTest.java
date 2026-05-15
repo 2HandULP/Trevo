@@ -28,6 +28,7 @@ import pt.trevo.trevo_api.persistence.entity.Order;
 import pt.trevo.trevo_api.persistence.entity.OrderItem;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.PaymentMethod;
+import pt.trevo.trevo_api.persistence.entity.Payout;
 import pt.trevo.trevo_api.persistence.entity.Product;
 import pt.trevo.trevo_api.persistence.entity.ProductStatus;
 import pt.trevo.trevo_api.persistence.entity.Shop;
@@ -54,6 +55,9 @@ class OrderServiceTest extends BaseUnitTest {
 
     @Mock
     private NotificationService notificationService;
+
+    @Mock
+    private PayoutService payoutService;
 
     @InjectMocks
     private OrderService orderService;
@@ -238,6 +242,40 @@ class OrderServiceTest extends BaseUnitTest {
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    // PAY-B05: escrow release on DELIVERED
+
+    @Test
+    void transitionToDeliveredCreatesPayoutRecord() {
+        Long orderId = 1L;
+        Long shopOwnerId = 901L;
+        Shop shop = shop(301L, shopOwnerId, "North Shop");
+        Order order = order(orderId, User.builder().id(10L).build(), shop, OrderStatus.SHIPPED);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(payoutService.createPayout(any(Order.class))).thenReturn(new Payout());
+
+        OrderResponse updated = orderService.updateStatus(orderId, OrderStatus.DELIVERED, shopOwnerId);
+
+        assertThat(updated.status()).isEqualTo(OrderStatus.DELIVERED);
+        verify(payoutService).createPayout(any(Order.class));
+    }
+
+    @Test
+    void transitionToNonDeliveredStatusDoesNotCreatePayout() {
+        Long orderId = 1L;
+        Long shopOwnerId = 901L;
+        Shop shop = shop(301L, shopOwnerId, "North Shop");
+        Order order = order(orderId, User.builder().id(10L).build(), shop, OrderStatus.PLACED);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateStatus(orderId, OrderStatus.CONFIRMED, shopOwnerId);
+
+        verify(payoutService, never()).createPayout(any(Order.class));
     }
 
     // CART-B06: cancelOrder

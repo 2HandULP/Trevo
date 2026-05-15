@@ -45,19 +45,22 @@ public class OrderService {
     private final VariantRepository variantRepository;
     private final ShopRepository shopRepository;
     private final NotificationService notificationService;
+    private final PayoutService payoutService;
 
     public OrderService(
         CartRepository cartRepository,
         OrderRepository orderRepository,
         VariantRepository variantRepository,
         ShopRepository shopRepository,
-        NotificationService notificationService
+        NotificationService notificationService,
+        PayoutService payoutService
     ) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
         this.variantRepository = variantRepository;
         this.shopRepository = shopRepository;
         this.notificationService = notificationService;
+        this.payoutService = payoutService;
     }
 
     @Transactional
@@ -169,7 +172,13 @@ public class OrderService {
         }
 
         order.setStatus(newStatus);
-        return toResponse(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+
+        if (newStatus == OrderStatus.DELIVERED) {
+            payoutService.createPayout(saved);
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional

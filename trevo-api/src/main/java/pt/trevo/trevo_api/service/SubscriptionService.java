@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.dto.SubscriptionResponse;
 import pt.trevo.trevo_api.persistence.entity.Subscription;
 import pt.trevo.trevo_api.persistence.entity.SubscriptionStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
@@ -38,11 +39,11 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public Subscription createSubscription(Long buyerId) {
+    public SubscriptionResponse createSubscription(Long buyerId) {
         User buyer = userRepository.findById(buyerId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        subscriptionRepository.findByBuyerId(buyerId)
+        subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(buyerId)
             .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
             .ifPresent(s -> { throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has an active subscription"); });
 
@@ -62,12 +63,12 @@ public class SubscriptionService {
         subscription.setEndDate(result.currentPeriodEnd());
         subscription.setCreatedAt(Instant.now());
 
-        return subscriptionRepository.save(subscription);
+        return toResponse(subscriptionRepository.save(subscription));
     }
 
     @Transactional
     public void cancelSubscription(Long buyerId) {
-        Subscription subscription = subscriptionRepository.findByBuyerId(buyerId)
+        Subscription subscription = subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(buyerId)
             .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No active subscription found"));
 
@@ -83,8 +84,20 @@ public class SubscriptionService {
     }
 
     public boolean isProUser(Long buyerId) {
-        return subscriptionRepository.findByBuyerId(buyerId)
+        return subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(buyerId)
             .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
+            .filter(s -> s.getEndDate() == null || s.getEndDate().isAfter(Instant.now()))
             .isPresent();
+    }
+
+    private SubscriptionResponse toResponse(Subscription s) {
+        return new SubscriptionResponse(
+            s.getId(),
+            s.getStatus(),
+            s.getStripeSubscriptionId(),
+            s.getStartDate(),
+            s.getEndDate(),
+            s.getCreatedAt()
+        );
     }
 }

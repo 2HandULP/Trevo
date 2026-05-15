@@ -17,6 +17,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.BaseUnitTest;
+import pt.trevo.trevo_api.dto.SubscriptionResponse;
 import pt.trevo.trevo_api.persistence.entity.Subscription;
 import pt.trevo.trevo_api.persistence.entity.SubscriptionStatus;
 import pt.trevo.trevo_api.persistence.entity.User;
@@ -40,7 +41,7 @@ class SubscriptionServiceTest extends BaseUnitTest {
     void createSubscriptionSavesActiveSubscription() throws Exception {
         User buyer = user(1L, "buyer@example.com");
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.empty());
 
         Instant start = Instant.parse("2026-05-14T00:00:00Z");
         Instant end = Instant.parse("2026-06-14T00:00:00Z");
@@ -48,12 +49,12 @@ class SubscriptionServiceTest extends BaseUnitTest {
             .thenReturn(new StripeSubscriptionResult("sub_abc", "active", start, end));
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Subscription result = service().createSubscription(1L);
+        SubscriptionResponse result = service().createSubscription(1L);
 
-        assertThat(result.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
-        assertThat(result.getStripeSubscriptionId()).isEqualTo("sub_abc");
-        assertThat(result.getStartDate()).isEqualTo(start);
-        assertThat(result.getEndDate()).isEqualTo(end);
+        assertThat(result.status()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(result.stripeSubscriptionId()).isEqualTo("sub_abc");
+        assertThat(result.startDate()).isEqualTo(start);
+        assertThat(result.endDate()).isEqualTo(end);
         verify(stripeSubscriptionClient).createSubscription("buyer@example.com", PRICE_ID);
     }
 
@@ -61,7 +62,7 @@ class SubscriptionServiceTest extends BaseUnitTest {
     void createSubscriptionRejectsAlreadyActiveSubscription() {
         User buyer = user(1L, "buyer@example.com");
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.of(activeSubscription()));
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.of(activeSubscription()));
 
         Throwable thrown = catchThrowable(() -> service().createSubscription(1L));
 
@@ -73,7 +74,7 @@ class SubscriptionServiceTest extends BaseUnitTest {
     void createSubscriptionWrapsStripeFailure(CapturedOutput output) throws Exception {
         User buyer = user(1L, "buyer@example.com");
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.empty());
         when(stripeSubscriptionClient.createSubscription(any(), any()))
             .thenThrow(new ApiConnectionException("stripe down"));
 
@@ -88,7 +89,7 @@ class SubscriptionServiceTest extends BaseUnitTest {
     void cancelSubscriptionCancelsOnStripeAndUpdatesStatus() throws Exception {
         Subscription sub = activeSubscription();
         sub.setStripeSubscriptionId("sub_abc");
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.of(sub));
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.of(sub));
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         service().cancelSubscription(1L);
@@ -99,7 +100,7 @@ class SubscriptionServiceTest extends BaseUnitTest {
 
     @Test
     void cancelSubscriptionThrowsWhenNoActiveSubscription() {
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.empty());
 
         Throwable thrown = catchThrowable(() -> service().cancelSubscription(1L));
 
@@ -109,28 +110,38 @@ class SubscriptionServiceTest extends BaseUnitTest {
 
     @Test
     void isProUserReturnsTrueForActiveSubscription() {
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.of(activeSubscription()));
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.of(activeSubscription()));
 
         assertThat(service().isProUser(1L)).isTrue();
     }
 
     @Test
+    void isProUserReturnsFalseWhenEndDateHasPassed() {
+        Subscription sub = new Subscription();
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setEndDate(Instant.now().minusSeconds(3600));
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.of(sub));
+
+        assertThat(service().isProUser(1L)).isFalse();
+    }
+
+    @Test
     void isProUserReturnsFalseForExpiredSubscription() {
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.of(subscription(SubscriptionStatus.EXPIRED)));
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.of(subscription(SubscriptionStatus.EXPIRED)));
 
         assertThat(service().isProUser(1L)).isFalse();
     }
 
     @Test
     void isProUserReturnsFalseForCancelledSubscription() {
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.of(subscription(SubscriptionStatus.CANCELLED)));
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.of(subscription(SubscriptionStatus.CANCELLED)));
 
         assertThat(service().isProUser(1L)).isFalse();
     }
 
     @Test
     void isProUserReturnsFalseWhenNoSubscription() {
-        when(subscriptionRepository.findByBuyerId(1L)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByBuyerIdOrderByCreatedAtDesc(1L)).thenReturn(Optional.empty());
 
         assertThat(service().isProUser(1L)).isFalse();
     }

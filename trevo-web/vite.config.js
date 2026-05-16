@@ -22,7 +22,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     clearMocks: true,
-    exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**'],
+    exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**', 'e2e/**'],
     setupFiles: './src/test/setup.js',
   },
 })

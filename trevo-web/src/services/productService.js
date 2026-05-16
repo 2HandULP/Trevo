@@ -1,5 +1,19 @@
 import apiClient from "../lib/apiClient";
 
+export async function searchProducts(params = {}) {
+  const { data } = await apiClient.get("/products/search", {
+    params: cleanParams(params),
+  });
+  return data;
+}
+
+export async function browseProducts(params = {}) {
+  const { data } = await apiClient.get("/products", {
+    params: cleanParams(params),
+  });
+  return data;
+}
+
 export async function createProduct(payload) {
   const { data } = await apiClient.post("/products", payload);
   return data;
@@ -37,4 +51,10 @@ export async function updateProductVariant(productId, variantId, payload) {
 
 export async function deleteProductVariant(productId, variantId) {
   await apiClient.delete(`/products/${productId}/variants/${variantId}`);
+}
+
+function cleanParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== "" && value != null)
+  );
 }

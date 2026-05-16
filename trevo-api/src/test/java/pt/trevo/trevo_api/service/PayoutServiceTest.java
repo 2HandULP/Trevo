@@ -14,6 +14,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -123,41 +126,44 @@ class PayoutServiceTest extends BaseUnitTest {
         Instant t2 = Instant.parse("2026-05-10T10:00:00Z");
         Payout older = payout(1L, "90.00", t1);
         Payout newer = payout(2L, "135.00", t2);
-        when(payoutRepository.findByOrderShopIdAndStatusOrderByReleasedAtDesc(shopId, PayoutStatus.RELEASED))
-            .thenReturn(List.of(newer, older));
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(payoutRepository.findByOrderShopIdAndStatus(shopId, PayoutStatus.RELEASED, pageable))
+            .thenReturn(new PageImpl<>(List.of(newer, older), pageable, 2));
 
-        List<Payout> history = payoutService.getPayoutHistory(shopId);
+        Page<Payout> history = payoutService.getPayoutHistory(shopId, pageable);
 
-        assertThat(history).hasSize(2);
-        assertThat(history.get(0).getReleasedAt()).isEqualTo(t2);
-        assertThat(history.get(1).getReleasedAt()).isEqualTo(t1);
-        verify(payoutRepository).findByOrderShopIdAndStatusOrderByReleasedAtDesc(shopId, PayoutStatus.RELEASED);
+        assertThat(history.getContent()).hasSize(2);
+        assertThat(history.getContent().get(0).getReleasedAt()).isEqualTo(t2);
+        assertThat(history.getContent().get(1).getReleasedAt()).isEqualTo(t1);
+        verify(payoutRepository).findByOrderShopIdAndStatus(shopId, PayoutStatus.RELEASED, pageable);
     }
 
     @Test
     void getPayoutHistoryReturnsEmptyListWhenNoReleasedPayouts() {
         Long shopId = 303L;
-        when(payoutRepository.findByOrderShopIdAndStatusOrderByReleasedAtDesc(eq(shopId), eq(PayoutStatus.RELEASED)))
-            .thenReturn(List.of());
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(payoutRepository.findByOrderShopIdAndStatus(eq(shopId), eq(PayoutStatus.RELEASED), eq(pageable)))
+            .thenReturn(Page.empty(pageable));
 
-        List<Payout> history = payoutService.getPayoutHistory(shopId);
+        Page<Payout> history = payoutService.getPayoutHistory(shopId, pageable);
 
-        assertThat(history).isEmpty();
+        assertThat(history.getContent()).isEmpty();
     }
 
     @Test
     void getPayoutHistoryForOwnerUsesTheOwnersShop() {
         Shop shop = Shop.builder().id(301L).owner(User.builder().id(901L).build()).build();
         Payout payout = payout(1L, "90.00", Instant.parse("2026-05-10T10:00:00Z"));
+        PageRequest pageable = PageRequest.of(0, 20);
         when(shopRepository.findByOwnerId(901L)).thenReturn(Optional.of(shop));
-        when(payoutRepository.findByOrderShopIdAndStatusOrderByReleasedAtDesc(301L, PayoutStatus.RELEASED))
-            .thenReturn(List.of(payout));
+        when(payoutRepository.findByOrderShopIdAndStatus(301L, PayoutStatus.RELEASED, pageable))
+            .thenReturn(new PageImpl<>(List.of(payout), pageable, 1));
 
-        List<Payout> history = payoutService.getPayoutHistoryForOwner(901L);
+        Page<Payout> history = payoutService.getPayoutHistoryForOwner(901L, pageable);
 
-        assertThat(history).containsExactly(payout);
+        assertThat(history.getContent()).containsExactly(payout);
         verify(shopRepository).findByOwnerId(901L);
-        verify(payoutRepository).findByOrderShopIdAndStatusOrderByReleasedAtDesc(301L, PayoutStatus.RELEASED);
+        verify(payoutRepository).findByOrderShopIdAndStatus(301L, PayoutStatus.RELEASED, pageable);
     }
 
     @Test
@@ -165,7 +171,7 @@ class PayoutServiceTest extends BaseUnitTest {
         when(shopRepository.findByOwnerId(901L)).thenReturn(Optional.empty());
 
         Throwable thrown = org.assertj.core.api.Assertions.catchThrowable(
-            () -> payoutService.getPayoutHistoryForOwner(901L)
+            () -> payoutService.getPayoutHistoryForOwner(901L, PageRequest.of(0, 20))
         );
 
         assertThat(thrown).isInstanceOf(ResponseStatusException.class);

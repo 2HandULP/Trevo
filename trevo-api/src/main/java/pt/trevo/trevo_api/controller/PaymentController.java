@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.CreatePaymentIntentRequest;
 import pt.trevo.trevo_api.dto.PaymentIntentResponse;
 import pt.trevo.trevo_api.persistence.entity.Order;
+import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.PaymentMethod;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 import pt.trevo.trevo_api.security.SecurityUtils;
@@ -58,6 +59,9 @@ public class PaymentController {
         }
         if (order.getPaymentMethod() != PaymentMethod.STRIPE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order payment method is not Stripe");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is not awaiting payment");
         }
 
         return paymentService.createPaymentIntent(order);

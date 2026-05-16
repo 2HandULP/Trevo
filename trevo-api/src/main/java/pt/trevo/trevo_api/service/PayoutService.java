@@ -2,7 +2,8 @@ package pt.trevo.trevo_api.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -44,13 +45,13 @@ public class PayoutService {
         return getPendingBalance(shop.getId());
     }
 
-    public List<Payout> getPayoutHistory(Long shopId) {
-        return payoutRepository.findByOrderShopIdAndStatusOrderByReleasedAtDesc(shopId, PayoutStatus.RELEASED);
+    public Page<Payout> getPayoutHistory(Long shopId, Pageable pageable) {
+        return payoutRepository.findByOrderShopIdAndStatus(shopId, PayoutStatus.RELEASED, pageable);
     }
 
-    public List<Payout> getPayoutHistoryForOwner(Long ownerId) {
+    public Page<Payout> getPayoutHistoryForOwner(Long ownerId, Pageable pageable) {
         Shop shop = requireShopByOwnerId(ownerId);
-        return getPayoutHistory(shop.getId());
+        return getPayoutHistory(shop.getId(), pageable);
     }
 
     private Shop requireShopByOwnerId(Long ownerId) {

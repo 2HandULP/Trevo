@@ -1,6 +1,7 @@
 package pt.trevo.trevo_api.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -115,6 +116,21 @@ class PaymentControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new CreatePaymentIntentRequest(77L))))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "10", roles = "BUYER")
+    void createPaymentIntentReturnsConflictWhenOrderIsNotAwaitingPayment() throws Exception {
+        Order order = order(77L, 10L, PaymentMethod.STRIPE);
+        order.setStatus(OrderStatus.PLACED);
+        when(orderRepository.findById(77L)).thenReturn(Optional.of(order));
+
+        mockMvc.perform(post("/api/payments/stripe/payment-intents")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new CreatePaymentIntentRequest(77L))))
+            .andExpect(status().isConflict());
+
+        verify(paymentService, never()).createPaymentIntent(any(Order.class));
     }
 
     @Test

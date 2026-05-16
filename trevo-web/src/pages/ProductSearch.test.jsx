@@ -1,5 +1,4 @@
-import React from "react";
-import { act } from "react";
+import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import {
   MemoryRouter,
@@ -44,16 +43,13 @@ function renderProductSearch(initialEntries = ["/products"], initialIndex = 0) {
   act(() => {
     root.render(
       <MemoryRouter initialEntries={initialEntries} initialIndex={initialIndex}>
+        <LocationProbe />
         <Routes>
           <Route
             path="/products"
-            element={
-              <>
-                <LocationProbe />
-                <ProductSearch />
-              </>
-            }
+            element={<ProductSearch />}
           />
+          <Route path="*" element={null} />
         </Routes>
       </MemoryRouter>
     );
@@ -86,13 +82,14 @@ function changeInput(input, value) {
   });
 }
 
-function productsPage(products = []) {
+function productsPage(products = [], overrides = {}) {
   return {
     content: products,
     totalElements: products.length,
     totalPages: 1,
     number: 0,
     size: 20,
+    ...overrides,
   };
 }
 
@@ -135,6 +132,28 @@ describe("ProductSearch", () => {
         q: "dress",
       })
     );
+
+    unmount();
+  });
+
+  it("replaces filter edits in browser history", async () => {
+    const { container, unmount } = renderProductSearch(["/landing", "/products?q=old"], 1);
+
+    await flushPromises();
+
+    changeInput(container.querySelector('input[name="q"]'), "dress");
+    await advanceDebounce();
+
+    expect(container.querySelector('[data-testid="location"]').textContent).toBe("/products?q=dress");
+
+    act(() => {
+      [...container.querySelectorAll("button")]
+        .find((button) => button.textContent === "Voltar")
+        .click();
+    });
+    await flushPromises();
+
+    expect(container.querySelector('[data-testid="location"]').textContent).toBe("/landing");
 
     unmount();
   });
@@ -214,6 +233,67 @@ describe("ProductSearch", () => {
     );
     expect(mockSearchProducts).not.toHaveBeenCalled();
     expect(container.querySelector('[data-testid="location"]').textContent).toBe("/products?shopId=7");
+
+    unmount();
+  });
+
+  it("renders pagination controls and requests the selected page", async () => {
+    mockSearchProducts.mockResolvedValue(
+      productsPage(
+        [
+          {
+            id: 1,
+            name: "Vestido azul",
+            price: "25.00",
+          },
+        ],
+        {
+          totalElements: 45,
+          totalPages: 3,
+          number: 0,
+        }
+      )
+    );
+
+    const { container, unmount } = renderProductSearch(["/products?q=vestido"]);
+
+    await flushPromises();
+
+    expect(container.textContent).toContain("Página 1 de 3");
+    expect(container.querySelector('[data-testid="location"]').textContent).toBe("/products?q=vestido");
+
+    mockSearchProducts.mockResolvedValue(
+      productsPage(
+        [
+          {
+            id: 2,
+            name: "Vestido verde",
+            price: "30.00",
+          },
+        ],
+        {
+          totalElements: 45,
+          totalPages: 3,
+          number: 1,
+        }
+      )
+    );
+
+    act(() => {
+      [...container.querySelectorAll("button")]
+        .find((button) => button.textContent === "Seguinte")
+        .click();
+    });
+    await flushPromises();
+
+    expect(container.querySelector('[data-testid="location"]').textContent).toBe("/products?q=vestido&page=1");
+    expect(mockSearchProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        q: "vestido",
+        page: "1",
+      })
+    );
+    expect(container.textContent).toContain("Página 2 de 3");
 
     unmount();
   });

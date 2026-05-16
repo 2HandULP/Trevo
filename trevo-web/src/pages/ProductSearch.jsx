@@ -34,6 +34,14 @@ function productItems(page) {
   return page?.content || page?.products || [];
 }
 
+function pageNumber(page) {
+  return page?.number ?? 0;
+}
+
+function totalPages(page) {
+  return page?.totalPages ?? 0;
+}
+
 function productImage(product) {
   return product.imageUrl || product.images?.[0]?.url || product.images?.[0]?.imageUrl || "";
 }
@@ -48,22 +56,23 @@ export default function ProductSearch() {
 
   useEffect(() => {
     setFilters(urlFilters);
-  }, [urlFilters]);
+  }, [searchParams, urlFilters]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      const current = searchParams.toString();
-      const next = buildSearchParams(filters).toString();
+      const current = buildSearchParams(urlFilters).toString();
+      const nextParams = buildSearchParams(filters);
+      const next = nextParams.toString();
 
       if (current !== next) {
-        setSearchParams(next, { replace: false });
+        setSearchParams(next, { replace: true });
       }
     }, SEARCH_DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [filters, searchParams, setSearchParams]);
+  }, [filters, setSearchParams, urlFilters]);
 
   useEffect(() => {
     let active = true;
@@ -75,6 +84,7 @@ export default function ProductSearch() {
       try {
         const params = {
           ...urlFilters,
+          page: searchParams.get("page") ?? "",
         };
         const scopedBrowse = !hasSearchFilters(urlFilters) && (urlFilters.shopId || urlFilters.collectionId);
         const page = scopedBrowse ? await browseProducts(params) : await searchProducts(params);
@@ -112,7 +122,23 @@ export default function ProductSearch() {
     }));
   }
 
+  function updatePage(nextPage) {
+    const next = new URLSearchParams(searchParams);
+
+    if (nextPage > 0) {
+      next.set("page", String(nextPage));
+    } else {
+      next.delete("page");
+    }
+
+    setSearchParams(next, { replace: false });
+  }
+
   const products = productItems(results);
+  const currentPage = pageNumber(results);
+  const pageCount = totalPages(results);
+  const hasPreviousPage = currentPage > 0;
+  const hasNextPage = pageCount > 0 && currentPage + 1 < pageCount;
 
   return (
     <main className="mx-auto my-10 grid max-w-6xl gap-6 text-black lg:grid-cols-[260px_1fr]">
@@ -192,22 +218,50 @@ export default function ProductSearch() {
 
         {!error && products.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
-              <article key={product.id} className="border border-gray-200 p-4">
-                {productImage(product) && (
-                  <img
-                    src={productImage(product)}
-                    alt={product.name}
-                    className="mb-3 aspect-square w-full object-cover"
-                  />
-                )}
-                <h2 className="font-semibold">{product.name}</h2>
-                {product.brand && <p>{product.brand}</p>}
-                <p>{Number(product.price).toFixed(2)} EUR</p>
-                <Link to={`/products/${product.id}`}>Ver produto</Link>
-              </article>
-            ))}
+            {products.map((product) => {
+              const imageUrl = productImage(product);
+
+              return (
+                <article key={product.id} className="border border-gray-200 p-4">
+                  {imageUrl && (
+                    <img
+                      src={imageUrl}
+                      alt={product.name}
+                      className="mb-3 aspect-square w-full object-cover"
+                    />
+                  )}
+                  <h2 className="font-semibold">{product.name}</h2>
+                  {product.brand && <p>{product.brand}</p>}
+                  <p>{Number(product.price).toFixed(2)} EUR</p>
+                  <Link to={`/products/${product.id}`}>Ver produto</Link>
+                </article>
+              );
+            })}
           </div>
+        )}
+
+        {!error && pageCount > 1 && (
+          <nav aria-label="Paginação de produtos" className="mt-6 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => updatePage(currentPage - 1)}
+              disabled={!hasPreviousPage || isLoading}
+              className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <span>
+              Página {currentPage + 1} de {pageCount}
+            </span>
+            <button
+              type="button"
+              onClick={() => updatePage(currentPage + 1)}
+              disabled={!hasNextPage || isLoading}
+              className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Seguinte
+            </button>
+          </nav>
         )}
       </section>
     </main>

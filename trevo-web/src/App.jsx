@@ -12,6 +12,7 @@ import CreateShop from "./pages/CreateShop";
 import ProductForm from "./pages/ProductForm";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import OrderHistory from "./pages/OrderHistory";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -31,6 +32,10 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.BUYER]} />}>
+        <Route path="/orders" element={<OrderHistory />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>

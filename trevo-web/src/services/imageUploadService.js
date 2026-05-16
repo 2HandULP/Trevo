@@ -30,9 +30,10 @@ export async function uploadImage(file, onProgress, options = {}) {
 async function pollUploadResult(statusUrl, options) {
   const pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const maxPollAttempts = options.maxPollAttempts ?? DEFAULT_MAX_POLL_ATTEMPTS;
+  const pollUrl = normalizeStatusUrl(statusUrl);
 
   for (let attempt = 0; attempt < maxPollAttempts; attempt += 1) {
-    const { data } = await apiClient.get(statusUrl);
+    const { data } = await apiClient.get(pollUrl);
 
     if (data.status === "COMPLETED" && data.result?.url) {
       return data.result.url;
@@ -46,6 +47,10 @@ async function pollUploadResult(statusUrl, options) {
   }
 
   throw new Error("Image upload timed out");
+}
+
+function normalizeStatusUrl(statusUrl) {
+  return statusUrl.startsWith("/api/") ? statusUrl.slice(4) : statusUrl;
 }
 
 function wait(ms) {

@@ -39,7 +39,8 @@ public class CloudinaryService {
     }
 
     public CloudinaryUploadResult uploadImage(byte[] bytes, String originalFilename, String contentType) {
-        return uploadImage(new InMemoryMultipartFile(bytes, originalFilename, contentType));
+        validateImageBytes(bytes, contentType);
+        return uploadImageBytes(bytes);
     }
 
     public void deleteImage(String publicId) {
@@ -69,6 +70,30 @@ public class CloudinaryService {
         }
 
         try (InputStream inputStream = new BufferedInputStream(file.getInputStream())) {
+            String detectedContentType = URLConnection.guessContentTypeFromStream(inputStream);
+
+            if (isBlank(detectedContentType) || !detectedContentType.startsWith("image/")) {
+                throw badRequest("Only image files are allowed");
+            }
+        } catch (IOException ex) {
+            throw badRequest("Unable to read image file", ex);
+        }
+    }
+
+    private void validateImageBytes(byte[] bytes, String contentType) {
+        if (bytes == null || bytes.length == 0) {
+            throw badRequest("Image file is required");
+        }
+
+        if (isBlank(contentType) || !contentType.startsWith("image/")) {
+            throw badRequest("Only image files are allowed");
+        }
+
+        if (bytes.length > maxFileSizeBytes) {
+            throw badRequest("Image file exceeds maximum allowed size");
+        }
+
+        try (InputStream inputStream = new BufferedInputStream(new java.io.ByteArrayInputStream(bytes))) {
             String detectedContentType = URLConnection.guessContentTypeFromStream(inputStream);
 
             if (isBlank(detectedContentType) || !detectedContentType.startsWith("image/")) {
@@ -122,58 +147,6 @@ public class CloudinaryService {
             return new CloudinaryUploadResult(publicId, imageUrl);
         } catch (IOException ex) {
             throw badGateway("Failed to upload image to Cloudinary", ex);
-        }
-    }
-
-    private static final class InMemoryMultipartFile implements MultipartFile {
-        private final byte[] bytes;
-        private final String originalFilename;
-        private final String contentType;
-
-        private InMemoryMultipartFile(byte[] bytes, String originalFilename, String contentType) {
-            this.bytes = bytes != null ? bytes.clone() : new byte[0];
-            this.originalFilename = originalFilename;
-            this.contentType = contentType;
-        }
-
-        @Override
-        public String getName() {
-            return "file";
-        }
-
-        @Override
-        public String getOriginalFilename() {
-            return originalFilename;
-        }
-
-        @Override
-        public String getContentType() {
-            return contentType;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return bytes.length == 0;
-        }
-
-        @Override
-        public long getSize() {
-            return bytes.length;
-        }
-
-        @Override
-        public byte[] getBytes() {
-            return bytes.clone();
-        }
-
-        @Override
-        public InputStream getInputStream() {
-            return new java.io.ByteArrayInputStream(bytes);
-        }
-
-        @Override
-        public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
-            java.nio.file.Files.write(dest.toPath(), bytes);
         }
     }
 }

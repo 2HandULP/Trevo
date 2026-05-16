@@ -40,15 +40,15 @@ class AsyncImageUploadServiceTest extends BaseUnitTest {
     void startUploadReturnsPendingJobBeforeCloudinaryCallRuns() {
         MockMultipartFile file = pngFile();
 
-        AsyncImageUploadAcceptedResponse response = service.startUpload(file);
+        AsyncImageUploadAcceptedResponse response = service.startUpload(file, 11L);
 
         assertThat(response.uploadId()).isNotBlank();
         assertThat(response.status()).isEqualTo(AsyncImageUploadStatus.PENDING);
-        assertThat(response.statusUrl()).isEqualTo("/uploads/images/" + response.uploadId());
+        assertThat(response.statusUrl()).isEqualTo("/api/uploads/images/" + response.uploadId());
         assertThat(executor.queuedTasks()).isEqualTo(1);
         verify(cloudinaryService, never()).uploadImage(any(byte[].class), any(), any());
 
-        AsyncImageUploadStatusResponse status = service.getStatus(response.uploadId());
+        AsyncImageUploadStatusResponse status = service.getStatus(response.uploadId(), 11L);
         assertThat(status.status()).isEqualTo(AsyncImageUploadStatus.PENDING);
         assertThat(status.result()).isNull();
     }
@@ -59,10 +59,10 @@ class AsyncImageUploadServiceTest extends BaseUnitTest {
         when(cloudinaryService.uploadImage(any(byte[].class), eq("logo.png"), eq("image/png")))
             .thenReturn(new CloudinaryUploadResult("trevo/logo", "https://res.cloudinary.com/demo/logo.png"));
 
-        AsyncImageUploadAcceptedResponse response = service.startUpload(file);
+        AsyncImageUploadAcceptedResponse response = service.startUpload(file, 11L);
         executor.runNext();
 
-        AsyncImageUploadStatusResponse status = service.getStatus(response.uploadId());
+        AsyncImageUploadStatusResponse status = service.getStatus(response.uploadId(), 11L);
         assertThat(status.status()).isEqualTo(AsyncImageUploadStatus.COMPLETED);
         assertThat(status.result().publicId()).isEqualTo("trevo/logo");
         assertThat(status.result().url()).isEqualTo("https://res.cloudinary.com/demo/logo.png");
@@ -75,10 +75,10 @@ class AsyncImageUploadServiceTest extends BaseUnitTest {
         when(cloudinaryService.uploadImage(any(byte[].class), eq("logo.png"), eq("image/png")))
             .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Cloudinary unavailable"));
 
-        AsyncImageUploadAcceptedResponse response = service.startUpload(file);
+        AsyncImageUploadAcceptedResponse response = service.startUpload(file, 11L);
         executor.runNext();
 
-        AsyncImageUploadStatusResponse status = service.getStatus(response.uploadId());
+        AsyncImageUploadStatusResponse status = service.getStatus(response.uploadId(), 11L);
         assertThat(status.status()).isEqualTo(AsyncImageUploadStatus.FAILED);
         assertThat(status.error()).isEqualTo("Cloudinary unavailable");
         assertThat(status.result()).isNull();
@@ -86,7 +86,19 @@ class AsyncImageUploadServiceTest extends BaseUnitTest {
 
     @Test
     void getStatusReturnsNotFoundForUnknownUploadId() {
-        Throwable thrown = catchThrowable(() -> service.getStatus("missing"));
+        Throwable thrown = catchThrowable(() -> service.getStatus("missing", 11L));
+
+        assertThat(thrown).isInstanceOf(ResponseStatusException.class);
+        ResponseStatusException exception = (ResponseStatusException) thrown;
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(exception.getReason()).isEqualTo("Upload job not found");
+    }
+
+    @Test
+    void getStatusReturnsNotFoundWhenUploadBelongsToAnotherUser() {
+        AsyncImageUploadAcceptedResponse response = service.startUpload(pngFile(), 11L);
+
+        Throwable thrown = catchThrowable(() -> service.getStatus(response.uploadId(), 22L));
 
         assertThat(thrown).isInstanceOf(ResponseStatusException.class);
         ResponseStatusException exception = (ResponseStatusException) thrown;

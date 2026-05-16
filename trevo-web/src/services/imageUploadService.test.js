@@ -24,7 +24,7 @@ describe("imageUploadService", () => {
       data: {
         uploadId: "upload-123",
         status: "PENDING",
-        statusUrl: "/uploads/images/upload-123",
+        statusUrl: "/api/uploads/images/upload-123",
       },
     });
     mockGet.mockResolvedValue({
@@ -63,7 +63,7 @@ describe("imageUploadService", () => {
         data: {
           uploadId: "upload-456",
           status: "PENDING",
-          statusUrl: "/uploads/images/upload-456",
+          statusUrl: "/api/uploads/images/upload-456",
         },
       });
     });
@@ -89,7 +89,7 @@ describe("imageUploadService", () => {
       data: {
         uploadId: "upload-789",
         status: "PENDING",
-        statusUrl: "/uploads/images/upload-789",
+        statusUrl: "/api/uploads/images/upload-789",
       },
     });
     mockGet

@@ -1,6 +1,7 @@
 package pt.trevo.trevo_api.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,11 +27,12 @@ import pt.trevo.trevo_api.dto.AsyncImageUploadAcceptedResponse;
 import pt.trevo.trevo_api.dto.AsyncImageUploadStatusResponse;
 import pt.trevo.trevo_api.dto.CloudinaryUploadResult;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
+import pt.trevo.trevo_api.security.SecurityUtils;
 import pt.trevo.trevo_api.service.AsyncImageUploadService;
 import pt.trevo.trevo_api.service.AsyncImageUploadStatus;
 
 @WebMvcTest(ImageUploadController.class)
-@Import({SecurityConfig.class, ImageUploadValidator.class})
+@Import({SecurityConfig.class, ImageUploadValidator.class, SecurityUtils.class})
 class ImageUploadControllerIntegrationTest {
 
     @Autowired
@@ -58,11 +60,11 @@ class ImageUploadControllerIntegrationTest {
             new byte[] {1, 2, 3}
         );
 
-        when(asyncImageUploadService.startUpload(any())).thenReturn(
+        when(asyncImageUploadService.startUpload(any(), eq(11L))).thenReturn(
             new AsyncImageUploadAcceptedResponse(
                 "upload-123",
                 AsyncImageUploadStatus.PENDING,
-                "/uploads/images/upload-123"
+                "/api/uploads/images/upload-123"
             )
         );
 
@@ -70,7 +72,7 @@ class ImageUploadControllerIntegrationTest {
             .andExpect(status().isAccepted())
             .andExpect(jsonPath("$.uploadId").value("upload-123"))
             .andExpect(jsonPath("$.status").value("PENDING"))
-            .andExpect(jsonPath("$.statusUrl").value("/uploads/images/upload-123"));
+            .andExpect(jsonPath("$.statusUrl").value("/api/uploads/images/upload-123"));
     }
 
     @Test
@@ -86,7 +88,7 @@ class ImageUploadControllerIntegrationTest {
         mockMvc.perform(multipart("/api/uploads/images").file(file))
             .andExpect(status().isBadRequest());
 
-        verify(asyncImageUploadService, never()).startUpload(any());
+        verify(asyncImageUploadService, never()).startUpload(any(), any());
     }
 
     @Test
@@ -105,7 +107,7 @@ class ImageUploadControllerIntegrationTest {
     @Test
     @WithMockUser(username = "11", roles = "SHOP_OWNER")
     void getUploadStatusReturnsCompletedCloudinaryResult() throws Exception {
-        when(asyncImageUploadService.getStatus("upload-123")).thenReturn(
+        when(asyncImageUploadService.getStatus("upload-123", 11L)).thenReturn(
             new AsyncImageUploadStatusResponse(
                 "upload-123",
                 AsyncImageUploadStatus.COMPLETED,

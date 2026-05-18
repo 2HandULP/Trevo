@@ -75,6 +75,12 @@ class JwtAuthenticationFilterIntegrationTest {
     private NotificationRepository notificationRepository;
 
     @MockitoBean
+    private PayoutRepository payoutRepository;
+
+    @MockitoBean
+    private SubscriptionRepository subscriptionRepository;
+
+    @MockitoBean
     private UserPhotoRepository userPhotoRepository;
 
     @Autowired

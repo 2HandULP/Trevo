@@ -297,4 +297,24 @@ describe("ProductSearch", () => {
 
     unmount();
   });
+
+  it("clears the page param when filters change", async () => {
+    const { container, unmount } = renderProductSearch(["/products?q=vestido&page=2"]);
+
+    await flushPromises();
+    mockSearchProducts.mockClear();
+
+    changeInput(container.querySelector('input[name="q"]'), "casaco");
+    await advanceDebounce();
+
+    expect(container.querySelector('[data-testid="location"]').textContent).toBe("/products?q=casaco");
+    expect(mockSearchProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        q: "casaco",
+        page: "",
+      })
+    );
+
+    unmount();
+  });
 });

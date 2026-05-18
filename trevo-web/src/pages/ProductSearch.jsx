@@ -49,6 +49,7 @@ function productImage(product) {
 export default function ProductSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlFilters = useMemo(() => readFilters(searchParams), [searchParams]);
+  const pageParam = searchParams.get("page") ?? "";
   const [filters, setFilters] = useState(urlFilters);
   const [results, setResults] = useState(null);
   const [error, setError] = useState("");
@@ -62,6 +63,7 @@ export default function ProductSearch() {
     const timeoutId = window.setTimeout(() => {
       const current = buildSearchParams(urlFilters).toString();
       const nextParams = buildSearchParams(filters);
+      nextParams.delete("page");
       const next = nextParams.toString();
 
       if (current !== next) {
@@ -84,7 +86,7 @@ export default function ProductSearch() {
       try {
         const params = {
           ...urlFilters,
-          page: searchParams.get("page") ?? "",
+          page: pageParam,
         };
         const scopedBrowse = !hasSearchFilters(urlFilters) && (urlFilters.shopId || urlFilters.collectionId);
         const page = scopedBrowse ? await browseProducts(params) : await searchProducts(params);
@@ -113,7 +115,7 @@ export default function ProductSearch() {
     return () => {
       active = false;
     };
-  }, [urlFilters]);
+  }, [pageParam, urlFilters]);
 
   function updateFilter(name, value) {
     setFilters((current) => ({

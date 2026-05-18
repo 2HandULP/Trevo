@@ -11,6 +11,7 @@ import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
 import ProductDetail from "./pages/ProductDetail";
 import ProductForm from "./pages/ProductForm";
+import StockManagement from "./pages/StockManagement";
 import ShopProducts from "./pages/ShopProducts";
 import ProductSearchResults from "./pages/ProductSearchResults";
 import Profile from "./pages/Profile";
@@ -54,6 +55,7 @@ export default function App() {
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
         <Route path="/products/new" element={<ProductForm mode="create" />} />
         <Route path="/products/:productId/edit" element={<ProductForm mode="edit" />} />
+        <Route path="/products/:productId/stock" element={<StockManagement />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>

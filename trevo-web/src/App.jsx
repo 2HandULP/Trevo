@@ -16,6 +16,7 @@ import ShopProducts from "./pages/ShopProducts";
 import ProductSearchResults from "./pages/ProductSearchResults";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import Cart from "./pages/Cart";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -38,6 +39,10 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.BUYER]} />}>
+        <Route path="/cart" element={<Cart />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>

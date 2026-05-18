@@ -9,10 +9,15 @@ import PublicShopProfile from "./pages/PublicShopProfile";
 import CollectionManager from "./pages/CollectionManager";
 import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
+import ProductDetail from "./pages/ProductDetail";
 import ProductForm from "./pages/ProductForm";
+import StockManagement from "./pages/StockManagement";
+import ShopProducts from "./pages/ShopProducts";
+import ProductSearchResults from "./pages/ProductSearchResults";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
+import Cart from "./pages/Cart";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -26,8 +31,11 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/products/:productId" element={<ProductDetail />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/shops/:shopId" element={<PublicShopProfile />} />
+      <Route path="/shops/:shopId/products" element={<ShopProducts />} />
+      <Route path="/products" element={<ProductSearchResults />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
@@ -35,6 +43,7 @@ export default function App() {
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.BUYER]} />}>
+        <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
       </Route>
 
@@ -53,6 +62,7 @@ export default function App() {
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
         <Route path="/products/new" element={<ProductForm mode="create" />} />
         <Route path="/products/:productId/edit" element={<ProductForm mode="edit" />} />
+        <Route path="/products/:productId/stock" element={<StockManagement />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>

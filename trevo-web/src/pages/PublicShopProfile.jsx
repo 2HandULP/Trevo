@@ -88,7 +88,7 @@ export default function PublicShopProfile() {
           <p>{formatRating(shop.averageRating)}</p>
 
           <p>
-            <Link to={`/products?shopId=${shopId}`}>Ver todos os produtos</Link>
+            <Link to={`/shops/${shopId}/products`}>Ver todos os produtos</Link>
           </p>
 
           <section>
@@ -99,7 +99,7 @@ export default function PublicShopProfile() {
               <ul>
                 {shop.collections.map((collection) => (
                   <li key={collection.id}>
-                    <Link to={`/products?collectionId=${collection.id}`}>
+                    <Link to={`/shops/${shopId}/products?collectionId=${collection.id}`}>
                       {collection.name}
                     </Link>
                   </li>

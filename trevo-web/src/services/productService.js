@@ -38,3 +38,21 @@ export async function updateProductVariant(productId, variantId, payload) {
 export async function deleteProductVariant(productId, variantId) {
   await apiClient.delete(`/products/${productId}/variants/${variantId}`);
 }
+
+export async function bulkUpdateVariantStock(productId, updates) {
+  const { data } = await apiClient.post(
+    `/products/${productId}/variants/bulk-stock`,
+    updates
+  );
+  return data;
+}
+
+export async function searchProducts(params = {}) {
+  const { data } = await apiClient.get("/products/search", { params });
+  return data;
+}
+
+export async function browseProducts(params = {}) {
+  const { data } = await apiClient.get("/products", { params });
+  return data;
+}

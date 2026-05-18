@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import ReviewForm from "../components/ReviewForm";
 import { getProduct } from "../services/productService";
 
 function formatPrice(price) {
@@ -286,6 +287,8 @@ export default function ProductDetail() {
                 <p className="font-semibold">Combinacao indisponivel</p>
               )}
             </div>
+
+            {product.shopId && <ReviewForm shopId={product.shopId} />}
           </section>
         </div>
       )}

@@ -9,10 +9,16 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import pt.trevo.trevo_api.BaseUnitTest;
 import pt.trevo.trevo_api.persistence.entity.Order;
@@ -23,11 +29,15 @@ import pt.trevo.trevo_api.persistence.entity.PayoutStatus;
 import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.PayoutRepository;
+import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 
 class PayoutServiceTest extends BaseUnitTest {
 
     @Mock
     private PayoutRepository payoutRepository;
+
+    @Mock
+    private ShopRepository shopRepository;
 
     @InjectMocks
     private PayoutService payoutService;
@@ -93,6 +103,20 @@ class PayoutServiceTest extends BaseUnitTest {
         assertThat(balance).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
+    @Test
+    void getPendingBalanceForOwnerUsesTheOwnersShop() {
+        Shop shop = Shop.builder().id(301L).owner(User.builder().id(901L).build()).build();
+        when(shopRepository.findByOwnerId(901L)).thenReturn(Optional.of(shop));
+        when(payoutRepository.sumByOrderShopIdAndStatus(301L, PayoutStatus.PENDING))
+            .thenReturn(new BigDecimal("120.00"));
+
+        BigDecimal balance = payoutService.getPendingBalanceForOwner(901L);
+
+        assertThat(balance).isEqualByComparingTo("120.00");
+        verify(shopRepository).findByOwnerId(901L);
+        verify(payoutRepository).sumByOrderShopIdAndStatus(301L, PayoutStatus.PENDING);
+    }
+
     // PAY-B06: getPayoutHistory
 
     @Test
@@ -102,26 +126,58 @@ class PayoutServiceTest extends BaseUnitTest {
         Instant t2 = Instant.parse("2026-05-10T10:00:00Z");
         Payout older = payout(1L, "90.00", t1);
         Payout newer = payout(2L, "135.00", t2);
-        when(payoutRepository.findByOrderShopIdAndStatusOrderByReleasedAtDesc(shopId, PayoutStatus.RELEASED))
-            .thenReturn(List.of(newer, older));
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(payoutRepository.findByOrderShopIdAndStatus(shopId, PayoutStatus.RELEASED, pageable))
+            .thenReturn(new PageImpl<>(List.of(newer, older), pageable, 2));
 
-        List<Payout> history = payoutService.getPayoutHistory(shopId);
+        Page<Payout> history = payoutService.getPayoutHistory(shopId, pageable);
 
-        assertThat(history).hasSize(2);
-        assertThat(history.get(0).getReleasedAt()).isEqualTo(t2);
-        assertThat(history.get(1).getReleasedAt()).isEqualTo(t1);
-        verify(payoutRepository).findByOrderShopIdAndStatusOrderByReleasedAtDesc(shopId, PayoutStatus.RELEASED);
+        assertThat(history.getContent()).hasSize(2);
+        assertThat(history.getContent().get(0).getReleasedAt()).isEqualTo(t2);
+        assertThat(history.getContent().get(1).getReleasedAt()).isEqualTo(t1);
+        verify(payoutRepository).findByOrderShopIdAndStatus(shopId, PayoutStatus.RELEASED, pageable);
     }
 
     @Test
     void getPayoutHistoryReturnsEmptyListWhenNoReleasedPayouts() {
         Long shopId = 303L;
-        when(payoutRepository.findByOrderShopIdAndStatusOrderByReleasedAtDesc(eq(shopId), eq(PayoutStatus.RELEASED)))
-            .thenReturn(List.of());
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(payoutRepository.findByOrderShopIdAndStatus(eq(shopId), eq(PayoutStatus.RELEASED), eq(pageable)))
+            .thenReturn(Page.empty(pageable));
 
-        List<Payout> history = payoutService.getPayoutHistory(shopId);
+        Page<Payout> history = payoutService.getPayoutHistory(shopId, pageable);
 
-        assertThat(history).isEmpty();
+        assertThat(history.getContent()).isEmpty();
+    }
+
+    @Test
+    void getPayoutHistoryForOwnerUsesTheOwnersShop() {
+        Shop shop = Shop.builder().id(301L).owner(User.builder().id(901L).build()).build();
+        Payout payout = payout(1L, "90.00", Instant.parse("2026-05-10T10:00:00Z"));
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(shopRepository.findByOwnerId(901L)).thenReturn(Optional.of(shop));
+        when(payoutRepository.findByOrderShopIdAndStatus(301L, PayoutStatus.RELEASED, pageable))
+            .thenReturn(new PageImpl<>(List.of(payout), pageable, 1));
+
+        Page<Payout> history = payoutService.getPayoutHistoryForOwner(901L, pageable);
+
+        assertThat(history.getContent()).containsExactly(payout);
+        verify(shopRepository).findByOwnerId(901L);
+        verify(payoutRepository).findByOrderShopIdAndStatus(301L, PayoutStatus.RELEASED, pageable);
+    }
+
+    @Test
+    void payoutOwnerQueriesReturnNotFoundWhenOwnerHasNoShop() {
+        when(shopRepository.findByOwnerId(901L)).thenReturn(Optional.empty());
+
+        Throwable thrown = org.assertj.core.api.Assertions.catchThrowable(
+            () -> payoutService.getPayoutHistoryForOwner(901L, PageRequest.of(0, 20))
+        );
+
+        assertThat(thrown).isInstanceOf(ResponseStatusException.class);
+        ResponseStatusException exception = (ResponseStatusException) thrown;
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(exception.getReason()).isEqualTo("Shop not found");
     }
 
     // Helpers

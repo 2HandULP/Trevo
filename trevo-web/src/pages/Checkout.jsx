@@ -3,6 +3,7 @@ import { getCart } from "../services/cartService";
 import { checkoutOrder } from "../services/orderService";
 
 const paymentMethods = [
+  // Keep these values aligned with the backend PaymentMethod enum.
   { value: "MBWAY", label: "MB WAY" },
   { value: "STRIPE", label: "Stripe" },
   { value: "PAYPAL", label: "PayPal" },
@@ -17,8 +18,8 @@ function formatPrice(value) {
 
 function getErrorMessage(error, fallback) {
   return (
-    error.response?.data?.detail ||
     error.response?.data?.message ||
+    error.response?.data?.detail ||
     fallback
   );
 }
@@ -51,7 +52,7 @@ export default function Checkout() {
         }
       } catch (loadError) {
         if (active) {
-          setError(getErrorMessage(loadError, "Nao foi possivel carregar o checkout"));
+          setError(getErrorMessage(loadError, "Não foi possível carregar o checkout"));
         }
       } finally {
         if (active) {
@@ -69,9 +70,16 @@ export default function Checkout() {
 
   const shops = cart?.shops || [];
   const isEmpty = !isLoading && !error && shops.length === 0 && orders.length === 0;
+  const hasValidCart = shops.length > 0;
+  const isConfirmDisabled =
+    isSubmitting || orders.length > 0 || !hasValidCart || !paymentMethod;
   const successTotal = useMemo(() => orderTotal(orders), [orders]);
 
   async function handleConfirm() {
+    if (isSubmitting) return;
+    if (orders.length > 0) return;
+    if (!hasValidCart || !paymentMethod) return;
+
     setError("");
 
     try {
@@ -79,7 +87,7 @@ export default function Checkout() {
       const createdOrders = await checkoutOrder(paymentMethod);
       setOrders(createdOrders);
     } catch (checkoutError) {
-      setError(getErrorMessage(checkoutError, "Nao foi possivel confirmar a encomenda"));
+      setError(getErrorMessage(checkoutError, "Não foi possível confirmar a encomenda"));
     } finally {
       setIsSubmitting(false);
     }
@@ -94,12 +102,12 @@ export default function Checkout() {
         </p>
 
         <section className="mt-8">
-          <h2 className="text-xl font-semibold">Orders criadas</h2>
+          <h2 className="text-xl font-semibold">Encomendas criadas</h2>
           <ul className="mt-4 space-y-3">
             {orders.map((order) => (
               <li key={order.id} className="border border-gray-200 p-4">
                 <p className="font-semibold">
-                  Order #{order.id} - {order.shopName}
+                  Encomenda n.º {order.id} - {order.shopName}
                 </p>
                 <p className="text-sm text-gray-700">Estado: {order.status}</p>
                 <p className="text-sm text-gray-700">
@@ -127,7 +135,7 @@ export default function Checkout() {
         </p>
       )}
       {isEmpty && (
-        <p className="mt-6 text-gray-600">O carrinho esta vazio.</p>
+        <p className="mt-6 text-gray-600">O carrinho está vazio.</p>
       )}
 
       {!isLoading && !isEmpty && shops.length > 0 && (
@@ -182,7 +190,7 @@ export default function Checkout() {
             </h2>
 
             <label className="mt-4 block text-sm font-semibold" htmlFor="paymentMethod">
-              Metodo de pagamento
+              Método de pagamento
             </label>
             <select
               id="paymentMethod"
@@ -199,17 +207,17 @@ export default function Checkout() {
             </select>
 
             <div className="mt-5 border border-gray-200 bg-gray-50 p-4">
-              <h3 className="font-semibold">Payment placeholder</h3>
+              <h3 className="font-semibold">Pagamento pendente de integração</h3>
               <p className="mt-2 text-sm text-gray-700">
-                O pagamento real ainda nao esta integrado nesta fase. A confirmacao
-                cria as orders usando o metodo selecionado.
+                O pagamento real ainda não está integrado nesta fase. A confirmação
+                cria as encomendas usando o método selecionado.
               </p>
             </div>
 
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={isSubmitting}
+              disabled={isConfirmDisabled}
               className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? "A confirmar..." : "Confirmar encomenda"}

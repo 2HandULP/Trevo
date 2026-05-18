@@ -191,6 +191,26 @@ describe("Checkout", () => {
     unmount();
   });
 
+  it("shows an error when the cart cannot be loaded", async () => {
+    mockGetCart.mockRejectedValue({
+      response: {
+        data: {
+          message: "Não foi possível carregar o carrinho",
+        },
+      },
+    });
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Não foi possível carregar o carrinho"
+    );
+    expect(confirmButton(container)).toBeUndefined();
+
+    unmount();
+  });
+
   it("shows a success state with order ids, status, and total", async () => {
     const { container, unmount } = renderCheckout();
 
@@ -198,7 +218,7 @@ describe("Checkout", () => {
     await click(confirmButton(container));
 
     expect(container.textContent).toContain("Encomenda confirmada");
-    expect(container.textContent).toContain("Order #10");
+    expect(container.textContent).toContain("Encomenda n.º 10");
     expect(container.textContent).toContain("Estado: PLACED");
     expect(container.textContent).toContain("99,98");
 
@@ -211,7 +231,7 @@ describe("Checkout", () => {
 
     await flushPromises();
 
-    expect(container.textContent).toContain("O carrinho esta vazio.");
+    expect(container.textContent).toContain("O carrinho está vazio.");
     expect(confirmButton(container)).toBeUndefined();
 
     unmount();

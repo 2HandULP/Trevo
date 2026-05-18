@@ -71,8 +71,12 @@ class AuthControllerIntegrationTest {
     @MockitoBean
     private PasswordResetEmailSender passwordResetEmailSender;
 
+    @Autowired
+    private RateLimitingFilter rateLimitingFilter;
+
     @BeforeEach
     void cleanDatabase() {
+        rateLimitingFilter.resetBuckets();
         passwordResetTokenRepository.deleteAll();
         refreshTokenRepository.deleteAll();
         shopRepository.deleteAll();

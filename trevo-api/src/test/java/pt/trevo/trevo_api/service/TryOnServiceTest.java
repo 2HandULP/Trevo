@@ -46,7 +46,6 @@ class TryOnServiceTest extends BaseUnitTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(buyer));
         when(productRepository.findById(20L)).thenReturn(Optional.of(product));
         when(tryOnUsageRepository.findByBuyerIdAndProductId(10L, 20L)).thenReturn(Optional.empty());
-        when(tryOnImageRepository.findFirstCached(20L, "classic-model")).thenReturn(Optional.empty());
         when(aiImageGenerationClient.generateTryOn(product, "classic-model")).thenReturn("https://ai.example/try-on-1.png");
         when(tryOnUsageRepository.save(any(TryOnUsage.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(tryOnImageRepository.save(any(TryOnImage.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -74,7 +73,7 @@ class TryOnServiceTest extends BaseUnitTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(existingUsage.getBuyer()));
         when(productRepository.findById(20L)).thenReturn(Optional.of(existingUsage.getProduct()));
         when(tryOnUsageRepository.findByBuyerIdAndProductId(10L, 20L)).thenReturn(Optional.of(existingUsage));
-        when(tryOnImageRepository.findFirstCached(20L, "new-model")).thenReturn(Optional.empty());
+        when(tryOnImageRepository.findFirstCachedForUsage(30L, "new-model")).thenReturn(Optional.empty());
 
         Throwable thrown = catchThrowable(() -> service().generateTryOn(10L, 20L, "new-model"));
 
@@ -95,8 +94,8 @@ class TryOnServiceTest extends BaseUnitTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(buyer));
         when(productRepository.findById(20L)).thenReturn(Optional.of(product));
         when(tryOnUsageRepository.findByBuyerIdAndProductId(10L, 20L)).thenReturn(Optional.of(usage));
-        when(tryOnImageRepository.findFirstCached(20L, "front-model")).thenReturn(Optional.empty());
-        when(tryOnImageRepository.findFirstCached(20L, "side-model")).thenReturn(Optional.empty());
+        when(tryOnImageRepository.findFirstCachedForUsage(30L, "front-model")).thenReturn(Optional.empty());
+        when(tryOnImageRepository.findFirstCachedForUsage(30L, "side-model")).thenReturn(Optional.empty());
         when(aiImageGenerationClient.generateTryOn(product, "front-model")).thenReturn("https://ai.example/front.png");
         when(aiImageGenerationClient.generateTryOn(product, "side-model")).thenReturn("https://ai.example/side.png");
         when(tryOnUsageRepository.save(any(TryOnUsage.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -168,7 +167,6 @@ class TryOnServiceTest extends BaseUnitTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(buyer));
         when(productRepository.findById(20L)).thenReturn(Optional.of(product));
         when(tryOnUsageRepository.findByBuyerIdAndProductId(10L, 20L)).thenReturn(Optional.empty());
-        when(tryOnImageRepository.findFirstCached(20L, "model-a")).thenReturn(Optional.empty());
         when(aiImageGenerationClient.generateTryOn(product, "model-a")).thenReturn("https://ai.example/model-a.png");
         when(tryOnUsageRepository.save(any(TryOnUsage.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(tryOnImageRepository.save(any(TryOnImage.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -192,13 +190,36 @@ class TryOnServiceTest extends BaseUnitTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(buyer));
         when(productRepository.findById(20L)).thenReturn(Optional.of(product));
         when(tryOnUsageRepository.findByBuyerIdAndProductId(10L, 20L)).thenReturn(Optional.of(usage));
-        when(tryOnImageRepository.findFirstCached(20L, "model-a")).thenReturn(Optional.of(cachedImage));
+        when(tryOnImageRepository.findFirstCachedForUsage(30L, "model-a")).thenReturn(Optional.of(cachedImage));
 
         TryOnImageResponse response = service().generateTryOn(10L, 20L, "model-a");
 
         assertThat(response.imageUrl()).isEqualTo("https://ai.example/cached.png");
         assertThat(usage.getGenerationCount()).isEqualTo(1);
         verify(aiImageGenerationClient, never()).generateTryOn(any(), any());
+        verify(tryOnUsageRepository, never()).save(any());
+        verify(tryOnImageRepository, never()).save(any());
+    }
+
+    @Test
+    void generatePersonalizedTryOnSecondCallForSameBuyerProductReturnsCachedUrlWithoutCallingAi() {
+        User buyer = buyer(10L);
+        Product product = product(20L);
+        TryOnUsage usage = usage(buyer, product, 1);
+        TryOnImage cachedImage = new TryOnImage();
+        cachedImage.setImageUrl("https://ai.example/personalized-cached.png");
+        cachedImage.setModelIdentifier("personalized:10");
+        when(subscriptionService.isProUser(10L)).thenReturn(true);
+        when(userRepository.findById(10L)).thenReturn(Optional.of(buyer));
+        when(productRepository.findById(20L)).thenReturn(Optional.of(product));
+        when(tryOnUsageRepository.findByBuyerIdAndProductId(10L, 20L)).thenReturn(Optional.of(usage));
+        when(tryOnImageRepository.findFirstCachedForUsage(30L, "personalized:10")).thenReturn(Optional.of(cachedImage));
+
+        TryOnImageResponse response = service().generatePersonalizedTryOn(10L, 20L, photos(3));
+
+        assertThat(response.imageUrl()).isEqualTo("https://ai.example/personalized-cached.png");
+        assertThat(usage.getGenerationCount()).isEqualTo(1);
+        verify(aiImageGenerationClient, never()).generatePersonalizedTryOn(any(), any());
         verify(tryOnUsageRepository, never()).save(any());
         verify(tryOnImageRepository, never()).save(any());
     }
@@ -229,6 +250,7 @@ class TryOnServiceTest extends BaseUnitTest {
 
     private TryOnUsage usage(User buyer, Product product, int generationCount) {
         TryOnUsage usage = new TryOnUsage();
+        usage.setId(30L);
         usage.setBuyer(buyer);
         usage.setProduct(product);
         usage.setGenerationCount(generationCount);

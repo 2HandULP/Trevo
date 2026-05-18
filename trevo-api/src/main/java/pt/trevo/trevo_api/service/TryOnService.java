@@ -54,7 +54,7 @@ public class TryOnService {
         Product product = findProduct(productId);
         TryOnUsage usage = findOrCreateUsage(buyer, product);
 
-        Optional<TryOnImage> cachedImage = tryOnImageRepository.findFirstCached(productId, normalizedModelIdentifier);
+        Optional<TryOnImage> cachedImage = tryOnImageRepository.findFirstCachedForUsage(usage.getId(), normalizedModelIdentifier);
         if (cachedImage.isPresent()) {
             return new TryOnImageResponse(cachedImage.get().getImageUrl());
         }
@@ -79,12 +79,23 @@ public class TryOnService {
         User buyer = findBuyer(buyerId);
         Product product = findProduct(productId);
         TryOnUsage usage = findOrCreateUsage(buyer, product);
+        String personalizedModelIdentifier = personalizedModelIdentifier(buyerId);
+
+        Optional<TryOnImage> cachedImage = tryOnImageRepository.findFirstCachedForUsage(usage.getId(), personalizedModelIdentifier);
+        if (cachedImage.isPresent()) {
+            return new TryOnImageResponse(cachedImage.get().getImageUrl());
+        }
+
         String imageUrl = aiImageGenerationClient.generatePersonalizedTryOn(product, List.copyOf(photos));
 
         incrementUsage(usage);
-        persistImage(usage, imageUrl, "personalized:" + buyerId);
+        persistImage(usage, imageUrl, personalizedModelIdentifier);
 
         return new TryOnImageResponse(imageUrl);
+    }
+
+    private String personalizedModelIdentifier(Long buyerId) {
+        return "personalized:" + buyerId;
     }
 
     private String normalizeModelIdentifier(String modelIdentifier) {

@@ -14,18 +14,20 @@ public interface TryOnImageRepository extends JpaRepository<TryOnImage, Long> {
     @Query("""
         select image
         from TryOnImage image
-        join image.usage usage
-        where usage.product.id = :productId
+        where image.usage.id = :usageId
           and image.modelIdentifier = :modelIdentifier
         order by image.generatedAt desc
         """)
-    List<TryOnImage> findCached(
-        @Param("productId") Long productId,
+    List<TryOnImage> findCachedForUsage(
+        @Param("usageId") Long usageId,
         @Param("modelIdentifier") String modelIdentifier,
         Pageable pageable
     );
 
-    default Optional<TryOnImage> findFirstCached(Long productId, String modelIdentifier) {
-        return findCached(productId, modelIdentifier, PageRequest.of(0, 1)).stream().findFirst();
+    default Optional<TryOnImage> findFirstCachedForUsage(Long usageId, String modelIdentifier) {
+        if (usageId == null) {
+            return Optional.empty();
+        }
+        return findCachedForUsage(usageId, modelIdentifier, PageRequest.of(0, 1)).stream().findFirst();
     }
 }

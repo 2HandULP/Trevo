@@ -20,6 +20,7 @@ public class HttpAiImageGenerationClient implements AiImageGenerationClient {
     private static final Logger log = LoggerFactory.getLogger(HttpAiImageGenerationClient.class);
 
     private final String baseUrl;
+    private final RestClient restClient;
     private final String tryOnPath;
     private final String personalizedTryOnPath;
 
@@ -29,6 +30,11 @@ public class HttpAiImageGenerationClient implements AiImageGenerationClient {
         @Value("${app.ai.image-generation.personalized-try-on-path:/try-on/personalized}") String personalizedTryOnPath
     ) {
         this.baseUrl = baseUrl;
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        if (baseUrl != null && !baseUrl.isBlank()) {
+            restClientBuilder.baseUrl(baseUrl);
+        }
+        this.restClient = restClientBuilder.build();
         this.tryOnPath = tryOnPath;
         this.personalizedTryOnPath = personalizedTryOnPath;
     }
@@ -59,9 +65,7 @@ public class HttpAiImageGenerationClient implements AiImageGenerationClient {
 
     private String postForImageUrl(String path, Object request) {
         try {
-            AiImageGenerationResponse response = RestClient.builder()
-                .baseUrl(baseUrl)
-                .build()
+            AiImageGenerationResponse response = restClient
                 .post()
                 .uri(path)
                 .contentType(MediaType.APPLICATION_JSON)

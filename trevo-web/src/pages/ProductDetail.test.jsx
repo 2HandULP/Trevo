@@ -5,8 +5,13 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProductDetail from "./ProductDetail";
 
-const { mockGetProduct } = vi.hoisted(() => ({
+const { mockAddCartItem, mockGetProduct } = vi.hoisted(() => ({
+  mockAddCartItem: vi.fn(),
   mockGetProduct: vi.fn(),
+}));
+
+vi.mock("../services/cartService", () => ({
+  addCartItem: mockAddCartItem,
 }));
 
 vi.mock("../services/productService", () => ({
@@ -62,6 +67,12 @@ function clickButton(button) {
   });
 }
 
+async function clickButtonAsync(button) {
+  await act(async () => {
+    button.click();
+  });
+}
+
 function buttonByText(container, text) {
   return [...container.querySelectorAll("button")].find(
     (button) => button.textContent === text
@@ -71,6 +82,7 @@ function buttonByText(container, text) {
 describe("ProductDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAddCartItem.mockResolvedValue({});
   });
 
   it("changes the main image when the carousel advances", async () => {
@@ -116,6 +128,85 @@ describe("ProductDetail", () => {
     clickButton(buttonByText(container, "Blue"));
 
     expect(container.textContent).toContain("3 em stock");
+
+    unmount();
+  });
+
+  it("keeps add to cart disabled until size and color are selected", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [{ id: 1, productId: 1, size: "M", color: "Blue", stock: 3 }],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+
+    const addButton = buttonByText(container, "Adicionar ao carrinho");
+
+    expect(addButton.disabled).toBe(true);
+
+    clickButton(buttonByText(container, "M"));
+
+    expect(addButton.disabled).toBe(true);
+
+    clickButton(buttonByText(container, "Blue"));
+
+    expect(addButton.disabled).toBe(false);
+
+    unmount();
+  });
+
+  it("adds the selected variant to the cart and shows success", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [{ id: 7, productId: 1, size: "M", color: "Blue", stock: 3 }],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+
+    clickButton(buttonByText(container, "M"));
+    clickButton(buttonByText(container, "Blue"));
+    await clickButtonAsync(buttonByText(container, "Adicionar ao carrinho"));
+
+    expect(mockAddCartItem).toHaveBeenCalledWith(7, 1);
+    expect(container.querySelector('[role="status"]').textContent).toContain(
+      "Produto adicionado ao carrinho."
+    );
+
+    unmount();
+  });
+
+  it("shows an error when adding the selected variant fails", async () => {
+    mockAddCartItem.mockRejectedValue({
+      response: {
+        data: {
+          detail: "Requested quantity exceeds available stock",
+        },
+      },
+    });
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [{ id: 7, productId: 1, size: "M", color: "Blue", stock: 3 }],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+
+    clickButton(buttonByText(container, "M"));
+    clickButton(buttonByText(container, "Blue"));
+    await clickButtonAsync(buttonByText(container, "Adicionar ao carrinho"));
+
+    expect(mockAddCartItem).toHaveBeenCalledWith(7, 1);
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Requested quantity exceeds available stock"
+    );
 
     unmount();
   });

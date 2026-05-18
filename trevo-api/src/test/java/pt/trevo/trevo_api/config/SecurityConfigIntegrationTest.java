@@ -33,11 +33,13 @@ import pt.trevo.trevo_api.persistence.repository.CollectionRepository;
 import pt.trevo.trevo_api.persistence.repository.NotificationRepository;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 import pt.trevo.trevo_api.persistence.repository.PasswordResetTokenRepository;
+import pt.trevo.trevo_api.persistence.repository.PayoutRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductImageRepository;
 import pt.trevo.trevo_api.persistence.repository.ProductRepository;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
+import pt.trevo.trevo_api.persistence.repository.SubscriptionRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 import pt.trevo.trevo_api.service.UserPhotoService;
@@ -98,6 +100,12 @@ class SecurityConfigIntegrationTest {
 
     @MockitoBean
     private NotificationRepository notificationRepository;
+
+    @MockitoBean
+    private PayoutRepository payoutRepository;
+
+    @MockitoBean
+    private SubscriptionRepository subscriptionRepository;
 
     @MockitoBean
     private UserPhotoService userPhotoService;

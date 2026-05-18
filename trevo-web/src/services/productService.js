@@ -46,3 +46,13 @@ export async function bulkUpdateVariantStock(productId, updates) {
   );
   return data;
 }
+
+export async function searchProducts(params = {}) {
+  const { data } = await apiClient.get("/products/search", { params });
+  return data;
+}
+
+export async function browseProducts(params = {}) {
+  const { data } = await apiClient.get("/products", { params });
+  return data;
+}

@@ -53,6 +53,14 @@ export async function deleteProductVariant(productId, variantId) {
   await apiClient.delete(`/products/${productId}/variants/${variantId}`);
 }
 
+export async function bulkUpdateVariantStock(productId, updates) {
+  const { data } = await apiClient.post(
+    `/products/${productId}/variants/bulk-stock`,
+    updates
+  );
+  return data;
+}
+
 function cleanParams(params) {
   return Object.fromEntries(
     Object.entries(params).filter(([, value]) => value !== "" && value != null)

@@ -11,6 +11,7 @@ import ShopDashboard from "./pages/ShopDashboard";
 import CreateShop from "./pages/CreateShop";
 import ProductDetail from "./pages/ProductDetail";
 import ProductForm from "./pages/ProductForm";
+import ProductSearchResults from "./pages/ProductSearchResults";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/products/:productId" element={<ProductDetail />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/shops/:shopId" element={<PublicShopProfile />} />
+      <Route path="/products" element={<ProductSearchResults />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />

@@ -11,6 +11,8 @@ const statusLabels = {
   CANCELLED: "Cancelada",
 };
 
+const PAGE_SIZE = 20;
+
 function formatPrice(value) {
   return new Intl.NumberFormat("pt-PT", {
     style: "currency",
@@ -31,8 +33,8 @@ function formatDate(value) {
 
 function getErrorMessage(error, fallback) {
   return (
-    error.response?.data?.detail ||
     error.response?.data?.message ||
+    error.response?.data?.detail ||
     fallback
   );
 }
@@ -46,6 +48,8 @@ export default function OrderHistory() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [error, setError] = useState("");
   const [detailError, setDetailError] = useState("");
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
@@ -53,11 +57,16 @@ export default function OrderHistory() {
     let active = true;
 
     async function loadOrders() {
+      setIsLoading(true);
+      setSelectedOrder(null);
+      setDetailError("");
+
       try {
-        const orders = await getBuyerOrders();
+        const orders = await getBuyerOrders({ page, size: PAGE_SIZE });
 
         if (active) {
           setOrderPage(orders);
+          setTotalPages(orders.totalPages || 0);
           setError("");
         }
       } catch (loadError) {
@@ -76,9 +85,10 @@ export default function OrderHistory() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [page]);
 
   async function handleSelectOrder(orderId) {
+    setSelectedOrder(null);
     setDetailError("");
     setIsLoadingDetail(true);
 
@@ -96,12 +106,18 @@ export default function OrderHistory() {
 
   const orders = orderPage?.orders || [];
   const isEmpty = !isLoading && !error && orders.length === 0;
+  const isFirstPage = page === 0;
+  const isLastPage = totalPages === 0 || page >= totalPages - 1;
 
   return (
     <main className="mx-auto my-10 max-w-5xl px-4 text-black">
       <h1 className="text-3xl font-semibold">Historico de encomendas</h1>
 
-      {isLoading && <p className="mt-6">A carregar encomendas...</p>}
+      {isLoading && (
+        <p className="mt-6" aria-live="polite">
+          A carregar encomendas...
+        </p>
+      )}
       {error && (
         <p className="mt-6 text-red-600" role="alert">
           {error}
@@ -140,11 +156,37 @@ export default function OrderHistory() {
                 </li>
               ))}
             </ul>
+
+            <div className="mt-6 flex items-center justify-between gap-4">
+              <button
+                type="button"
+                onClick={() => setPage((currentPage) => currentPage - 1)}
+                disabled={isFirstPage}
+                className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-gray-600">
+                Página {page + 1} de {Math.max(totalPages, 1)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((currentPage) => currentPage + 1)}
+                disabled={isLastPage}
+                className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Seguinte
+              </button>
+            </div>
           </section>
 
           <section aria-label="Detalhe da encomenda">
             <h2 className="text-xl font-semibold">Detalhe</h2>
-            {isLoadingDetail && <p className="mt-4">A carregar detalhe...</p>}
+            {isLoadingDetail && (
+              <p className="mt-4" aria-live="polite">
+                A carregar detalhe...
+              </p>
+            )}
             {detailError && (
               <p className="mt-4 text-red-600" role="alert">
                 {detailError}

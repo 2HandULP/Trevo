@@ -159,6 +159,59 @@ describe("OrderHistory", () => {
     unmount();
   });
 
+  it("loads the next page when clicking pagination", async () => {
+    mockGetBuyerOrders
+      .mockResolvedValueOnce({
+        ...orderPage,
+        totalPages: 2,
+        page: 0,
+      })
+      .mockResolvedValueOnce({
+        ...orderPage,
+        totalPages: 2,
+        page: 1,
+        orders: [orderPage.orders[1]],
+      });
+    const { container, unmount } = renderOrderHistory();
+
+    await flushPromises();
+    await click(
+      [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Seguinte"
+      )
+    );
+    await flushPromises();
+
+    expect(mockGetBuyerOrders).toHaveBeenLastCalledWith({ page: 1, size: 20 });
+
+    unmount();
+  });
+
+  it("shows an error when loading order detail fails", async () => {
+    mockGetBuyerOrder.mockRejectedValue({
+      response: {
+        data: {
+          message: "Não foi possível carregar o detalhe",
+        },
+      },
+    });
+    const { container, unmount } = renderOrderHistory();
+
+    await flushPromises();
+    await click(
+      [...container.querySelectorAll("button")].find((button) =>
+        button.textContent.includes("Order #11")
+      )
+    );
+    await flushPromises();
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Não foi possível carregar o detalhe"
+    );
+
+    unmount();
+  });
+
   it("shows an empty state when there are no orders", async () => {
     mockGetBuyerOrders.mockResolvedValue({
       totalElements: 0,

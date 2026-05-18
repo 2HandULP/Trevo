@@ -1,5 +1,19 @@
 import apiClient from "../lib/apiClient";
 
+export async function searchProducts(params = {}) {
+  const { data } = await apiClient.get("/products/search", {
+    params: cleanParams(params),
+  });
+  return data;
+}
+
+export async function browseProducts(params = {}) {
+  const { data } = await apiClient.get("/products", {
+    params: cleanParams(params),
+  });
+  return data;
+}
+
 export async function createProduct(payload) {
   const { data } = await apiClient.post("/products", payload);
   return data;
@@ -47,12 +61,8 @@ export async function bulkUpdateVariantStock(productId, updates) {
   return data;
 }
 
-export async function searchProducts(params = {}) {
-  const { data } = await apiClient.get("/products/search", { params });
-  return data;
-}
-
-export async function browseProducts(params = {}) {
-  const { data } = await apiClient.get("/products", { params });
-  return data;
+function cleanParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== "" && value != null)
+  );
 }

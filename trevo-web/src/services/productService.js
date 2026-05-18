@@ -44,6 +44,7 @@ export async function searchProducts(params = {}) {
   return data;
 }
 
+
 export async function browseProducts(params = {}) {
   const { data } = await apiClient.get("/products", { params });
   return data;

@@ -17,6 +17,7 @@ import ShopProducts from "./pages/ShopProducts";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import OrderHistory from "./pages/OrderHistory";
+import OrderManagement from "./pages/OrderManagement";
 import Checkout from "./pages/Checkout";
 import Cart from "./pages/Cart";
 import Unauthorized from "./pages/Unauthorized";
@@ -55,6 +56,7 @@ export default function App() {
 
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
         <Route path="/shop/dashboard" element={<ShopDashboard />} />
+        <Route path="/shop/orders" element={<OrderManagement />} />
       </Route>
 
       <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>

@@ -56,10 +56,8 @@ async function submitForm(container) {
   });
 }
 
-function buttonByText(container, text) {
-  return [...container.querySelectorAll("button")].find(
-    (button) => button.textContent === text
-  );
+function submitButton(container) {
+  return container.querySelector('button[type="submit"]');
 }
 
 describe("ReviewForm", () => {
@@ -78,21 +76,24 @@ describe("ReviewForm", () => {
 
     await click(container.querySelector('button[aria-label="4 estrelas"]'));
 
-    expect(container.querySelector('button[aria-label="4 estrelas"]').textContent).toBe(
-      "★"
-    );
-    expect(container.querySelector('button[aria-label="5 estrelas"]').textContent).toBe(
-      "☆"
-    );
+    expect(
+      container.querySelector('button[aria-label="4 estrelas"]').getAttribute(
+        "aria-pressed"
+      )
+    ).toBe("true");
+    expect(
+      container.querySelector('button[aria-label="5 estrelas"]').getAttribute(
+        "aria-pressed"
+      )
+    ).toBe("false");
 
     unmount();
   });
 
   it("does not submit with zero stars", async () => {
     const { container, unmount } = renderReviewForm();
-    const submitButton = buttonByText(container, "Enviar avaliação");
 
-    expect(submitButton.disabled).toBe(true);
+    expect(submitButton(container).disabled).toBe(true);
 
     await submitForm(container);
 
@@ -119,26 +120,40 @@ describe("ReviewForm", () => {
     const { container, unmount } = renderReviewForm();
 
     await click(container.querySelector('button[aria-label="3 estrelas"]'));
-    changeTextarea(container.querySelector("textarea"), "Boa experiência.");
+    changeTextarea(container.querySelector("textarea"), "Boa experiencia.");
     await submitForm(container);
 
     expect(mockCreateReview).toHaveBeenCalledWith(5, {
       rating: 3,
-      comment: "Boa experiência.",
+      comment: "Boa experiencia.",
     });
 
     unmount();
   });
 
-  it("shows success after submit", async () => {
+  it("shows success after submit and hides the form", async () => {
     const { container, unmount } = renderReviewForm();
 
     await click(container.querySelector('button[aria-label="5 estrelas"]'));
     await submitForm(container);
 
     expect(container.querySelector('[role="status"]').textContent).toContain(
-      "Avaliação enviada com sucesso."
+      "sucesso"
     );
+    expect(container.querySelector("form")).toBeNull();
+
+    unmount();
+  });
+
+  it("does not allow another submission after success", async () => {
+    const { container, unmount } = renderReviewForm();
+
+    await click(container.querySelector('button[aria-label="5 estrelas"]'));
+    await submitForm(container);
+
+    expect(container.querySelector("form")).toBeNull();
+    expect(submitButton(container)).toBeNull();
+    expect(mockCreateReview).toHaveBeenCalledTimes(1);
 
     unmount();
   });
@@ -158,6 +173,30 @@ describe("ReviewForm", () => {
 
     expect(container.querySelector('[role="alert"]').textContent).toContain(
       "Buyer has no delivered order from this shop"
+    );
+
+    unmount();
+  });
+
+  it("shows a Portuguese message for duplicate review errors", async () => {
+    mockCreateReview.mockRejectedValue({
+      response: {
+        status: 409,
+        data: {
+          message: "Buyer already reviewed this shop",
+        },
+      },
+    });
+    const { container, unmount } = renderReviewForm();
+
+    await click(container.querySelector('button[aria-label="5 estrelas"]'));
+    await submitForm(container);
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Já avaliou esta loja."
+    );
+    expect(container.querySelector('[role="alert"]').textContent).not.toContain(
+      "Buyer already reviewed this shop"
     );
 
     unmount();

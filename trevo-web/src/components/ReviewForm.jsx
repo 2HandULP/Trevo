@@ -2,6 +2,10 @@ import { useState } from "react";
 import { createReview } from "../services/reviewService";
 
 function getErrorMessage(error, fallback) {
+  if (error.response?.status === 409) {
+    return "Já avaliou esta loja.";
+  }
+
   return (
     error.response?.data?.message ||
     error.response?.data?.detail ||
@@ -15,11 +19,12 @@ export default function ReviewForm({ shopId }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (rating === 0 || isSubmitting) {
+    if (rating === 0 || isSubmitting || hasSubmitted) {
       return;
     }
 
@@ -33,6 +38,7 @@ export default function ReviewForm({ shopId }) {
         comment: comment.trim() ? comment.trim() : null,
       });
       setSuccess("Avaliação enviada com sucesso.");
+      setHasSubmitted(true);
       setComment("");
       setRating(0);
     } catch (submitError) {
@@ -48,7 +54,12 @@ export default function ReviewForm({ shopId }) {
     <section className="mt-10 border-t border-gray-200 pt-8">
       <h2 className="text-xl font-semibold">Avaliar esta loja</h2>
 
-      <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
+      {hasSubmitted ? (
+        <p className="mt-4 text-green-600" role="status" aria-live="polite">
+          {success}
+        </p>
+      ) : (
+        <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         <div>
           <p className="text-sm font-semibold">Classificação</p>
           <div className="mt-2 flex gap-2" aria-label="Classificação por estrelas">
@@ -85,17 +96,13 @@ export default function ReviewForm({ shopId }) {
           {isSubmitting ? "A enviar..." : "Enviar avaliação"}
         </button>
 
-        {success && (
-          <p className="text-green-600" role="status" aria-live="polite">
-            {success}
-          </p>
-        )}
         {error && (
           <p className="text-red-600" role="alert">
             {error}
           </p>
         )}
-      </form>
+        </form>
+      )}
     </section>
   );
 }

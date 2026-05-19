@@ -95,6 +95,11 @@ export default function ProductDetail() {
     };
   }, [productId]);
 
+  useEffect(() => {
+    setCartSuccess("");
+    setCartError("");
+  }, [selectedSize, selectedColor]);
+
   const images = useMemo(() => normalizeImages(product?.images), [product]);
   const variants = useMemo(() => product?.variants || [], [product]);
   const sizes = useMemo(

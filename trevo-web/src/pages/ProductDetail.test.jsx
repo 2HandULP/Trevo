@@ -158,6 +158,25 @@ describe("ProductDetail", () => {
     unmount();
   });
 
+  it("keeps add to cart disabled for a variant without stock", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [{ id: 2, productId: 1, size: "L", color: "Black", stock: 0 }],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+
+    clickButton(buttonByText(container, "L"));
+    clickButton(buttonByText(container, "Black"));
+
+    expect(buttonByText(container, "Adicionar ao carrinho").disabled).toBe(true);
+
+    unmount();
+  });
+
   it("adds the selected variant to the cart and shows success", async () => {
     mockGetProduct.mockResolvedValue({
       ...baseProduct,

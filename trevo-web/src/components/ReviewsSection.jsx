@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getShopReviews } from "../services/reviewService";
 
 const PAGE_SIZE = 5;
@@ -13,7 +13,7 @@ function getErrorMessage(error, fallback) {
 
 function formatDate(value) {
   if (!value) {
-    return "Data indisponivel";
+    return "Data indisponível";
   }
 
   return new Intl.DateTimeFormat("pt-PT", {
@@ -43,84 +43,72 @@ export default function ReviewsSection({ shopId }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function loadReviews(nextPage = 0, mode = "replace") {
-    setIsLoading(true);
-    setError("");
+  const loadReviews = useCallback(
+    async (nextPage = 0, mode = "replace", options = {}) => {
+      const { isActive = () => true } = options;
 
-    try {
-      const response = await getShopReviews(shopId, {
-        page: nextPage,
-        size: PAGE_SIZE,
-      });
-
-      setReviews((currentReviews) =>
-        mode === "append"
-          ? [...currentReviews, ...(response.reviews || [])]
-          : response.reviews || []
-      );
-      setAverageRating(response.averageRating ?? null);
-      setTotalPages(response.totalPages || 0);
-      setPage(response.page ?? nextPage);
-    } catch (loadError) {
-      setError(getErrorMessage(loadError, "Nao foi possivel carregar avaliacoes"));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadInitialReviews() {
       setIsLoading(true);
       setError("");
 
       try {
         const response = await getShopReviews(shopId, {
-          page: 0,
+          page: nextPage,
           size: PAGE_SIZE,
         });
 
-        if (active) {
-          setReviews(response.reviews || []);
+        if (isActive()) {
+          setReviews((currentReviews) =>
+            mode === "append"
+              ? [...currentReviews, ...(response.reviews || [])]
+              : response.reviews || []
+          );
           setAverageRating(response.averageRating ?? null);
           setTotalPages(response.totalPages || 0);
-          setPage(response.page || 0);
+          setPage(response.page ?? nextPage);
         }
       } catch (loadError) {
-        if (active) {
-          setError(getErrorMessage(loadError, "Nao foi possivel carregar avaliacoes"));
+        if (isActive()) {
+          setError(
+            getErrorMessage(loadError, "Não foi possível carregar avaliações")
+          );
         }
       } finally {
-        if (active) {
+        if (isActive()) {
           setIsLoading(false);
         }
       }
-    }
+    },
+    [shopId]
+  );
 
-    loadInitialReviews();
+  useEffect(() => {
+    let active = true;
+
+    loadReviews(0, "replace", { isActive: () => active });
 
     return () => {
       active = false;
     };
-  }, [shopId]);
+  }, [loadReviews]);
 
   const hasMore = page < totalPages - 1;
-  const isEmpty = !isLoading && !error && averageRating == null && reviews.length === 0;
+  const isEmpty =
+    !isLoading && !error && averageRating == null && reviews.length === 0;
 
   return (
     <section className="mt-8">
-      <h2>Avaliacoes</h2>
+      <h2>Avaliações</h2>
 
       {averageRating != null && (
         <p>
-          Media: <Stars rating={averageRating} /> {Number(averageRating).toFixed(1)}
+          Média: <Stars rating={averageRating} />{" "}
+          {Number(averageRating).toFixed(1)}
         </p>
       )}
 
       {isLoading && (
         <p className="mt-3" aria-live="polite">
-          A carregar avaliacoes...
+          A carregar avaliações...
         </p>
       )}
       {error && (

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
 
 function formatPrice(price) {
@@ -41,6 +42,14 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function getErrorMessage(error, fallback) {
+  return (
+    error.response?.data?.message ||
+    error.response?.data?.detail ||
+    fallback
+  );
+}
+
 export default function ProductDetail() {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
@@ -49,6 +58,9 @@ export default function ProductDetail() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [cartSuccess, setCartSuccess] = useState("");
+  const [cartError, setCartError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -82,6 +94,11 @@ export default function ProductDetail() {
       active = false;
     };
   }, [productId]);
+
+  useEffect(() => {
+    setCartSuccess("");
+    setCartError("");
+  }, [selectedSize, selectedColor]);
 
   const images = useMemo(() => normalizeImages(product?.images), [product]);
   const variants = useMemo(() => product?.variants || [], [product]);
@@ -125,6 +142,37 @@ export default function ProductDetail() {
       current === 0 ? images.length - 1 : current - 1
     );
   }
+
+  async function handleAddToCart() {
+    if (!selectedVariant || selectedVariant.stock <= 0) {
+      return;
+    }
+
+    setCartSuccess("");
+    setCartError("");
+    setIsAddingToCart(true);
+
+    try {
+      await addCartItem(selectedVariant.id, 1);
+      setCartSuccess("Produto adicionado ao carrinho.");
+    } catch (addError) {
+      setCartError(
+        getErrorMessage(
+          addError,
+          "Não foi possível adicionar o produto ao carrinho."
+        )
+      );
+    } finally {
+      setIsAddingToCart(false);
+    }
+  }
+
+  const isAddToCartDisabled =
+    !selectedSize ||
+    !selectedColor ||
+    !selectedVariant ||
+    selectedVariant.stock <= 0 ||
+    isAddingToCart;
 
   return (
     <main className="mx-auto my-10 max-w-5xl px-4 text-black">
@@ -286,6 +334,26 @@ export default function ProductDetail() {
                 <p className="font-semibold">Combinacao indisponivel</p>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={isAddToCartDisabled}
+              className="mt-4 w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
+            >
+              {isAddingToCart ? "A adicionar..." : "Adicionar ao carrinho"}
+            </button>
+
+            {cartSuccess && (
+              <p className="mt-3 text-green-600" role="status" aria-live="polite">
+                {cartSuccess}
+              </p>
+            )}
+            {cartError && (
+              <p className="mt-3 text-red-600" role="alert">
+                {cartError}
+              </p>
+            )}
           </section>
         </div>
       )}

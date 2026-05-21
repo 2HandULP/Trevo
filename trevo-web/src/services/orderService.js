@@ -21,3 +21,17 @@ export async function cancelBuyerOrder(orderId) {
   const { data } = await apiClient.post(`/buyer/orders/${orderId}/cancel`);
   return data;
 }
+
+export async function getShopOrders({ page, size = 20 }) {
+  const { data } = await apiClient.get("/orders", {
+    params: { page, size },
+  });
+  return data;
+}
+
+export async function updateOrderStatus(orderId, status) {
+  const { data } = await apiClient.patch(`/orders/${orderId}/status`, {
+    status,
+  });
+  return data;
+}

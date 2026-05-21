@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import StripePaymentForm from "../components/StripePaymentForm";
 import { getCart } from "../services/cartService";
 import { checkoutOrder } from "../services/orderService";
 
@@ -31,13 +33,23 @@ function orderTotal(orders) {
   );
 }
 
+function getStripePublishableKey() {
+  return import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+}
+
 export default function Checkout() {
   const [cart, setCart] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [pendingStripeOrders, setPendingStripeOrders] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState("MBWAY");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const stripePublishableKey = getStripePublishableKey();
+  const stripePromise = useMemo(
+    () => (stripePublishableKey ? loadStripe(stripePublishableKey) : null),
+    [stripePublishableKey]
+  );
 
   useEffect(() => {
     let active = true;
@@ -72,25 +84,54 @@ export default function Checkout() {
   const isEmpty = !isLoading && !error && shops.length === 0 && orders.length === 0;
   const hasValidCart = shops.length > 0;
   const isConfirmDisabled =
-    isSubmitting || orders.length > 0 || !hasValidCart || !paymentMethod;
+    isSubmitting ||
+    orders.length > 0 ||
+    pendingStripeOrders.length > 0 ||
+    !hasValidCart ||
+    !paymentMethod ||
+    (paymentMethod === "STRIPE" && !stripePromise);
   const successTotal = useMemo(() => orderTotal(orders), [orders]);
+  const pendingStripeOrder = pendingStripeOrders[0] || null;
 
   async function handleConfirm() {
     if (isSubmitting) return;
     if (orders.length > 0) return;
+    if (pendingStripeOrders.length > 0) return;
     if (!hasValidCart || !paymentMethod) return;
+    if (paymentMethod === "STRIPE" && !stripePromise) {
+      setError("Stripe não está configurado neste ambiente.");
+      return;
+    }
 
     setError("");
 
     try {
       setIsSubmitting(true);
       const createdOrders = await checkoutOrder(paymentMethod);
+
+      if (paymentMethod === "STRIPE") {
+        if (createdOrders.length !== 1) {
+          setError(
+            "O pagamento Stripe só suporta uma encomenda por checkout neste momento."
+          );
+          return;
+        }
+
+        setPendingStripeOrders(createdOrders);
+        return;
+      }
+
       setOrders(createdOrders);
     } catch (checkoutError) {
       setError(getErrorMessage(checkoutError, "Não foi possível confirmar a encomenda"));
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function handleStripeSuccess() {
+    setOrders(pendingStripeOrders);
+    setPendingStripeOrders([]);
   }
 
   if (orders.length > 0) {
@@ -206,22 +247,38 @@ export default function Checkout() {
               ))}
             </select>
 
-            <div className="mt-5 border border-gray-200 bg-gray-50 p-4">
+            {paymentMethod === "STRIPE" && !stripePromise && (
+              <p className="mt-5 text-red-600" role="alert">
+                Stripe não está configurado neste ambiente.
+              </p>
+            )}
+
+            {paymentMethod !== "STRIPE" && (
+              <div className="mt-5 border border-gray-200 bg-gray-50 p-4">
               <h3 className="font-semibold">Pagamento pendente de integração</h3>
               <p className="mt-2 text-sm text-gray-700">
                 O pagamento real ainda não está integrado nesta fase. A confirmação
                 cria as encomendas usando o método selecionado.
               </p>
-            </div>
+              </div>
+            )}
 
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={isConfirmDisabled}
-              className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? "A confirmar..." : "Confirmar encomenda"}
-            </button>
+            {pendingStripeOrder ? (
+              <StripePaymentForm
+                order={pendingStripeOrder}
+                onSuccess={handleStripeSuccess}
+                stripePromise={stripePromise}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={isConfirmDisabled}
+                className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? "A confirmar..." : "Confirmar encomenda"}
+              </button>
+            )}
           </aside>
         </div>
       )}

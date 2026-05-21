@@ -13,6 +13,10 @@ vi.mock("../services/shopService", () => ({
   getShopProfile: mockGetShopProfile,
 }));
 
+vi.mock("../components/ReviewsSection", () => ({
+  default: ({ shopId }) => <section data-testid="reviews-section">Reviews {shopId}</section>,
+}));
+
 globalThis.React = React;
 
 function renderPublicShopProfile() {

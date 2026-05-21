@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import ReviewsSection from "../components/ReviewsSection";
 import { getShopProfile } from "../services/shopService";
 
 function sortCollections(collections) {
@@ -90,6 +91,8 @@ export default function PublicShopProfile() {
           <p>
             <Link to={`/shops/${shopId}/products`}>Ver todos os produtos</Link>
           </p>
+
+          <ReviewsSection shopId={shopId} />
 
           <section>
             <h2>Coleções</h2>

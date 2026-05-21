@@ -4,12 +4,22 @@ import { createRoot } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ReviewsSection from "./ReviewsSection";
 
-const { mockGetShopReviews } = vi.hoisted(() => ({
+const { mockGetShopReviews, mockRespondToReview, mockAuthState } = vi.hoisted(() => ({
   mockGetShopReviews: vi.fn(),
+  mockRespondToReview: vi.fn(),
+  mockAuthState: {
+    isAuthenticated: false,
+    role: null,
+  },
 }));
 
 vi.mock("../services/reviewService", () => ({
   getShopReviews: mockGetShopReviews,
+  respondToReview: mockRespondToReview,
+}));
+
+vi.mock("../hooks/useAuth", () => ({
+  useAuth: () => mockAuthState,
 }));
 
 globalThis.React = React;
@@ -33,6 +43,7 @@ const firstPage = {
 
 function renderReviewsSection() {
   const container = document.createElement("div");
+  document.body.appendChild(container);
   const root = createRoot(container);
 
   act(() => {
@@ -44,8 +55,14 @@ function renderReviewsSection() {
     unmount: () =>
       act(() => {
         root.unmount();
+        container.remove();
       }),
   };
+}
+
+function setAuthState(authState) {
+  mockAuthState.isAuthenticated = authState.isAuthenticated;
+  mockAuthState.role = authState.role;
 }
 
 async function flushPromises() {
@@ -60,6 +77,19 @@ async function click(button) {
   });
 }
 
+async function changeField(field, value) {
+  await act(async () => {
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      "value"
+    ).set;
+
+    valueSetter.call(field, value);
+    field.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
 function buttonByText(container, text) {
   return [...container.querySelectorAll("button")].find(
     (button) => button.textContent === text
@@ -69,7 +99,12 @@ function buttonByText(container, text) {
 describe("ReviewsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setAuthState({ isAuthenticated: false, role: null });
     mockGetShopReviews.mockResolvedValue(firstPage);
+    mockRespondToReview.mockResolvedValue({
+      id: 20,
+      response: "Obrigado pelo feedback.",
+    });
   });
 
   it("shows the average rating with star icons", async () => {
@@ -186,6 +221,120 @@ describe("ReviewsSection", () => {
     expect(mockGetShopReviews).toHaveBeenLastCalledWith(7, { page: 0, size: 5 });
     expect(container.textContent).toContain("Ana Silva");
     expect(container.querySelector('[role="alert"]')).toBeNull();
+
+    unmount();
+  });
+
+  it("opens an inline textarea when a shop owner clicks Responder", async () => {
+    setAuthState({ isAuthenticated: true, role: "SHOP_OWNER" });
+    const { container, unmount } = renderReviewsSection();
+
+    await flushPromises();
+    await click(buttonByText(container, "Responder"));
+
+    expect(container.querySelector("textarea")).not.toBeNull();
+    expect(buttonByText(container, "Enviar resposta")).not.toBeUndefined();
+    expect(buttonByText(container, "Cancelar")).not.toBeUndefined();
+
+    unmount();
+  });
+
+  it("submits a response and shows it after success", async () => {
+    setAuthState({ isAuthenticated: true, role: "SHOP_OWNER" });
+    const { container, unmount } = renderReviewsSection();
+
+    await flushPromises();
+    await click(buttonByText(container, "Responder"));
+    await changeField(container.querySelector("textarea"), "Obrigado pela avaliação.");
+    await click(buttonByText(container, "Enviar resposta"));
+    await flushPromises();
+
+    expect(mockRespondToReview).toHaveBeenCalledWith(
+      10,
+      "Obrigado pela avaliação."
+    );
+    expect(container.textContent).toContain("Resposta da loja");
+    expect(container.textContent).toContain("Obrigado pelo feedback.");
+    expect(buttonByText(container, "Responder")).toBeUndefined();
+    expect(container.querySelector("textarea")).toBeNull();
+
+    unmount();
+  });
+
+  it("disables response submit while the textarea is blank", async () => {
+    setAuthState({ isAuthenticated: true, role: "SHOP_OWNER" });
+    const { container, unmount } = renderReviewsSection();
+
+    await flushPromises();
+    await click(buttonByText(container, "Responder"));
+    await changeField(container.querySelector("textarea"), "   ");
+
+    expect(buttonByText(container, "Enviar resposta").disabled).toBe(true);
+
+    unmount();
+  });
+
+  it("does not show Responder for a buyer or visitor", async () => {
+    setAuthState({ isAuthenticated: true, role: "BUYER" });
+    const buyerRender = renderReviewsSection();
+
+    await flushPromises();
+
+    expect(buttonByText(buyerRender.container, "Responder")).toBeUndefined();
+    buyerRender.unmount();
+
+    setAuthState({ isAuthenticated: false, role: null });
+    const visitorRender = renderReviewsSection();
+
+    await flushPromises();
+
+    expect(buttonByText(visitorRender.container, "Responder")).toBeUndefined();
+    visitorRender.unmount();
+  });
+
+  it("does not show Responder when the review already has a response", async () => {
+    setAuthState({ isAuthenticated: true, role: "SHOP_OWNER" });
+    mockGetShopReviews.mockResolvedValue({
+      ...firstPage,
+      reviews: [
+        {
+          ...firstPage.reviews[0],
+          response: { id: 20, response: "Resposta existente." },
+        },
+      ],
+    });
+    const { container, unmount } = renderReviewsSection();
+
+    await flushPromises();
+
+    expect(container.textContent).toContain("Resposta existente.");
+    expect(buttonByText(container, "Responder")).toBeUndefined();
+
+    unmount();
+  });
+
+  it("shows an alert when responding fails", async () => {
+    setAuthState({ isAuthenticated: true, role: "SHOP_OWNER" });
+    mockRespondToReview.mockRejectedValue({
+      response: {
+        status: 409,
+        data: {
+          detail: "Already responded",
+        },
+      },
+    });
+    const { container, unmount } = renderReviewsSection();
+
+    await flushPromises();
+    await click(buttonByText(container, "Responder"));
+    await changeField(container.querySelector("textarea"), "Obrigado.");
+    await click(buttonByText(container, "Enviar resposta"));
+    await flushPromises();
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Esta avaliação já tem resposta."
+    );
+    expect(container.querySelector("textarea")).not.toBeNull();
 
     unmount();
   });

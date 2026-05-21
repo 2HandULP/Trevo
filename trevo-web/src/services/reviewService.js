@@ -1,4 +1,9 @@
-import { publicClient } from "../lib/apiClient";
+import apiClient, { publicClient } from "../lib/apiClient";
+
+export async function createReview(shopId, payload) {
+  const { data } = await apiClient.post(`/buyer/reviews/shops/${shopId}`, payload);
+  return data;
+}
 
 export async function getShopReviews(shopId, params) {
   const { data } = await publicClient.get(`/shops/${shopId}/reviews`, { params });

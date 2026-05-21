@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import ReviewForm from "../components/ReviewForm";
+import { useAuth } from "../hooks/useAuth";
+import { normalizeRole, ROLES } from "../lib/roles";
 import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
 
@@ -52,6 +55,7 @@ function getErrorMessage(error, fallback) {
 
 export default function ProductDetail() {
   const { productId } = useParams();
+  const { isAuthenticated, role } = useAuth();
   const [product, setProduct] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -114,6 +118,10 @@ export default function ProductDetail() {
   const selectedVariant = variants.find(
     (variant) => variant.size === selectedSize && variant.color === selectedColor
   );
+  const canReviewShop =
+    isAuthenticated &&
+    normalizeRole(role) === ROLES.BUYER &&
+    Boolean(product?.shopId);
 
   function isSizeDisabled(size) {
     return !variants.some(
@@ -354,6 +362,8 @@ export default function ProductDetail() {
                 {cartError}
               </p>
             )}
+
+            {canReviewShop && <ReviewForm shopId={product.shopId} />}
           </section>
         </div>
       )}

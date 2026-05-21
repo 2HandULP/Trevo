@@ -5,9 +5,14 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProductDetail from "./ProductDetail";
 
-const { mockAddCartItem, mockGetProduct } = vi.hoisted(() => ({
+const { mockAddCartItem, mockGetProduct, mockUseAuth } = vi.hoisted(() => ({
   mockAddCartItem: vi.fn(),
   mockGetProduct: vi.fn(),
+  mockUseAuth: vi.fn(),
+}));
+
+vi.mock("../hooks/useAuth", () => ({
+  useAuth: mockUseAuth,
 }));
 
 vi.mock("../services/cartService", () => ({
@@ -82,6 +87,10 @@ function buttonByText(container, text) {
 describe("ProductDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      role: "BUYER",
+    });
     mockAddCartItem.mockResolvedValue({});
   });
 
@@ -264,5 +273,54 @@ describe("ProductDetail", () => {
     expect(container.textContent).toContain("Camisa Linho");
 
     unmount();
+  });
+
+  it("renders ReviewForm only for authenticated buyers", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+
+    expect(container.textContent).toContain("Avaliar esta loja");
+
+    unmount();
+  });
+
+  it("does not render ReviewForm for shop owners or visitors", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      role: "SHOP_OWNER",
+    });
+
+    const shopOwnerRender = renderProductDetail();
+
+    await flushPromises();
+
+    expect(shopOwnerRender.container.textContent).not.toContain("Avaliar esta loja");
+
+    shopOwnerRender.unmount();
+
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      role: null,
+    });
+
+    const visitorRender = renderProductDetail();
+
+    await flushPromises();
+
+    expect(visitorRender.container.textContent).not.toContain("Avaliar esta loja");
+
+    visitorRender.unmount();
   });
 });

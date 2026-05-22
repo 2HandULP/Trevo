@@ -5,9 +5,10 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProductDetail from "./ProductDetail";
 
-const { mockAddCartItem, mockGetProduct, mockUseAuth } = vi.hoisted(() => ({
+const { mockAddCartItem, mockGetProduct, mockUploadBuyerPhotos, mockUseAuth } = vi.hoisted(() => ({
   mockAddCartItem: vi.fn(),
   mockGetProduct: vi.fn(),
+  mockUploadBuyerPhotos: vi.fn(),
   mockUseAuth: vi.fn(),
 }));
 
@@ -21,6 +22,10 @@ vi.mock("../services/cartService", () => ({
 
 vi.mock("../services/productService", () => ({
   getProduct: mockGetProduct,
+}));
+
+vi.mock("../services/userPhotoService", () => ({
+  uploadBuyerPhotos: mockUploadBuyerPhotos,
 }));
 
 globalThis.React = React;
@@ -78,10 +83,32 @@ async function clickButtonAsync(button) {
   });
 }
 
+async function submitForm(form) {
+  await act(async () => {
+    form.dispatchEvent(
+      new Event("submit", {
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+  });
+}
+
 function buttonByText(container, text) {
   return [...container.querySelectorAll("button")].find(
     (button) => button.textContent === text
   );
+}
+
+function changeFiles(input, files) {
+  Object.defineProperty(input, "files", {
+    configurable: true,
+    value: files,
+  });
+
+  act(() => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 }
 
 describe("ProductDetail", () => {
@@ -92,6 +119,15 @@ describe("ProductDetail", () => {
       role: "BUYER",
     });
     mockAddCartItem.mockResolvedValue({});
+    mockUploadBuyerPhotos.mockResolvedValue({
+      photos: [
+        { id: 1, url: "https://example.test/user-1.jpg" },
+        { id: 2, url: "https://example.test/user-2.jpg" },
+        { id: 3, url: "https://example.test/user-3.jpg" },
+      ],
+    });
+    globalThis.URL.createObjectURL = vi.fn((file) => `blob:${file.name}`);
+    globalThis.URL.revokeObjectURL = vi.fn();
   });
 
   it("changes the main image when the carousel advances", async () => {
@@ -365,6 +401,238 @@ describe("ProductDetail", () => {
 
     unmount();
     vi.useRealTimers();
+  });
+
+  it("accepts exactly three See It On Yourself images and shows previews", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [
+        { id: 1, imageUrl: "https://example.test/front.jpg", alt: "Frente" },
+      ],
+      variants: [],
+    });
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ]);
+
+    expect(container.querySelectorAll('img[alt^="Pre-visualizacao See It"]').length).toBe(3);
+    expect(container.querySelector('img[alt="Pre-visualizacao See It 1"]').src).toBe(
+      "blob:photo-1.png"
+    );
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+
+    unmount();
+  });
+
+  it("shows an error when See It On Yourself does not have exactly three images", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+    ]);
+    await clickButtonAsync(buttonByText(container, "Gerar resultado"));
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Seleciona exatamente 3 imagens."
+    );
+    expect(mockUploadBuyerPhotos).not.toHaveBeenCalled();
+
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+      new File(["photo-4"], "photo-4.png", { type: "image/png" }),
+    ]);
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Seleciona exatamente 3 imagens."
+    );
+
+    unmount();
+  });
+
+  it("keeps the See It On Yourself submit button disabled without exactly three images", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+
+    expect(buttonByText(container, "Gerar resultado").disabled).toBe(true);
+
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+    ]);
+
+    expect(buttonByText(container, "Gerar resultado").disabled).toBe(true);
+
+    unmount();
+  });
+
+  it("shows the service error when a See It On Yourself file is not an image", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    mockUploadBuyerPhotos.mockRejectedValueOnce(
+      new Error("Todos os ficheiros têm de ser imagens")
+    );
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["not-image"], "not-image.txt", { type: "text/plain" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ]);
+    await submitForm(container.querySelector('[role="dialog"] form'));
+    await flushPromises();
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Todos os ficheiros têm de ser imagens"
+    );
+
+    unmount();
+  });
+
+  it("shows the service error when a See It On Yourself image is above 10MB", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    mockUploadBuyerPhotos.mockRejectedValueOnce(
+      new Error("Cada imagem deve ter no máximo 10MB")
+    );
+    const largeImage = new File(
+      [new Uint8Array(10 * 1024 * 1024 + 1)],
+      "large.png",
+      { type: "image/png" }
+    );
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      largeImage,
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ]);
+    await submitForm(container.querySelector('[role="dialog"] form'));
+    await flushPromises();
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Cada imagem deve ter no máximo 10MB"
+    );
+
+    unmount();
+  });
+
+  it("uploads See It On Yourself photos and shows the mock result", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [
+        { id: 1, imageUrl: "https://example.test/front.jpg", alt: "Frente" },
+      ],
+      variants: [],
+    });
+    const { container, unmount } = renderProductDetail();
+    const files = [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ];
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), files);
+    await flushPromises();
+    await submitForm(container.querySelector('[role="dialog"] form'));
+    await flushPromises();
+
+    expect(mockUploadBuyerPhotos).toHaveBeenCalledWith(files);
+    expect(container.querySelector('[role="status"]').textContent).toContain(
+      "Fotos carregadas com sucesso."
+    );
+    expect(container.querySelector('img[alt="Resultado See It On Yourself"]').src).toBe(
+      "https://example.test/front.jpg"
+    );
+
+    unmount();
+  });
+
+  it("revokes See It On Yourself preview URLs when closing the modal", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ]);
+    clickButton(buttonByText(container, "Fechar"));
+
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-1.png");
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-2.png");
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-3.png");
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+
+    unmount();
+  });
+
+  it("revokes See It On Yourself preview URLs when replacing images", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ]);
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-4"], "photo-4.png", { type: "image/png" }),
+      new File(["photo-5"], "photo-5.png", { type: "image/png" }),
+      new File(["photo-6"], "photo-6.png", { type: "image/png" }),
+    ]);
+
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-1.png");
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-2.png");
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-3.png");
+
+    unmount();
   });
 
   it("renders ReviewForm only for authenticated buyers", async () => {

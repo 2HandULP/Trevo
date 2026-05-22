@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import OrderHistory from "./pages/OrderHistory";
 import OrderManagement from "./pages/OrderManagement";
+import ReceiptView from "./pages/ReceiptView";
 import Checkout from "./pages/Checkout";
 import Cart from "./pages/Cart";
 import Unauthorized from "./pages/Unauthorized";
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<OrderHistory />} />
+          <Route path="/orders/:orderId/receipt" element={<ReceiptView />} />
         </Route>
 
         <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>

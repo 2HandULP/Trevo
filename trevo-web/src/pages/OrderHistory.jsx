@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getBuyerOrder, getBuyerOrders } from "../services/orderService";
 
 const statusLabels = {
@@ -240,6 +241,12 @@ export default function OrderHistory() {
                 <p className="mt-5 text-xl font-semibold">
                   Total: {formatPrice(selectedOrder.totalAmount)}
                 </p>
+                <Link
+                  to={`/orders/${selectedOrder.id}/receipt`}
+                  className="mt-5 inline-block border border-gray-300 px-4 py-2 font-semibold"
+                >
+                  Ver recibo
+                </Link>
               </div>
             )}
           </section>

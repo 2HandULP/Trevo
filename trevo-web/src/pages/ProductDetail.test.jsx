@@ -311,6 +311,98 @@ describe("ProductDetail", () => {
     unmount();
   });
 
+  it("shows the Virtual Try-On button on product detail", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+
+    expect(buttonByText(container, "Virtual Try-On")).not.toBeUndefined();
+
+    unmount();
+  });
+
+  it("opens a Virtual Try-On modal when clicking the button", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "Virtual Try-On"));
+
+    const dialog = container.querySelector('[role="dialog"]');
+
+    expect(dialog).not.toBeNull();
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(dialog.textContent).toContain("Virtual Try-On");
+
+    unmount();
+  });
+
+  it("shows at least four body type options in the Virtual Try-On modal", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "Virtual Try-On"));
+
+    expect(container.querySelectorAll('input[name="bodyType"]').length).toBeGreaterThanOrEqual(4);
+    expect(container.textContent).toContain("Slim");
+    expect(container.textContent).toContain("Athletic");
+    expect(container.textContent).toContain("Regular");
+    expect(container.textContent).toContain("Plus Size");
+
+    unmount();
+  });
+
+  it("shows loading while generating and then displays the try-on image", async () => {
+    vi.useFakeTimers();
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [
+        { id: 1, imageUrl: "https://example.test/front.jpg", alt: "Frente" },
+      ],
+      variants: [],
+    });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "Virtual Try-On"));
+    await clickButtonAsync(buttonByText(container, "Generate Try-On"));
+
+    expect(container.textContent).toContain("A gerar try-on...");
+
+    await act(async () => {
+      vi.advanceTimersByTime(150);
+      await Promise.resolve();
+    });
+
+    const resultImage = container.querySelector(
+      'img[alt="Resultado Virtual Try-On Slim"]'
+    );
+
+    expect(resultImage).not.toBeNull();
+    expect(resultImage.src).toBe("https://example.test/front.jpg");
+
+    unmount();
+    vi.useRealTimers();
+  });
+
   it("accepts exactly three See It On Yourself images and shows previews", async () => {
     mockGetProduct.mockResolvedValue({
       ...baseProduct,

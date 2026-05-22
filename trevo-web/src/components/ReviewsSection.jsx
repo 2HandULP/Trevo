@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { getShopReviews } from "../services/reviewService";
+import { useAuth } from "../hooks/useAuth";
+import { normalizeRole, ROLES } from "../lib/roles";
+import { getShopReviews, respondToReview } from "../services/reviewService";
 
 const PAGE_SIZE = 5;
 
 function getErrorMessage(error, fallback) {
+  if (error.response?.status === 409) {
+    return "Esta avaliação já tem resposta.";
+  }
+
   return (
     error.response?.data?.message ||
     error.response?.data?.detail ||
@@ -35,13 +41,29 @@ function Stars({ rating }) {
   );
 }
 
+function getResponseText(response) {
+  if (!response) {
+    return "";
+  }
+
+  return response.response || response.text || response.content || "";
+}
+
 export default function ReviewsSection({ shopId }) {
+  const { isAuthenticated, role } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [averageRating, setAverageRating] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeResponseReviewId, setActiveResponseReviewId] = useState(null);
+  const [responseText, setResponseText] = useState("");
+  const [responseError, setResponseError] = useState("");
+  const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
+
+  const canRespond =
+    isAuthenticated && normalizeRole(role) === ROLES.SHOP_OWNER;
 
   const loadReviews = useCallback(
     async (nextPage = 0, mode = "replace", options = {}) => {
@@ -91,6 +113,49 @@ export default function ReviewsSection({ shopId }) {
     };
   }, [loadReviews]);
 
+  function openResponseForm(reviewId) {
+    setActiveResponseReviewId(reviewId);
+    setResponseText("");
+    setResponseError("");
+  }
+
+  function closeResponseForm() {
+    setActiveResponseReviewId(null);
+    setResponseText("");
+    setResponseError("");
+  }
+
+  async function handleResponseSubmit(event, reviewId) {
+    event.preventDefault();
+
+    const trimmedResponse = responseText.trim();
+    if (!trimmedResponse) {
+      return;
+    }
+
+    setIsSubmittingResponse(true);
+    setResponseError("");
+
+    try {
+      const reviewResponse = await respondToReview(reviewId, trimmedResponse);
+
+      setReviews((currentReviews) =>
+        currentReviews.map((review) =>
+          review.id === reviewId
+            ? { ...review, response: reviewResponse }
+            : review
+        )
+      );
+      closeResponseForm();
+    } catch (submitError) {
+      setResponseError(
+        getErrorMessage(submitError, "Não foi possível enviar a resposta")
+      );
+    } finally {
+      setIsSubmittingResponse(false);
+    }
+  }
+
   const hasMore = page < totalPages - 1;
   const isEmpty =
     !isLoading && !error && averageRating == null && reviews.length === 0;
@@ -139,6 +204,60 @@ export default function ReviewsSection({ shopId }) {
               </div>
               <p className="text-sm text-gray-600">{formatDate(review.createdAt)}</p>
               {review.comment && <p className="mt-2">{review.comment}</p>}
+              {review.response && (
+                <div className="mt-3 border-l-2 border-gray-300 pl-3">
+                  <p className="text-sm font-semibold">Resposta da loja</p>
+                  <p className="mt-1">{getResponseText(review.response)}</p>
+                </div>
+              )}
+              {canRespond && !review.response && (
+                <div className="mt-3">
+                  {activeResponseReviewId === review.id ? (
+                    <form onSubmit={(event) => handleResponseSubmit(event, review.id)}>
+                      <label className="sr-only" htmlFor={`review-response-${review.id}`}>
+                        Resposta
+                      </label>
+                      <textarea
+                        id={`review-response-${review.id}`}
+                        value={responseText}
+                        onInput={(event) => setResponseText(event.target.value)}
+                        className="w-full border border-gray-300 p-2"
+                        rows={3}
+                      />
+                      {responseError && (
+                        <p className="mt-2 text-red-600" role="alert">
+                          {responseError}
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          disabled={!responseText.trim() || isSubmittingResponse}
+                          className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Enviar resposta
+                        </button>
+                        <button
+                          type="button"
+                          onClick={closeResponseForm}
+                          disabled={isSubmittingResponse}
+                          className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openResponseForm(review.id)}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      Responder
+                    </button>
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>

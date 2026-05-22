@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { redirectTo } from "../lib/checkoutRedirect";
+import { loadStripe } from "@stripe/stripe-js";
+import StripePaymentForm from "./StripePaymentForm";
 import { getCart } from "../services/cartService";
 import { checkoutOrder } from "../services/orderService";
+
+const PAYPAL_MOCK_REDIRECT_URL = "/checkout/paypal/mock";
 
 const paymentMethods = [
   // Keep these values aligned with the backend PaymentMethod enum.
@@ -31,13 +36,39 @@ function orderTotal(orders) {
   );
 }
 
+function normalizeMbWayPhone(phoneNumber) {
+  const normalized = phoneNumber.replace(/\s/g, "");
+
+  if (/^9\d{8}$/.test(normalized)) {
+    return normalized;
+  }
+
+  if (/^\+3519\d{8}$/.test(normalized)) {
+    return normalized;
+  }
+
+  return "";
+}
+
+function getStripePublishableKey() {
+  return import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+}
+
 export default function Checkout() {
   const [cart, setCart] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [pendingStripeOrders, setPendingStripeOrders] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState("MBWAY");
+  const [mbWayPhone, setMbWayPhone] = useState("");
+  const [mbWayMessage, setMbWayMessage] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const stripePublishableKey = getStripePublishableKey();
+  const stripePromise = useMemo(
+    () => (stripePublishableKey ? loadStripe(stripePublishableKey) : null),
+    [stripePublishableKey]
+  );
 
   useEffect(() => {
     let active = true;
@@ -72,25 +103,100 @@ export default function Checkout() {
   const isEmpty = !isLoading && !error && shops.length === 0 && orders.length === 0;
   const hasValidCart = shops.length > 0;
   const isConfirmDisabled =
-    isSubmitting || orders.length > 0 || !hasValidCart || !paymentMethod;
+    isSubmitting ||
+    orders.length > 0 ||
+    pendingStripeOrders.length > 0 ||
+    !hasValidCart ||
+    !paymentMethod ||
+    (paymentMethod === "STRIPE" && !stripePromise);
+  const normalizedMbWayPhone = normalizeMbWayPhone(mbWayPhone);
+  const isMbWaySubmitDisabled =
+    isSubmitting || orders.length > 0 || !hasValidCart || !normalizedMbWayPhone;
   const successTotal = useMemo(() => orderTotal(orders), [orders]);
+  const pendingStripeOrder = pendingStripeOrders[0] || null;
+
+  function handlePaymentMethodChange(event) {
+    setPaymentMethod(event.target.value);
+    setError("");
+    setMbWayMessage("");
+  }
 
   async function handleConfirm() {
     if (isSubmitting) return;
     if (orders.length > 0) return;
+    if (pendingStripeOrders.length > 0) return;
     if (!hasValidCart || !paymentMethod) return;
+    if (paymentMethod === "STRIPE" && shops.length !== 1) {
+      setError(
+        "O pagamento Stripe só suporta uma loja por checkout neste momento."
+      );
+      return;
+    }
+    if (paymentMethod === "STRIPE" && !stripePromise) {
+      setError("Stripe não está configurado neste ambiente.");
+      return;
+    }
 
     setError("");
 
     try {
       setIsSubmitting(true);
       const createdOrders = await checkoutOrder(paymentMethod);
+
+      if (paymentMethod === "STRIPE") {
+        setPendingStripeOrders(createdOrders);
+        return;
+      }
+
       setOrders(createdOrders);
     } catch (checkoutError) {
       setError(getErrorMessage(checkoutError, "Não foi possível confirmar a encomenda"));
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handlePayPalPayment() {
+    if (isSubmitting) return;
+    if (orders.length > 0) return;
+    if (!hasValidCart) return;
+
+    setError("");
+    setMbWayMessage("");
+
+    try {
+      setIsSubmitting(true);
+      await checkoutOrder("PAYPAL");
+      redirectTo(PAYPAL_MOCK_REDIRECT_URL);
+    } catch (checkoutError) {
+      setError(getErrorMessage(checkoutError, "Não foi possível iniciar o PayPal"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleMbWayPayment(event) {
+    event.preventDefault();
+
+    if (isMbWaySubmitDisabled) return;
+
+    setError("");
+    setMbWayMessage("");
+
+    try {
+      setIsSubmitting(true);
+      await checkoutOrder("MBWAY", { phone: normalizedMbWayPhone });
+      setMbWayMessage(`Pedido MB WAY iniciado para o número ${normalizedMbWayPhone}`);
+    } catch (checkoutError) {
+      setError(getErrorMessage(checkoutError, "Não foi possível iniciar o MB WAY"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function handleStripeSuccess() {
+    setOrders(pendingStripeOrders);
+    setPendingStripeOrders([]);
   }
 
   if (orders.length > 0) {
@@ -196,7 +302,7 @@ export default function Checkout() {
               id="paymentMethod"
               name="paymentMethod"
               value={paymentMethod}
-              onChange={(event) => setPaymentMethod(event.target.value)}
+              onChange={handlePaymentMethodChange}
               className="mt-2 w-full border border-gray-300 p-2"
             >
               {paymentMethods.map((method) => (
@@ -206,22 +312,67 @@ export default function Checkout() {
               ))}
             </select>
 
-            <div className="mt-5 border border-gray-200 bg-gray-50 p-4">
-              <h3 className="font-semibold">Pagamento pendente de integração</h3>
-              <p className="mt-2 text-sm text-gray-700">
-                O pagamento real ainda não está integrado nesta fase. A confirmação
-                cria as encomendas usando o método selecionado.
-              </p>
-            </div>
+            {paymentMethod === "PAYPAL" && (
+              <button
+                type="button"
+                onClick={handlePayPalPayment}
+                disabled={isSubmitting || orders.length > 0 || !hasValidCart}
+                className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? "A iniciar PayPal..." : "Pagar com PayPal"}
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={isConfirmDisabled}
-              className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? "A confirmar..." : "Confirmar encomenda"}
-            </button>
+            {paymentMethod === "MBWAY" && (
+              <form onSubmit={handleMbWayPayment} className="mt-5">
+                <label className="block text-sm font-semibold" htmlFor="mbWayPhone">
+                  Número de telemóvel
+                </label>
+                <input
+                  id="mbWayPhone"
+                  name="mbWayPhone"
+                  type="tel"
+                  value={mbWayPhone}
+                  onChange={(event) => setMbWayPhone(event.target.value)}
+                  className="mt-2 w-full border border-gray-300 p-2"
+                />
+                <button
+                  type="submit"
+                  disabled={isMbWaySubmitDisabled}
+                  className="mt-4 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting ? "A iniciar MB WAY..." : "Iniciar MB WAY"}
+                </button>
+                {mbWayMessage && (
+                  <p className="mt-3 text-sm text-green-700" role="status">
+                    {mbWayMessage}
+                  </p>
+                )}
+              </form>
+            )}
+
+            {paymentMethod === "STRIPE" && !stripePromise && (
+              <p className="mt-5 text-red-600" role="alert">
+                Stripe não está configurado neste ambiente.
+              </p>
+            )}
+
+            {paymentMethod === "STRIPE" && pendingStripeOrder ? (
+              <StripePaymentForm
+                order={pendingStripeOrder}
+                onSuccess={handleStripeSuccess}
+                stripePromise={stripePromise}
+              />
+            ) : paymentMethod === "STRIPE" && (
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={isConfirmDisabled}
+                className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? "A confirmar..." : "Confirmar encomenda"}
+              </button>
+            )}
           </aside>
         </div>
       )}

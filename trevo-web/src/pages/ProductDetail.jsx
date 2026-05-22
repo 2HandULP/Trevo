@@ -9,6 +9,8 @@ import { uploadBuyerPhotos } from "../services/userPhotoService";
 
 const REQUIRED_TRY_ON_PHOTOS = 3;
 
+const BODY_TYPES = ["Slim", "Athletic", "Regular", "Plus Size"];
+
 function formatPrice(price) {
   if (price === null || price === undefined || price === "") {
     return "";
@@ -69,6 +71,10 @@ export default function ProductDetail() {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState("");
   const [cartError, setCartError] = useState("");
+  const [isTryOnOpen, setIsTryOnOpen] = useState(false);
+  const [selectedBodyType, setSelectedBodyType] = useState(BODY_TYPES[0]);
+  const [isGeneratingTryOn, setIsGeneratingTryOn] = useState(false);
+  const [generatedTryOnImage, setGeneratedTryOnImage] = useState("");
   const [isSeeItOpen, setIsSeeItOpen] = useState(false);
   const [seeItPhotos, setSeeItPhotos] = useState([]);
   const [seeItError, setSeeItError] = useState("");
@@ -196,6 +202,18 @@ export default function ProductDetail() {
     } finally {
       setIsAddingToCart(false);
     }
+  }
+
+  async function handleGenerateTryOn() {
+    setGeneratedTryOnImage("");
+    setIsGeneratingTryOn(true);
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 150);
+    });
+
+    setGeneratedTryOnImage(images[activeImageIndex]?.url || "");
+    setIsGeneratingTryOn(false);
   }
 
   function handleSeeItPhotoChange(event) {
@@ -434,6 +452,14 @@ export default function ProductDetail() {
               {isAddingToCart ? "A adicionar..." : "Adicionar ao carrinho"}
             </button>
 
+            <button
+              type="button"
+              onClick={() => setIsTryOnOpen(true)}
+              className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
+            >
+              Virtual Try-On
+            </button>
+
             {canUseSeeItOnYourself && (
               <button
                 type="button"
@@ -457,6 +483,87 @@ export default function ProductDetail() {
 
             {canReviewShop && <ReviewForm shopId={product.shopId} />}
           </section>
+        </div>
+      )}
+
+      {isTryOnOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="virtual-try-on-title"
+            className="w-full max-w-lg rounded bg-white p-6 shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="virtual-try-on-title" className="text-xl font-semibold">
+                  Virtual Try-On
+                </h2>
+                <p className="mt-2 text-sm text-gray-600">
+                  Escolhe um modelo para simular o visual deste produto.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTryOnOpen(false)}
+                className="rounded border border-gray-300 px-3 py-1 text-sm"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <fieldset className="mt-6">
+              <legend className="font-semibold">Modelo</legend>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {BODY_TYPES.map((bodyType) => (
+                  <label
+                    key={bodyType}
+                    className={`rounded border px-4 py-3 text-sm ${
+                      selectedBodyType === bodyType
+                        ? "border-black bg-black text-white"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="bodyType"
+                      value={bodyType}
+                      checked={selectedBodyType === bodyType}
+                      onChange={() => setSelectedBodyType(bodyType)}
+                      className="mr-2"
+                    />
+                    {bodyType}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <button
+              type="button"
+              onClick={handleGenerateTryOn}
+              disabled={isGeneratingTryOn || images.length === 0}
+              className="mt-6 w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
+            >
+              {isGeneratingTryOn ? "A gerar try-on..." : "Generate Try-On"}
+            </button>
+
+            {images.length === 0 && (
+              <p className="mt-3 text-sm text-gray-600">
+                Este produto ainda nao tem imagem para simular.
+              </p>
+            )}
+
+            {generatedTryOnImage && (
+              <div className="mt-6">
+                <h3 className="font-semibold">Resultado</h3>
+                <img
+                  src={generatedTryOnImage}
+                  alt={`Resultado Virtual Try-On ${selectedBodyType}`}
+                  className="mt-3 aspect-square w-full rounded border border-gray-200 object-cover"
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 

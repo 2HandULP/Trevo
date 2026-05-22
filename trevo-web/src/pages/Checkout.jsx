@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { redirectTo } from "../lib/checkoutRedirect";
+import { loadStripe } from "@stripe/stripe-js";
+import StripePaymentForm from "./StripePaymentForm";
 import { getCart } from "../services/cartService";
 import { checkoutOrder } from "../services/orderService";
 
@@ -48,15 +50,25 @@ function normalizeMbWayPhone(phoneNumber) {
   return "";
 }
 
+function getStripePublishableKey() {
+  return import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+}
+
 export default function Checkout() {
   const [cart, setCart] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [pendingStripeOrders, setPendingStripeOrders] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState("MBWAY");
   const [mbWayPhone, setMbWayPhone] = useState("");
   const [mbWayMessage, setMbWayMessage] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const stripePublishableKey = getStripePublishableKey();
+  const stripePromise = useMemo(
+    () => (stripePublishableKey ? loadStripe(stripePublishableKey) : null),
+    [stripePublishableKey]
+  );
 
   useEffect(() => {
     let active = true;
@@ -91,11 +103,17 @@ export default function Checkout() {
   const isEmpty = !isLoading && !error && shops.length === 0 && orders.length === 0;
   const hasValidCart = shops.length > 0;
   const isConfirmDisabled =
-    isSubmitting || orders.length > 0 || !hasValidCart || !paymentMethod;
+    isSubmitting ||
+    orders.length > 0 ||
+    pendingStripeOrders.length > 0 ||
+    !hasValidCart ||
+    !paymentMethod ||
+    (paymentMethod === "STRIPE" && !stripePromise);
   const normalizedMbWayPhone = normalizeMbWayPhone(mbWayPhone);
   const isMbWaySubmitDisabled =
     isSubmitting || orders.length > 0 || !hasValidCart || !normalizedMbWayPhone;
   const successTotal = useMemo(() => orderTotal(orders), [orders]);
+  const pendingStripeOrder = pendingStripeOrders[0] || null;
 
   function handlePaymentMethodChange(event) {
     setPaymentMethod(event.target.value);
@@ -106,13 +124,30 @@ export default function Checkout() {
   async function handleConfirm() {
     if (isSubmitting) return;
     if (orders.length > 0) return;
+    if (pendingStripeOrders.length > 0) return;
     if (!hasValidCart || !paymentMethod) return;
+    if (paymentMethod === "STRIPE" && shops.length !== 1) {
+      setError(
+        "O pagamento Stripe só suporta uma loja por checkout neste momento."
+      );
+      return;
+    }
+    if (paymentMethod === "STRIPE" && !stripePromise) {
+      setError("Stripe não está configurado neste ambiente.");
+      return;
+    }
 
     setError("");
 
     try {
       setIsSubmitting(true);
       const createdOrders = await checkoutOrder(paymentMethod);
+
+      if (paymentMethod === "STRIPE") {
+        setPendingStripeOrders(createdOrders);
+        return;
+      }
+
       setOrders(createdOrders);
     } catch (checkoutError) {
       setError(getErrorMessage(checkoutError, "Não foi possível confirmar a encomenda"));
@@ -132,7 +167,6 @@ export default function Checkout() {
     try {
       setIsSubmitting(true);
       await checkoutOrder("PAYPAL");
-      // PAY-F02 is frontend/mock-ready because PayPal HTTP endpoints are not exposed yet.
       redirectTo(PAYPAL_MOCK_REDIRECT_URL);
     } catch (checkoutError) {
       setError(getErrorMessage(checkoutError, "Não foi possível iniciar o PayPal"));
@@ -152,13 +186,17 @@ export default function Checkout() {
     try {
       setIsSubmitting(true);
       await checkoutOrder("MBWAY", { phone: normalizedMbWayPhone });
-      // PAY-F02 is frontend/mock-ready because MB WAY HTTP endpoints are not exposed yet.
       setMbWayMessage(`Pedido MB WAY iniciado para o número ${normalizedMbWayPhone}`);
     } catch (checkoutError) {
       setError(getErrorMessage(checkoutError, "Não foi possível iniciar o MB WAY"));
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function handleStripeSuccess() {
+    setOrders(pendingStripeOrders);
+    setPendingStripeOrders([]);
   }
 
   if (orders.length > 0) {
@@ -313,25 +351,27 @@ export default function Checkout() {
               </form>
             )}
 
-            {paymentMethod === "STRIPE" && (
-              <>
-                <div className="mt-5 border border-gray-200 bg-gray-50 p-4">
-                  <h3 className="font-semibold">Pagamento pendente de integração</h3>
-                  <p className="mt-2 text-sm text-gray-700">
-                    O pagamento real ainda não está integrado nesta fase. A confirmação
-                    cria as encomendas usando o método selecionado.
-                  </p>
-                </div>
+            {paymentMethod === "STRIPE" && !stripePromise && (
+              <p className="mt-5 text-red-600" role="alert">
+                Stripe não está configurado neste ambiente.
+              </p>
+            )}
 
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  disabled={isConfirmDisabled}
-                  className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSubmitting ? "A confirmar..." : "Confirmar encomenda"}
-                </button>
-              </>
+            {paymentMethod === "STRIPE" && pendingStripeOrder ? (
+              <StripePaymentForm
+                order={pendingStripeOrder}
+                onSuccess={handleStripeSuccess}
+                stripePromise={stripePromise}
+              />
+            ) : paymentMethod === "STRIPE" && (
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={isConfirmDisabled}
+                className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? "A confirmar..." : "Confirmar encomenda"}
+              </button>
             )}
           </aside>
         </div>

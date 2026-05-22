@@ -1,8 +1,9 @@
 import apiClient from "../lib/apiClient";
 
-export async function checkoutOrder(paymentMethod) {
+export async function checkoutOrder(paymentMethod, payload = {}) {
   const { data } = await apiClient.post("/buyer/orders/checkout", {
     paymentMethod,
+    ...payload,
   });
   return data;
 }

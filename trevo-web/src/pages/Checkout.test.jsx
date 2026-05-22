@@ -5,9 +5,18 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Checkout from "./Checkout";
 
-const { mockCheckoutOrder, mockGetCart } = vi.hoisted(() => ({
+const {
+  mockCheckoutOrder,
+  mockConfirmCardPayment,
+  mockCreatePaymentIntent,
+  mockGetCart,
+  mockLoadStripe,
+} = vi.hoisted(() => ({
   mockCheckoutOrder: vi.fn(),
+  mockConfirmCardPayment: vi.fn(),
+  mockCreatePaymentIntent: vi.fn(),
   mockGetCart: vi.fn(),
+  mockLoadStripe: vi.fn(),
 }));
 
 vi.mock("../services/cartService", () => ({
@@ -16,6 +25,25 @@ vi.mock("../services/cartService", () => ({
 
 vi.mock("../services/orderService", () => ({
   checkoutOrder: mockCheckoutOrder,
+}));
+
+vi.mock("../services/paymentService", () => ({
+  createPaymentIntent: mockCreatePaymentIntent,
+}));
+
+vi.mock("@stripe/stripe-js", () => ({
+  loadStripe: mockLoadStripe,
+}));
+
+vi.mock("@stripe/react-stripe-js", () => ({
+  CardElement: () => "Stripe card input",
+  Elements: ({ children }) => children,
+  useElements: () => ({
+    getElement: () => ({ elementType: "card" }),
+  }),
+  useStripe: () => ({
+    confirmCardPayment: mockConfirmCardPayment,
+  }),
 }));
 
 globalThis.React = React;
@@ -64,6 +92,11 @@ const cartResponse = {
   grandTotal: 99.98,
 };
 
+const singleShopCartResponse = {
+  shops: [cartResponse.shops[0]],
+  grandTotal: 59.98,
+};
+
 const orderResponse = [
   {
     id: 10,
@@ -85,8 +118,21 @@ const orderResponse = [
   },
 ];
 
+const stripeOrderResponse = [
+  {
+    id: 20,
+    shopId: 301,
+    shopName: "North Shop",
+    status: "PENDING_PAYMENT",
+    totalAmount: 59.98,
+    paymentMethod: "STRIPE",
+    items: [],
+  },
+];
+
 function renderCheckout() {
   const container = document.createElement("div");
+  document.body.appendChild(container);
   const root = createRoot(container);
 
   act(() => {
@@ -104,6 +150,7 @@ function renderCheckout() {
     unmount: () =>
       act(() => {
         root.unmount();
+        container.remove();
       }),
   };
 }
@@ -141,8 +188,22 @@ function confirmButton(container) {
 describe("Checkout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("VITE_STRIPE_PUBLISHABLE_KEY", "pk_test_mock");
     mockGetCart.mockResolvedValue(cartResponse);
     mockCheckoutOrder.mockResolvedValue(orderResponse);
+    mockCreatePaymentIntent.mockResolvedValue({
+      id: "pi_123",
+      clientSecret: "pi_123_secret_abc",
+      amount: 5998,
+      currency: "eur",
+    });
+    mockConfirmCardPayment.mockResolvedValue({
+      paymentIntent: {
+        id: "pi_123",
+        status: "succeeded",
+      },
+    });
+    mockLoadStripe.mockReturnValue({ stripe: "promise" });
   });
 
   it("shows order summary", async () => {
@@ -245,6 +306,135 @@ describe("Checkout", () => {
     await click(confirmButton(container));
 
     expect(mockCheckoutOrder).toHaveBeenCalledWith("PAYPAL");
+
+    unmount();
+  });
+
+  it("mounts Stripe Elements after creating a Stripe checkout order", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
+    mockCheckoutOrder.mockResolvedValue(stripeOrderResponse);
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+    await changeSelect(container.querySelector('select[name="paymentMethod"]'), "STRIPE");
+    await click(confirmButton(container));
+    await flushPromises();
+
+    expect(mockCheckoutOrder).toHaveBeenCalledWith("STRIPE");
+    expect(container.textContent).toContain("Stripe card input");
+    expect(container.textContent).toContain("Confirmar pagamento Stripe");
+
+    unmount();
+  });
+
+  it("creates a PaymentIntent and confirms the Stripe payment", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
+    mockCheckoutOrder.mockResolvedValue(stripeOrderResponse);
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+    await changeSelect(container.querySelector('select[name="paymentMethod"]'), "STRIPE");
+    await click(confirmButton(container));
+    await flushPromises();
+    await click(
+      [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Confirmar pagamento Stripe"
+      )
+    );
+    await flushPromises();
+
+    expect(mockCreatePaymentIntent).toHaveBeenCalledWith(20);
+    expect(mockConfirmCardPayment).toHaveBeenCalledWith("pi_123_secret_abc", {
+      payment_method: {
+        card: { elementType: "card" },
+      },
+    });
+
+    unmount();
+  });
+
+  it("shows the confirmation state after a successful Stripe payment", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
+    mockCheckoutOrder.mockResolvedValue(stripeOrderResponse);
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+    await changeSelect(container.querySelector('select[name="paymentMethod"]'), "STRIPE");
+    await click(confirmButton(container));
+    await flushPromises();
+    await click(
+      [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Confirmar pagamento Stripe"
+      )
+    );
+    await flushPromises();
+
+    expect(container.textContent).toContain("Encomenda confirmada");
+    expect(container.textContent).toContain("20 - North Shop");
+    expect(container.textContent).toContain("Estado: PENDING_PAYMENT");
+
+    unmount();
+  });
+
+  it("shows a friendly message when Stripe PaymentIntent is blocked by backend status", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
+    mockCheckoutOrder.mockResolvedValue(stripeOrderResponse);
+    mockCreatePaymentIntent.mockRejectedValue({
+      response: {
+        status: 409,
+        data: {
+          detail: "Order is not awaiting payment",
+        },
+      },
+    });
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+    await changeSelect(container.querySelector('select[name="paymentMethod"]'), "STRIPE");
+    await click(confirmButton(container));
+    await flushPromises();
+    await click(
+      [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Confirmar pagamento Stripe"
+      )
+    );
+    await flushPromises();
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "O pagamento Stripe ainda não está disponível para esta encomenda."
+    );
+
+    unmount();
+  });
+
+  it("does not create Stripe checkout orders for multi-shop carts", async () => {
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+    await changeSelect(container.querySelector('select[name="paymentMethod"]'), "STRIPE");
+    await click(confirmButton(container));
+
+    expect(mockCheckoutOrder).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "O pagamento Stripe só suporta uma loja por checkout neste momento."
+    );
+
+    unmount();
+  });
+
+  it("shows a clear message when Stripe is not configured", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
+    vi.stubEnv("VITE_STRIPE_PUBLISHABLE_KEY", "");
+    mockLoadStripe.mockReturnValue(null);
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+    await changeSelect(container.querySelector('select[name="paymentMethod"]'), "STRIPE");
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Stripe não está configurado neste ambiente."
+    );
+    expect(confirmButton(container).disabled).toBe(true);
 
     unmount();
   });

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getShopDashboard } from "../services/shopService";
 
 const statusLabels = {
@@ -82,6 +83,9 @@ export default function ShopDashboard() {
           <section>
             <h2>Receita</h2>
             <p>{formatRevenue(revenue.total, revenue.currency)}</p>
+            <p>
+              <Link to="/shop/payouts">Ver pagamentos</Link>
+            </p>
           </section>
 
           <section>

@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import OrderHistory from "./pages/OrderHistory";
 import OrderManagement from "./pages/OrderManagement";
+import ProSubscription from "./pages/ProSubscription";
 import ReceiptView from "./pages/ReceiptView";
 import PayoutDashboard from "./pages/PayoutDashboard";
 import Checkout from "./pages/Checkout";
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<OrderHistory />} />
+          <Route path="/pro" element={<ProSubscription />} />
           <Route path="/orders/:orderId/receipt" element={<ReceiptView />} />
         </Route>
 

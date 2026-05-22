@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import ReviewForm from "../components/ReviewForm";
 import { useAuth } from "../hooks/useAuth";
@@ -52,6 +52,7 @@ function getErrorMessage(error, fallback) {
   return (
     error.response?.data?.message ||
     error.response?.data?.detail ||
+    error.message ||
     fallback
   );
 }
@@ -74,6 +75,7 @@ export default function ProductDetail() {
   const [seeItSuccess, setSeeItSuccess] = useState("");
   const [isUploadingSeeIt, setIsUploadingSeeIt] = useState(false);
   const [seeItResultImage, setSeeItResultImage] = useState("");
+  const seeItPhotosRef = useRef([]);
 
   useEffect(() => {
     let active = true;
@@ -114,10 +116,14 @@ export default function ProductDetail() {
   }, [selectedSize, selectedColor]);
 
   useEffect(() => {
-    return () => {
-      seeItPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-    };
+    seeItPhotosRef.current = seeItPhotos;
   }, [seeItPhotos]);
+
+  useEffect(() => {
+    return () => {
+      seeItPhotosRef.current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+    };
+  }, []);
 
   const images = useMemo(() => normalizeImages(product?.images), [product]);
   const variants = useMemo(() => product?.variants || [], [product]);
@@ -212,7 +218,15 @@ export default function ProductDetail() {
     }
   }
 
+  function clearSeeItPhotos() {
+    setSeeItPhotos((currentPhotos) => {
+      currentPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+      return [];
+    });
+  }
+
   function closeSeeItModal() {
+    clearSeeItPhotos();
     setIsSeeItOpen(false);
     setSeeItError("");
     setSeeItSuccess("");
@@ -515,7 +529,7 @@ export default function ProductDetail() {
 
               <button
                 type="submit"
-                disabled={isUploadingSeeIt}
+                disabled={isUploadingSeeIt || seeItPhotos.length !== REQUIRED_TRY_ON_PHOTOS}
                 className="w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
               >
                 {isUploadingSeeIt ? "A carregar..." : "Gerar resultado"}

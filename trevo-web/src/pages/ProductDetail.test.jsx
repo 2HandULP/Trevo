@@ -373,6 +373,90 @@ describe("ProductDetail", () => {
     unmount();
   });
 
+  it("keeps the See It On Yourself submit button disabled without exactly three images", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+
+    expect(buttonByText(container, "Gerar resultado").disabled).toBe(true);
+
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+    ]);
+
+    expect(buttonByText(container, "Gerar resultado").disabled).toBe(true);
+
+    unmount();
+  });
+
+  it("shows the service error when a See It On Yourself file is not an image", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    mockUploadBuyerPhotos.mockRejectedValueOnce(
+      new Error("Todos os ficheiros têm de ser imagens")
+    );
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["not-image"], "not-image.txt", { type: "text/plain" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ]);
+    await submitForm(container.querySelector('[role="dialog"] form'));
+    await flushPromises();
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Todos os ficheiros têm de ser imagens"
+    );
+
+    unmount();
+  });
+
+  it("shows the service error when a See It On Yourself image is above 10MB", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    mockUploadBuyerPhotos.mockRejectedValueOnce(
+      new Error("Cada imagem deve ter no máximo 10MB")
+    );
+    const largeImage = new File(
+      [new Uint8Array(10 * 1024 * 1024 + 1)],
+      "large.png",
+      { type: "image/png" }
+    );
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      largeImage,
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ]);
+    await submitForm(container.querySelector('[role="dialog"] form'));
+    await flushPromises();
+
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "Cada imagem deve ter no máximo 10MB"
+    );
+
+    unmount();
+  });
+
   it("uploads See It On Yourself photos and shows the mock result", async () => {
     mockGetProduct.mockResolvedValue({
       ...baseProduct,
@@ -402,6 +486,31 @@ describe("ProductDetail", () => {
     expect(container.querySelector('img[alt="Resultado See It On Yourself"]').src).toBe(
       "https://example.test/front.jpg"
     );
+
+    unmount();
+  });
+
+  it("revokes See It On Yourself preview URLs when closing the modal", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "See It On Yourself"));
+    changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
+      new File(["photo-1"], "photo-1.png", { type: "image/png" }),
+      new File(["photo-2"], "photo-2.png", { type: "image/png" }),
+      new File(["photo-3"], "photo-3.png", { type: "image/png" }),
+    ]);
+    clickButton(buttonByText(container, "Fechar"));
+
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-1.png");
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-2.png");
+    expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:photo-3.png");
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
 
     unmount();
   });

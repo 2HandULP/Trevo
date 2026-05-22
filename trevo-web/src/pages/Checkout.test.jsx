@@ -305,6 +305,16 @@ describe("Checkout", () => {
     unmount();
   });
 
+  it("disables the MB WAY button by default without a valid phone", async () => {
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+
+    expect(buttonByText(container, "Iniciar MB WAY").disabled).toBe(true);
+
+    unmount();
+  });
+
   it("does not submit MB WAY with an invalid phone", async () => {
     const { container, unmount } = renderCheckout();
 
@@ -325,7 +335,9 @@ describe("Checkout", () => {
     await click(buttonByText(container, "Iniciar MB WAY"));
     await flushPromises();
 
-    expect(mockCheckoutOrder).toHaveBeenCalledWith("MBWAY");
+    expect(mockCheckoutOrder).toHaveBeenCalledWith("MBWAY", {
+      phone: "+351923456789",
+    });
     expect(container.querySelector('[role="status"]').textContent).toContain(
       "Pedido MB WAY iniciado para o número +351923456789"
     );

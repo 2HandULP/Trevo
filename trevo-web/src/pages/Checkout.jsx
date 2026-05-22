@@ -151,7 +151,7 @@ export default function Checkout() {
 
     try {
       setIsSubmitting(true);
-      await checkoutOrder("MBWAY");
+      await checkoutOrder("MBWAY", { phone: normalizedMbWayPhone });
       // PAY-F02 is frontend/mock-ready because MB WAY HTTP endpoints are not exposed yet.
       setMbWayMessage(`Pedido MB WAY iniciado para o número ${normalizedMbWayPhone}`);
     } catch (checkoutError) {

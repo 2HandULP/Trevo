@@ -19,6 +19,14 @@ Thumbs.db
 .env.*
 !.env.example
 
+# TLS certificates / private keys
+*.crt
+*.csr
+*.jks
+*.key
+*.p12
+*.pem
+
 # Node / Frontend
 node_modules/
 dist/

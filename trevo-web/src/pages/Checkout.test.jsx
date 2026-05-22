@@ -92,6 +92,11 @@ const cartResponse = {
   grandTotal: 99.98,
 };
 
+const singleShopCartResponse = {
+  shops: [cartResponse.shops[0]],
+  grandTotal: 59.98,
+};
+
 const orderResponse = [
   {
     id: 10,
@@ -306,6 +311,7 @@ describe("Checkout", () => {
   });
 
   it("mounts Stripe Elements after creating a Stripe checkout order", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
     mockCheckoutOrder.mockResolvedValue(stripeOrderResponse);
     const { container, unmount } = renderCheckout();
 
@@ -322,6 +328,7 @@ describe("Checkout", () => {
   });
 
   it("creates a PaymentIntent and confirms the Stripe payment", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
     mockCheckoutOrder.mockResolvedValue(stripeOrderResponse);
     const { container, unmount } = renderCheckout();
 
@@ -347,6 +354,7 @@ describe("Checkout", () => {
   });
 
   it("shows the confirmation state after a successful Stripe payment", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
     mockCheckoutOrder.mockResolvedValue(stripeOrderResponse);
     const { container, unmount } = renderCheckout();
 
@@ -369,6 +377,7 @@ describe("Checkout", () => {
   });
 
   it("shows a friendly message when Stripe PaymentIntent is blocked by backend status", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
     mockCheckoutOrder.mockResolvedValue(stripeOrderResponse);
     mockCreatePaymentIntent.mockRejectedValue({
       response: {
@@ -398,7 +407,23 @@ describe("Checkout", () => {
     unmount();
   });
 
+  it("does not create Stripe checkout orders for multi-shop carts", async () => {
+    const { container, unmount } = renderCheckout();
+
+    await flushPromises();
+    await changeSelect(container.querySelector('select[name="paymentMethod"]'), "STRIPE");
+    await click(confirmButton(container));
+
+    expect(mockCheckoutOrder).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="alert"]').textContent).toContain(
+      "O pagamento Stripe só suporta uma loja por checkout neste momento."
+    );
+
+    unmount();
+  });
+
   it("shows a clear message when Stripe is not configured", async () => {
+    mockGetCart.mockResolvedValue(singleShopCartResponse);
     vi.stubEnv("VITE_STRIPE_PUBLISHABLE_KEY", "");
     mockLoadStripe.mockReturnValue(null);
     const { container, unmount } = renderCheckout();

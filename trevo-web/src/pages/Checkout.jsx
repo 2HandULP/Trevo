@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import StripePaymentForm from "../components/StripePaymentForm";
+import StripePaymentForm from "./StripePaymentForm";
 import { getCart } from "../services/cartService";
 import { checkoutOrder } from "../services/orderService";
 
@@ -98,6 +98,12 @@ export default function Checkout() {
     if (orders.length > 0) return;
     if (pendingStripeOrders.length > 0) return;
     if (!hasValidCart || !paymentMethod) return;
+    if (paymentMethod === "STRIPE" && shops.length !== 1) {
+      setError(
+        "O pagamento Stripe só suporta uma loja por checkout neste momento."
+      );
+      return;
+    }
     if (paymentMethod === "STRIPE" && !stripePromise) {
       setError("Stripe não está configurado neste ambiente.");
       return;
@@ -110,13 +116,6 @@ export default function Checkout() {
       const createdOrders = await checkoutOrder(paymentMethod);
 
       if (paymentMethod === "STRIPE") {
-        if (createdOrders.length !== 1) {
-          setError(
-            "O pagamento Stripe só suporta uma encomenda por checkout neste momento."
-          );
-          return;
-        }
-
         setPendingStripeOrders(createdOrders);
         return;
       }
@@ -255,11 +254,11 @@ export default function Checkout() {
 
             {paymentMethod !== "STRIPE" && (
               <div className="mt-5 border border-gray-200 bg-gray-50 p-4">
-              <h3 className="font-semibold">Pagamento pendente de integração</h3>
-              <p className="mt-2 text-sm text-gray-700">
-                O pagamento real ainda não está integrado nesta fase. A confirmação
-                cria as encomendas usando o método selecionado.
-              </p>
+                <h3 className="font-semibold">Pagamento pendente de integração</h3>
+                <p className="mt-2 text-sm text-gray-700">
+                  O pagamento real ainda não está integrado nesta fase. A confirmação
+                  cria as encomendas usando o método selecionado.
+                </p>
               </div>
             )}
 

@@ -5,6 +5,9 @@ import { useAuth } from "../hooks/useAuth";
 import { normalizeRole, ROLES } from "../lib/roles";
 import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
+import { uploadBuyerPhotos } from "../services/userPhotoService";
+
+const REQUIRED_TRY_ON_PHOTOS = 3;
 
 function formatPrice(price) {
   if (price === null || price === undefined || price === "") {
@@ -65,6 +68,12 @@ export default function ProductDetail() {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState("");
   const [cartError, setCartError] = useState("");
+  const [isSeeItOpen, setIsSeeItOpen] = useState(false);
+  const [seeItPhotos, setSeeItPhotos] = useState([]);
+  const [seeItError, setSeeItError] = useState("");
+  const [seeItSuccess, setSeeItSuccess] = useState("");
+  const [isUploadingSeeIt, setIsUploadingSeeIt] = useState(false);
+  const [seeItResultImage, setSeeItResultImage] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -104,6 +113,12 @@ export default function ProductDetail() {
     setCartError("");
   }, [selectedSize, selectedColor]);
 
+  useEffect(() => {
+    return () => {
+      seeItPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+    };
+  }, [seeItPhotos]);
+
   const images = useMemo(() => normalizeImages(product?.images), [product]);
   const variants = useMemo(() => product?.variants || [], [product]);
   const sizes = useMemo(
@@ -122,6 +137,8 @@ export default function ProductDetail() {
     isAuthenticated &&
     normalizeRole(role) === ROLES.BUYER &&
     Boolean(product?.shopId);
+  const canUseSeeItOnYourself =
+    isAuthenticated && normalizeRole(role) === ROLES.BUYER;
 
   function isSizeDisabled(size) {
     return !variants.some(
@@ -172,6 +189,57 @@ export default function ProductDetail() {
       );
     } finally {
       setIsAddingToCart(false);
+    }
+  }
+
+  function handleSeeItPhotoChange(event) {
+    const files = [...event.target.files];
+    setSeeItError("");
+    setSeeItSuccess("");
+    setSeeItResultImage("");
+
+    setSeeItPhotos((currentPhotos) => {
+      currentPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+
+      return files.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+    });
+
+    if (files.length !== REQUIRED_TRY_ON_PHOTOS) {
+      setSeeItError("Seleciona exatamente 3 imagens.");
+    }
+  }
+
+  function closeSeeItModal() {
+    setIsSeeItOpen(false);
+    setSeeItError("");
+    setSeeItSuccess("");
+    setSeeItResultImage("");
+  }
+
+  async function handleSeeItSubmit(event) {
+    event.preventDefault();
+    setSeeItError("");
+    setSeeItSuccess("");
+    setSeeItResultImage("");
+
+    if (seeItPhotos.length !== REQUIRED_TRY_ON_PHOTOS) {
+      setSeeItError("Seleciona exatamente 3 imagens.");
+      return;
+    }
+
+    setIsUploadingSeeIt(true);
+
+    try {
+      await uploadBuyerPhotos(seeItPhotos.map((photo) => photo.file));
+      setSeeItSuccess("Fotos carregadas com sucesso.");
+      setSeeItResultImage(images[activeImageIndex]?.url || seeItPhotos[0].previewUrl);
+    } catch (uploadError) {
+      setSeeItError(getErrorMessage(uploadError, "Nao foi possivel carregar as fotos"));
+    } finally {
+      setIsUploadingSeeIt(false);
     }
   }
 
@@ -352,6 +420,16 @@ export default function ProductDetail() {
               {isAddingToCart ? "A adicionar..." : "Adicionar ao carrinho"}
             </button>
 
+            {canUseSeeItOnYourself && (
+              <button
+                type="button"
+                onClick={() => setIsSeeItOpen(true)}
+                className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
+              >
+                See It On Yourself
+              </button>
+            )}
+
             {cartSuccess && (
               <p className="mt-3 text-green-600" role="status" aria-live="polite">
                 {cartSuccess}
@@ -365,6 +443,96 @@ export default function ProductDetail() {
 
             {canReviewShop && <ReviewForm shopId={product.shopId} />}
           </section>
+        </div>
+      )}
+
+      {isSeeItOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="see-it-on-yourself-title"
+            className="w-full max-w-2xl rounded bg-white p-6 shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="see-it-on-yourself-title" className="text-xl font-semibold">
+                  See It On Yourself
+                </h2>
+                <p className="mt-2 text-sm text-gray-600">
+                  Carrega exatamente 3 imagens para veres uma simulação personalizada.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeSeeItModal}
+                className="rounded border border-gray-300 px-3 py-1 text-sm"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <form onSubmit={handleSeeItSubmit} className="mt-6 space-y-5">
+              <div>
+                <label htmlFor="see-it-photos" className="block font-semibold">
+                  Imagens
+                </label>
+                <input
+                  id="see-it-photos"
+                  type="file"
+                  name="seeItPhotos"
+                  accept="image/*"
+                  multiple
+                  onChange={handleSeeItPhotoChange}
+                  className="mt-2 block w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </div>
+
+              {seeItError && (
+                <p className="text-red-600" role="alert">
+                  {seeItError}
+                </p>
+              )}
+              {seeItSuccess && (
+                <p className="text-green-600" role="status" aria-live="polite">
+                  {seeItSuccess}
+                </p>
+              )}
+
+              {seeItPhotos.length > 0 && (
+                <ul className="grid grid-cols-3 gap-3">
+                  {seeItPhotos.map((photo, index) => (
+                    <li key={photo.previewUrl}>
+                      <img
+                        src={photo.previewUrl}
+                        alt={`Pre-visualizacao See It ${index + 1}`}
+                        className="aspect-square w-full rounded object-cover"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <button
+                type="submit"
+                disabled={isUploadingSeeIt}
+                className="w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
+              >
+                {isUploadingSeeIt ? "A carregar..." : "Gerar resultado"}
+              </button>
+            </form>
+
+            {seeItResultImage && (
+              <div className="mt-6">
+                <h3 className="font-semibold">Resultado personalizado</h3>
+                <img
+                  src={seeItResultImage}
+                  alt="Resultado See It On Yourself"
+                  className="mt-3 aspect-square w-full rounded border border-gray-200 object-cover"
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </main>

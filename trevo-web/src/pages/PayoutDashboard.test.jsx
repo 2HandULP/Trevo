@@ -64,6 +64,12 @@ async function flushPromises() {
   });
 }
 
+async function click(button) {
+  await act(async () => {
+    button.click();
+  });
+}
+
 describe("PayoutDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -103,6 +109,45 @@ describe("PayoutDashboard", () => {
     expect(container.textContent).toContain("11/05/26");
     expect(container.textContent).toContain("35,50");
     expect(container.textContent).toContain("Pendente");
+
+    unmount();
+  });
+
+  it("loads the next payout page without reloading the balance", async () => {
+    mockGetPayoutHistory
+      .mockResolvedValueOnce({
+        ...payoutPage,
+        totalPages: 2,
+        page: 0,
+      })
+      .mockResolvedValueOnce({
+        ...payoutPage,
+        totalPages: 2,
+        page: 1,
+        payouts: [
+          {
+            id: 3,
+            orderId: 79,
+            payoutAmount: 12,
+            status: "RELEASED",
+            createdAt: "2026-05-12T09:00:00Z",
+            releasedAt: "2026-05-12T10:00:00Z",
+          },
+        ],
+      });
+    const { container, unmount } = renderPayoutDashboard();
+
+    await flushPromises();
+    await click(
+      [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Seguinte"
+      )
+    );
+    await flushPromises();
+
+    expect(mockGetPayoutHistory).toHaveBeenLastCalledWith({ page: 1, size: 20 });
+    expect(mockGetPayoutBalance).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("12,00");
 
     unmount();
   });

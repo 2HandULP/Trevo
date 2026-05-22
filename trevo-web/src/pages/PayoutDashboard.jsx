@@ -52,13 +52,12 @@ export default function PayoutDashboard() {
     setError("");
 
     try {
-      const [balanceResponse, historyResponse] = await Promise.all([
-        getPayoutBalance(),
-        getPayoutHistory({ page: nextPage, size: PAGE_SIZE }),
-      ]);
+      const historyResponse = await getPayoutHistory({
+        page: nextPage,
+        size: PAGE_SIZE,
+      });
 
       if (isActive()) {
-        setBalance(balanceResponse.pendingBalance ?? 0);
         setPayouts(historyResponse.payouts || []);
         setPage(historyResponse.page ?? nextPage);
         setTotalPages(historyResponse.totalPages || 0);
@@ -77,12 +76,41 @@ export default function PayoutDashboard() {
   useEffect(() => {
     let active = true;
 
-    loadPayouts(0, { isActive: () => active });
+    async function loadInitialPayouts() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const [balanceResponse, historyResponse] = await Promise.all([
+          getPayoutBalance(),
+          getPayoutHistory({ page: 0, size: PAGE_SIZE }),
+        ]);
+
+        if (active) {
+          setBalance(balanceResponse.pendingBalance ?? 0);
+          setPayouts(historyResponse.payouts || []);
+          setPage(historyResponse.page ?? 0);
+          setTotalPages(historyResponse.totalPages || 0);
+        }
+      } catch (loadError) {
+        if (active) {
+          setError(
+            getErrorMessage(loadError, "NÃ£o foi possÃ­vel carregar pagamentos")
+          );
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadInitialPayouts();
 
     return () => {
       active = false;
     };
-  }, [loadPayouts]);
+  }, []);
 
   const hasPreviousPage = page > 0;
   const hasNextPage = page < totalPages - 1;
@@ -103,7 +131,7 @@ export default function PayoutDashboard() {
         </p>
       )}
 
-      {!error && (
+      {!isLoading && !error && (
         <section className="mt-8 border border-gray-200 bg-gray-50 p-5">
           <h2 className="text-lg font-semibold">Saldo pendente</h2>
           <p className="mt-2 text-3xl font-semibold">{formatCurrency(balance)}</p>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import ReviewsSection from "../components/ReviewsSection";
 import { getShopProfile } from "../services/shopService";
@@ -7,15 +8,16 @@ function sortCollections(collections) {
   return [...collections].sort((a, b) => a.displayOrder - b.displayOrder);
 }
 
-function formatRating(averageRating) {
+function formatRating(averageRating, t) {
   if (averageRating == null) {
-    return "Sem avaliações";
+    return t("noReviews");
   }
 
-  return `Avaliação: ${Number(averageRating).toFixed(1)}`;
+  return t("shopRating", { rating: Number(averageRating).toFixed(1) });
 }
 
 export default function PublicShopProfile() {
+  const { t } = useTranslation("browse");
   const { shopId } = useParams();
   const [shop, setShop] = useState(null);
   const [error, setError] = useState("");
@@ -40,7 +42,7 @@ export default function PublicShopProfile() {
           setError(
             loadError.response?.data?.message ||
               loadError.response?.data?.detail ||
-              "Não foi possível carregar a loja"
+              t("loadShopFailed")
           );
         }
       } finally {
@@ -55,11 +57,11 @@ export default function PublicShopProfile() {
     return () => {
       active = false;
     };
-  }, [shopId]);
+  }, [shopId, t]);
 
   return (
     <div className="mx-auto my-16 max-w-3xl p-8 text-black">
-      {isLoading && <p aria-live="polite">A carregar loja...</p>}
+      {isLoading && <p aria-live="polite">{t("loadingShop")}</p>}
       {error && (
         <p role="alert" className="text-red-600">
           {error}
@@ -71,7 +73,7 @@ export default function PublicShopProfile() {
           {shop.bannerUrl && (
             <img
               src={shop.bannerUrl}
-              alt={`Banner da loja ${shop.name}`}
+              alt={t("shopBannerAlt", { name: shop.name || t("anonymousShop") })}
               className="block max-h-64 w-full object-cover"
             />
           )}
@@ -79,25 +81,25 @@ export default function PublicShopProfile() {
           {shop.logoUrl && (
             <img
               src={shop.logoUrl}
-              alt={`Logo da loja ${shop.name}`}
+              alt={t("shopLogoAlt", { name: shop.name || t("anonymousShop") })}
               className="mt-4 block h-24 w-24 object-cover"
             />
           )}
 
           <h1>{shop.name}</h1>
           <p>{shop.description}</p>
-          <p>{formatRating(shop.averageRating)}</p>
+          <p>{formatRating(shop.averageRating, t)}</p>
 
           <p>
-            <Link to={`/shops/${shopId}/products`}>Ver todos os produtos</Link>
+            <Link to={`/shops/${shopId}/products`}>{t("viewAllProducts")}</Link>
           </p>
 
           <ReviewsSection shopId={shopId} />
 
           <section>
-            <h2>Coleções</h2>
+            <h2>{t("collections")}</h2>
             {shop.collections.length === 0 ? (
-              <p>Sem coleções.</p>
+              <p>{t("noCollections")}</p>
             ) : (
               <ul>
                 {shop.collections.map((collection) => (

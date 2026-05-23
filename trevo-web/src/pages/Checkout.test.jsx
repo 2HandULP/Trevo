@@ -497,7 +497,7 @@ describe("Checkout", () => {
 
     expect(mockCheckoutOrder).not.toHaveBeenCalled();
     expect(container.querySelector('[role="alert"]').textContent).toContain(
-      "O pagamento Stripe só suporta uma loja por checkout neste momento."
+      "O pagamento Stripe só suporta uma loja por finalização de compra neste momento."
     );
 
     unmount();

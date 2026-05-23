@@ -150,7 +150,7 @@ describe("Profile", () => {
 
     expect(mockApiClient.put).not.toHaveBeenCalled();
     expect(container.textContent).toContain(
-      "A nova password deve ter pelo menos 8 caracteres"
+      "A nova palavra-passe deve ter pelo menos 8 caracteres"
     );
 
     unmount();

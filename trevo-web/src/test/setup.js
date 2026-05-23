@@ -1,3 +1,5 @@
+import "../i18n";
+
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const storage = new Map();

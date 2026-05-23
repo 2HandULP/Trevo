@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
+  const { t } = useTranslation("auth");
   const { login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -27,7 +29,7 @@ export default function Login() {
     e.preventDefault();
 
     if (!form.email || !form.password) {
-      setError("Preenche email e password");
+      setError(t("fillEmailAndPassword"));
       return;
     }
 
@@ -37,7 +39,7 @@ export default function Login() {
       setError("");
       navigate("/dashboard");
     } catch (error) {
-      setError(error.response?.data?.message || "Credenciais inválidas");
+      setError(error.response?.data?.message || t("invalidCredentials"));
     } finally {
       setIsSubmitting(false);
     }
@@ -45,7 +47,7 @@ export default function Login() {
 
   return (
     <div style={{ padding: "20px", color: "black" }}>
-      <h1>Login</h1>
+      <h1>{t("loginTitle")}</h1>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
       {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
@@ -65,19 +67,19 @@ export default function Login() {
           <input
             type="password"
             name="password"
-            placeholder="Password"
+            placeholder={t("password")}
             value={form.password}
             onChange={handleChange}
           />
         </div>
 
         <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "A entrar..." : "Entrar"}
+          {isSubmitting ? t("loginSubmitting") : t("loginSubmit")}
         </button>
       </form>
 
       <p>
-        <Link to="/forgot-password">Esqueceste-te da password?</Link>
+        <Link to="/forgot-password">{t("forgotPasswordLink")}</Link>
       </p>
     </div>
   );

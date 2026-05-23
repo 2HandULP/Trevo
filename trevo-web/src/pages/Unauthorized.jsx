@@ -1,3 +1,7 @@
+import { useTranslation } from "react-i18next";
+
 export default function Unauthorized() {
-  return <div style={{ color: "black", fontSize: "32px" }}>Sem permissão</div>;
+  const { t } = useTranslation("common");
+
+  return <div style={{ color: "black", fontSize: "32px" }}>{t("unauthorized")}</div>;
 }

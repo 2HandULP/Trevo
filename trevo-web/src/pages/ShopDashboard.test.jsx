@@ -95,7 +95,7 @@ describe("ShopDashboard", () => {
 
     expect(alert).not.toBeNull();
     expect(alert.textContent).toContain(
-      "Não foi possível carregar o dashboard da loja"
+      "Não foi possível carregar o painel da loja"
     );
     expect(container.textContent).not.toContain("Network error");
 

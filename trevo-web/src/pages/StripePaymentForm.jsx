@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
 import { createPaymentIntent } from "../services/paymentService";
 
-function getErrorMessage(error, fallback) {
+function getErrorMessage(error, fallback, unavailableMessage) {
   if (error.response?.status === 409) {
-    return "O pagamento Stripe ainda não está disponível para esta encomenda.";
+    return unavailableMessage;
   }
 
   return (
@@ -16,6 +17,7 @@ function getErrorMessage(error, fallback) {
 }
 
 function StripePaymentFormFields({ order, onSuccess }) {
+  const { t } = useTranslation("checkout");
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState("");
@@ -41,14 +43,18 @@ function StripePaymentFormFields({ order, onSuccess }) {
       });
 
       if (result.error) {
-        setError(result.error.message || "Não foi possível confirmar o pagamento Stripe");
+        setError(result.error.message || t("confirmStripePaymentFailed"));
         return;
       }
 
       onSuccess(result.paymentIntent);
     } catch (submitError) {
       setError(
-        getErrorMessage(submitError, "Não foi possível iniciar o pagamento Stripe")
+        getErrorMessage(
+          submitError,
+          t("startStripePaymentFailed"),
+          t("stripeUnavailableForOrder")
+        )
       );
     } finally {
       setIsSubmitting(false);
@@ -57,7 +63,7 @@ function StripePaymentFormFields({ order, onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-5 border border-gray-200 bg-gray-50 p-4">
-      <h3 className="font-semibold">Pagamento Stripe</h3>
+      <h3 className="font-semibold">{t("payment")} Stripe</h3>
       <div className="mt-3 border border-gray-300 bg-white p-3">
         <CardElement />
       </div>
@@ -71,17 +77,19 @@ function StripePaymentFormFields({ order, onSuccess }) {
         disabled={!stripe || !elements || isSubmitting}
         className="mt-4 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? "A confirmar pagamento..." : "Confirmar pagamento Stripe"}
+        {isSubmitting ? t("confirmingStripePayment") : t("confirmStripePayment")}
       </button>
     </form>
   );
 }
 
 export default function StripePaymentForm({ order, onSuccess, stripePromise }) {
+  const { t } = useTranslation("checkout");
+
   if (!stripePromise) {
     return (
       <p className="mt-5 text-red-600" role="alert">
-        Stripe não está configurado neste ambiente.
+        {t("stripeNotConfigured")}
       </p>
     );
   }

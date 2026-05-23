@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { requestPasswordReset } from "../lib/authApi";
 
 export default function ForgotPassword() {
+  const { t } = useTranslation("auth");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -14,7 +16,7 @@ export default function ForgotPassword() {
     setSubmitted(false);
 
     if (!email.trim()) {
-      setError("Preenche o email.");
+      setError(t("fillEmail"));
       return;
     }
 
@@ -31,16 +33,15 @@ export default function ForgotPassword() {
 
   return (
     <div style={{ maxWidth: "28rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
-      <h1>Esqueceste-te da password?</h1>
+      <h1>{t("forgotPasswordTitle")}</h1>
       <p>
-        Envia o teu email e, se existir uma conta associada, vais receber instrucoes para
-        redefinir a password.
+        {t("forgotPasswordDescription")}
       </p>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
       {submitted && (
         <p style={{ color: "green" }}>
-          Se o email existir, enviamos as instrucoes de recuperacao.
+          {t("forgotPasswordSuccess")}
         </p>
       )}
 
@@ -56,12 +57,12 @@ export default function ForgotPassword() {
         </div>
 
         <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "A enviar..." : "Enviar link de recuperacao"}
+          {isSubmitting ? t("forgotPasswordSubmitting") : t("forgotPasswordSubmit")}
         </button>
       </form>
 
       <p>
-        <Link to="/login">Voltar ao login</Link>
+        <Link to="/login">{t("backToLogin")}</Link>
       </p>
     </div>
   );

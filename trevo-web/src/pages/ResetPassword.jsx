@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { confirmPasswordReset, validatePasswordResetToken } from "../lib/authApi";
 
 export default function ResetPassword() {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
@@ -19,7 +21,7 @@ export default function ResetPassword() {
     async function checkToken() {
       if (!token) {
         setTokenStatus("invalid");
-        setError("O link de recuperacao nao inclui um token valido.");
+        setError(t("missingResetToken"));
         return;
       }
 
@@ -41,19 +43,19 @@ export default function ResetPassword() {
     return () => {
       ignore = true;
     };
-  }, [token]);
+  }, [token, t]);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
     if (newPassword.length < 8) {
-      setError("A password tem de ter pelo menos 8 caracteres.");
+      setError(t("passwordTooShort"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("As passwords nao coincidem.");
+      setError(t("passwordsMismatch"));
       return;
     }
 
@@ -62,7 +64,7 @@ export default function ResetPassword() {
       await confirmPasswordReset(token, newPassword);
       navigate("/login", {
         replace: true,
-        state: { message: "Password redefinida com sucesso. Podes iniciar sessao." },
+        state: { message: t("passwordReset") },
       });
     } catch (submitError) {
       setError(submitError.message);
@@ -73,9 +75,9 @@ export default function ResetPassword() {
 
   return (
     <div style={{ maxWidth: "28rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
-      <h1>Redefinir password</h1>
+      <h1>{t("resetPasswordTitle")}</h1>
 
-      {tokenStatus === "checking" && <p>A validar o link...</p>}
+      {tokenStatus === "checking" && <p>{t("validatingLink")}</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {tokenStatus === "valid" && (
@@ -84,7 +86,7 @@ export default function ResetPassword() {
             <input
               type="password"
               name="newPassword"
-              placeholder="Nova password"
+              placeholder={t("newPassword")}
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
             />
@@ -94,21 +96,21 @@ export default function ResetPassword() {
             <input
               type="password"
               name="confirmPassword"
-              placeholder="Confirmar password"
+              placeholder={t("confirmPassword")}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
             />
           </div>
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "A guardar..." : "Guardar nova password"}
+            {isSubmitting ? t("saving", { ns: "common" }) : t("resetPasswordSubmit")}
           </button>
         </form>
       )}
 
       {tokenStatus === "invalid" && (
         <p>
-          <Link to="/forgot-password">Pedir um novo link</Link>
+          <Link to="/forgot-password">{t("requestNewLink")}</Link>
         </p>
       )}
     </div>

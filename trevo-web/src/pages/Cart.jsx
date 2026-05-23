@@ -20,6 +20,12 @@ function getErrorMessage(error, fallback) {
   );
 }
 
+function productImageAlt(productName) {
+  const name = productName?.trim();
+
+  return name ? `Imagem do produto ${name}` : "Imagem do produto sem nome";
+}
+
 export default function Cart() {
   const [cart, setCart] = useState(null);
   const [error, setError] = useState("");
@@ -136,7 +142,7 @@ export default function Cart() {
                       {item.image ? (
                         <img
                           src={item.image}
-                          alt={`Imagem de ${item.productName}`}
+                          alt={productImageAlt(item.productName)}
                           className="h-24 w-24 object-cover"
                         />
                       ) : (

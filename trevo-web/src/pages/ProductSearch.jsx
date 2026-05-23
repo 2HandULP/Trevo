@@ -46,6 +46,12 @@ function productImage(product) {
   return product.imageUrl || product.images?.[0]?.url || product.images?.[0]?.imageUrl || "";
 }
 
+function productImageAlt(product) {
+  const name = product.name?.trim();
+
+  return name ? `Imagem do produto ${name}` : "Imagem do produto sem nome";
+}
+
 export default function ProductSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlFilters = useMemo(() => readFilters(searchParams), [searchParams]);
@@ -228,7 +234,7 @@ export default function ProductSearch() {
                   {imageUrl && (
                     <img
                       src={imageUrl}
-                      alt={product.name}
+                      alt={productImageAlt(product)}
                       className="mb-3 aspect-square w-full object-cover"
                     />
                   )}

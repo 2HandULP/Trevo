@@ -42,8 +42,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "${DB_PORT:-5432}:5432"
+    # In production the database is only reachable inside the Docker network.
+    # Uncomment the line below if you need direct host access for debugging.
+    # ports:
+    #   - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
     healthcheck:

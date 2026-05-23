@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReviewsSection from "../components/ReviewsSection";
+import { shopMediaAlt } from "../lib/imageAlt";
 import { getShopProfile } from "../services/shopService";
 
 function sortCollections(collections) {
@@ -13,12 +14,6 @@ function formatRating(averageRating) {
   }
 
   return `Avaliação: ${Number(averageRating).toFixed(1)}`;
-}
-
-function shopMediaAlt(kind, shopName) {
-  const name = shopName?.trim();
-
-  return name ? `${kind} da loja ${name}` : `${kind} da loja sem nome`;
 }
 
 export default function PublicShopProfile() {

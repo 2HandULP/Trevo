@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { productImageAlt } from "../lib/imageAlt";
 import { browseProducts, searchProducts } from "../services/productService";
 
 const FILTER_KEYS = ["q", "minPrice", "maxPrice", "size", "color"];
@@ -44,12 +45,6 @@ function totalPages(page) {
 
 function productImage(product) {
   return product.imageUrl || product.images?.[0]?.url || product.images?.[0]?.imageUrl || "";
-}
-
-function productImageAlt(product) {
-  const name = product.name?.trim();
-
-  return name ? `Imagem do produto ${name}` : "Imagem do produto sem nome";
 }
 
 export default function ProductSearch() {
@@ -234,7 +229,7 @@ export default function ProductSearch() {
                   {imageUrl && (
                     <img
                       src={imageUrl}
-                      alt={productImageAlt(product)}
+                      alt={productImageAlt(product.name)}
                       className="mb-3 aspect-square w-full object-cover"
                     />
                   )}

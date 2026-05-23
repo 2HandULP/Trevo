@@ -194,7 +194,7 @@ describe("image alt text", () => {
       content: [
         {
           id: 1,
-          name: "",
+          name: "Vestido Azul",
           price: 35,
           imageUrl: "https://example.test/product.jpg",
         },
@@ -319,7 +319,7 @@ describe("image alt text", () => {
 
     expectEveryImageHasNonEmptyAlt(container);
     expect(container.querySelector("img").getAttribute("alt")).toBe(
-      "Imagem do produto sem nome"
+      "Imagem do produto Vestido Azul"
     );
 
     unmount();

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReviewForm from "../components/ReviewForm";
 import { useAuth } from "../hooks/useAuth";
+import { productImageAlt } from "../lib/imageAlt";
 import { normalizeRole, ROLES } from "../lib/roles";
 import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
@@ -30,12 +31,6 @@ function imageUrlFrom(image) {
   }
 
   return image?.imageUrl || image?.url || image?.src || "";
-}
-
-function productImageAlt(productName) {
-  const name = productName?.trim();
-
-  return name ? `Imagem do produto ${name}` : "Imagem do produto sem nome";
 }
 
 function normalizeImages(images, productName) {

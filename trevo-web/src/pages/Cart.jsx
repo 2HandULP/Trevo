@@ -4,6 +4,7 @@ import {
   removeCartItem,
   updateCartItem,
 } from "../services/cartService";
+import { productImageAlt } from "../lib/imageAlt";
 
 function formatPrice(value) {
   return new Intl.NumberFormat("pt-PT", {
@@ -18,12 +19,6 @@ function getErrorMessage(error, fallback) {
     error.response?.data?.detail ||
     fallback
   );
-}
-
-function productImageAlt(productName) {
-  const name = productName?.trim();
-
-  return name ? `Imagem do produto ${name}` : "Imagem do produto sem nome";
 }
 
 export default function Cart() {

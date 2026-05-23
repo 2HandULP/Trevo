@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import ReviewForm from "../components/ReviewForm";
 import { useAuth } from "../hooks/useAuth";
 import { normalizeRole, ROLES } from "../lib/roles";
 import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
+import { getProStatus } from "../services/subscriptionService";
+import { getTryOnUsage } from "../services/tryOnService";
 import { uploadBuyerPhotos } from "../services/userPhotoService";
 
 const REQUIRED_TRY_ON_PHOTOS = 3;
@@ -75,6 +77,8 @@ export default function ProductDetail() {
   const [selectedBodyType, setSelectedBodyType] = useState(BODY_TYPES[0]);
   const [isGeneratingTryOn, setIsGeneratingTryOn] = useState(false);
   const [generatedTryOnImage, setGeneratedTryOnImage] = useState("");
+  const [isPro, setIsPro] = useState(null);
+  const [tryOnUsed, setTryOnUsed] = useState(false);
   const [isSeeItOpen, setIsSeeItOpen] = useState(false);
   const [seeItPhotos, setSeeItPhotos] = useState([]);
   const [seeItError, setSeeItError] = useState("");
@@ -204,6 +208,27 @@ export default function ProductDetail() {
     }
   }
 
+  async function loadTryOnStatus() {
+    if (!isAuthenticated || normalizeRole(role) !== ROLES.BUYER) {
+      return;
+    }
+    try {
+      const [proStatus, usage] = await Promise.all([
+        getProStatus(),
+        getTryOnUsage(productId),
+      ]);
+      setIsPro(proStatus.pro);
+      setTryOnUsed(usage.used);
+    } catch {
+      // Status unavailable - modal works without badge/counter
+    }
+  }
+
+  function handleOpenTryOn() {
+    setIsTryOnOpen(true);
+    loadTryOnStatus();
+  }
+
   async function handleGenerateTryOn() {
     setGeneratedTryOnImage("");
     setIsGeneratingTryOn(true);
@@ -214,6 +239,10 @@ export default function ProductDetail() {
 
     setGeneratedTryOnImage(images[activeImageIndex]?.url || "");
     setIsGeneratingTryOn(false);
+
+    if (isPro === false && !tryOnUsed) {
+      setTryOnUsed(true);
+    }
   }
 
   function handleSeeItPhotoChange(event) {
@@ -454,7 +483,7 @@ export default function ProductDetail() {
 
             <button
               type="button"
-              onClick={() => setIsTryOnOpen(true)}
+              onClick={handleOpenTryOn}
               className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
             >
               Virtual Try-On
@@ -496,9 +525,24 @@ export default function ProductDetail() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="virtual-try-on-title" className="text-xl font-semibold">
-                  Virtual Try-On
-                </h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 id="virtual-try-on-title" className="text-xl font-semibold">
+                    Virtual Try-On
+                  </h2>
+                  {isPro === true && (
+                    <span
+                      className="rounded bg-yellow-400 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-yellow-900"
+                      aria-label="Conta Pro: gerações ilimitadas"
+                    >
+                      PRO · Ilimitado
+                    </span>
+                  )}
+                  {isPro === false && !tryOnUsed && (
+                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                      1 experimento gratuito
+                    </span>
+                  )}
+                </div>
                 <p className="mt-2 text-sm text-gray-600">
                   Escolhe um modelo para simular o visual deste produto.
                 </p>
@@ -511,6 +555,16 @@ export default function ProductDetail() {
                 Fechar
               </button>
             </div>
+
+            {isPro === false && tryOnUsed && (
+              <div className="mt-4 rounded border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+                Experimenta gratuito esgotado.{" "}
+                <Link to="/pro" className="font-semibold underline">
+                  Atualiza para Pro
+                </Link>{" "}
+                para gerações ilimitadas.
+              </div>
+            )}
 
             <fieldset className="mt-6">
               <legend className="font-semibold">Modelo</legend>
@@ -541,7 +595,7 @@ export default function ProductDetail() {
             <button
               type="button"
               onClick={handleGenerateTryOn}
-              disabled={isGeneratingTryOn || images.length === 0}
+              disabled={isGeneratingTryOn || images.length === 0 || (isPro === false && tryOnUsed)}
               className="mt-6 w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
             >
               {isGeneratingTryOn ? "A gerar try-on..." : "Generate Try-On"}

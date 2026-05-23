@@ -5,9 +5,18 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProductDetail from "./ProductDetail";
 
-const { mockAddCartItem, mockGetProduct, mockUploadBuyerPhotos, mockUseAuth } = vi.hoisted(() => ({
+const {
+  mockAddCartItem,
+  mockGetProduct,
+  mockGetProStatus,
+  mockGetTryOnUsage,
+  mockUploadBuyerPhotos,
+  mockUseAuth,
+} = vi.hoisted(() => ({
   mockAddCartItem: vi.fn(),
   mockGetProduct: vi.fn(),
+  mockGetProStatus: vi.fn(),
+  mockGetTryOnUsage: vi.fn(),
   mockUploadBuyerPhotos: vi.fn(),
   mockUseAuth: vi.fn(),
 }));
@@ -22,6 +31,14 @@ vi.mock("../services/cartService", () => ({
 
 vi.mock("../services/productService", () => ({
   getProduct: mockGetProduct,
+}));
+
+vi.mock("../services/subscriptionService", () => ({
+  getProStatus: mockGetProStatus,
+}));
+
+vi.mock("../services/tryOnService", () => ({
+  getTryOnUsage: mockGetTryOnUsage,
 }));
 
 vi.mock("../services/userPhotoService", () => ({
@@ -126,6 +143,8 @@ describe("ProductDetail", () => {
         { id: 3, url: "https://example.test/user-3.jpg" },
       ],
     });
+    mockGetProStatus.mockRejectedValue(new Error("not needed"));
+    mockGetTryOnUsage.mockRejectedValue(new Error("not needed"));
     globalThis.URL.createObjectURL = vi.fn((file) => `blob:${file.name}`);
     globalThis.URL.revokeObjectURL = vi.fn();
   });
@@ -682,5 +701,101 @@ describe("ProductDetail", () => {
     expect(visitorRender.container.textContent).not.toContain("Avaliar esta loja");
 
     visitorRender.unmount();
+  });
+
+  it("shows PRO badge and Ilimitado in the Virtual Try-On modal for Pro users", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    mockGetProStatus.mockResolvedValue({ pro: true });
+    mockGetTryOnUsage.mockResolvedValue({ used: false });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "Virtual Try-On"));
+    await flushPromises();
+
+    expect(container.textContent).toContain("PRO · Ilimitado");
+
+    unmount();
+  });
+
+  it("shows 1 free try-on counter in the Virtual Try-On modal for free users who have not used it", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    mockGetProStatus.mockResolvedValue({ pro: false });
+    mockGetTryOnUsage.mockResolvedValue({ used: false });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "Virtual Try-On"));
+    await flushPromises();
+
+    expect(container.textContent).toContain("1 experimento gratuito");
+
+    unmount();
+  });
+
+  it("shows upgrade prompt in the Virtual Try-On modal when free tier is exhausted", async () => {
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [],
+      variants: [],
+    });
+    mockGetProStatus.mockResolvedValue({ pro: false });
+    mockGetTryOnUsage.mockResolvedValue({ used: true });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "Virtual Try-On"));
+    await flushPromises();
+
+    expect(container.textContent).toContain("Experimenta gratuito esgotado.");
+    expect(container.textContent).toContain("Atualiza para Pro");
+    expect(buttonByText(container, "Generate Try-On").disabled).toBe(true);
+
+    unmount();
+  });
+
+  it("marks free try-on as used after generating and shows upgrade prompt", async () => {
+    vi.useFakeTimers();
+    mockGetProduct.mockResolvedValue({
+      ...baseProduct,
+      images: [
+        { id: 1, imageUrl: "https://example.test/front.jpg", alt: "Frente" },
+      ],
+      variants: [],
+    });
+    mockGetProStatus.mockResolvedValue({ pro: false });
+    mockGetTryOnUsage.mockResolvedValue({ used: false });
+
+    const { container, unmount } = renderProductDetail();
+
+    await flushPromises();
+    clickButton(buttonByText(container, "Virtual Try-On"));
+    await flushPromises();
+
+    expect(container.textContent).toContain("1 experimento gratuito");
+
+    await clickButtonAsync(buttonByText(container, "Generate Try-On"));
+
+    await act(async () => {
+      vi.advanceTimersByTime(150);
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Experimenta gratuito esgotado.");
+    expect(buttonByText(container, "Generate Try-On").disabled).toBe(true);
+
+    unmount();
+    vi.useRealTimers();
   });
 });

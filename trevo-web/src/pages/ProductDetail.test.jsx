@@ -715,7 +715,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
     await flushPromises();
 
     expect(container.textContent).toContain("PRO · Ilimitado");
@@ -735,7 +735,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
     await flushPromises();
 
     expect(container.textContent).toContain("1 experimento gratuito");
@@ -755,12 +755,12 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
     await flushPromises();
 
     expect(container.textContent).toContain("Experimenta gratuito esgotado.");
     expect(container.textContent).toContain("Atualiza para Pro");
-    expect(buttonByText(container, "Generate Try-On").disabled).toBe(true);
+    expect(buttonByText(container, "Gerar experimentação").disabled).toBe(true);
 
     unmount();
   });
@@ -780,12 +780,12 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
     await flushPromises();
 
     expect(container.textContent).toContain("1 experimento gratuito");
 
-    await clickButtonAsync(buttonByText(container, "Generate Try-On"));
+    await clickButtonAsync(buttonByText(container, "Gerar experimentação"));
 
     await act(async () => {
       vi.advanceTimersByTime(150);
@@ -793,7 +793,7 @@ describe("ProductDetail", () => {
     });
 
     expect(container.textContent).toContain("Experimenta gratuito esgotado.");
-    expect(buttonByText(container, "Generate Try-On").disabled).toBe(true);
+    expect(buttonByText(container, "Gerar experimentação").disabled).toBe(true);
 
     unmount();
     vi.useRealTimers();

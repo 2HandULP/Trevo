@@ -63,7 +63,7 @@ function StripePaymentFormFields({ order, onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-5 border border-gray-200 bg-gray-50 p-4">
-      <h3 className="font-semibold">{t("payment")} Stripe</h3>
+      <h3 className="font-semibold">{t("stripePayment")}</h3>
       <div className="mt-3 border border-gray-300 bg-white p-3">
         <CardElement />
       </div>

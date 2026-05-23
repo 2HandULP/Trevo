@@ -302,7 +302,7 @@ export default function ProductDetail() {
 
     try {
       await uploadBuyerPhotos(seeItPhotos.map((photo) => photo.file));
-      setSeeItSuccess("Fotos carregadas com sucesso.");
+      setSeeItSuccess(t("photosUploaded"));
       setSeeItResultImage(images[activeImageIndex]?.url || seeItPhotos[0].previewUrl);
     } catch (uploadError) {
       setSeeItError(getErrorMessage(uploadError, t("uploadPhotosFailed")));

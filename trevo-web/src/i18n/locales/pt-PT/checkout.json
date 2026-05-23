@@ -29,6 +29,7 @@
   "total": "Total",
   "orderSummary": "Resumo da encomenda",
   "payment": "Pagamento",
+  "stripePayment": "Pagamento Stripe",
   "paymentMethod": "Método de pagamento",
   "phoneNumber": "Número de telemóvel",
   "startingPayPal": "A iniciar PayPal...",

@@ -47,6 +47,7 @@
   "tryOnResultAlt": "Resultado da experimentação virtual {{bodyType}}",
   "seeItTitle": "Ver em si",
   "seeItDescription": "Carrega exatamente 3 imagens para veres uma simulação personalizada.",
+  "photosUploaded": "Fotos carregadas com sucesso.",
   "images": "Imagens",
   "seeItPreviewAlt": "Pré-visualização Ver em si {{index}}",
   "generateResult": "Gerar resultado",

@@ -61,7 +61,7 @@ export default function Dashboard() {
           <p>{t("profileLoaded")}</p>
           <p>{t("accountType")}: {profile.role}</p>
           <p>Email: {profile.email}</p>
-          <p>Nome: {profile.fullName}</p>
+          <p>{t("name")}: {profile.fullName}</p>
           <p>{t("accountStatus")}: {profile.status}</p>
           {profile.shopName && <p>{t("shop")}: {profile.shopName}</p>}
           {profile.shopStatus && <p>{t("shopStatus")}: {profile.shopStatus}</p>}

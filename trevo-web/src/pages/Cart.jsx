@@ -150,7 +150,7 @@ export default function Cart() {
                       <div>
                         <h3 className="font-semibold">{item.productName}</h3>
                         <p className="mt-1 text-sm text-gray-600">
-                          Tamanho: {item.size || "N/A"} · Cor: {item.color || "N/A"}
+                          {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                         </p>
                         <p className="mt-2 text-sm">
                           {t("unitPrice")}: {formatPrice(item.unitPrice)}

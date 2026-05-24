@@ -15,9 +15,12 @@ import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.SubscriptionRepository;
+import pt.trevo.trevo_api.persistence.repository.TryOnImageRepository;
+import pt.trevo.trevo_api.persistence.repository.TryOnUsageRepository;
 import pt.trevo.trevo_api.persistence.repository.UserPhotoRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
+import pt.trevo.trevo_api.service.AiImageGenerationClient;
 
 @SpringBootTest(properties = {
 	"spring.autoconfigure.exclude=" +
@@ -71,6 +74,15 @@ class TrevoApiApplicationTests {
 
 	@MockitoBean
 	private UserPhotoRepository userPhotoRepository;
+
+	@MockitoBean
+	private TryOnImageRepository tryOnImageRepository;
+
+	@MockitoBean
+	private TryOnUsageRepository tryOnUsageRepository;
+
+	@MockitoBean
+	private AiImageGenerationClient aiImageGenerationClient;
 
 	@Test
 	void contextLoads() {

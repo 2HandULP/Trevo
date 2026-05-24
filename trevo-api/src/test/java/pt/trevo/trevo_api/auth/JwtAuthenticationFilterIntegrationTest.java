@@ -25,6 +25,7 @@ import pt.trevo.trevo_api.TrevoApiApplication;
 import pt.trevo.trevo_api.persistence.entity.Role;
 import pt.trevo.trevo_api.persistence.entity.User;
 import pt.trevo.trevo_api.persistence.repository.*;
+import pt.trevo.trevo_api.service.AiImageGenerationClient;
 
 @SpringBootTest(
     classes = TrevoApiApplication.class,
@@ -82,6 +83,15 @@ class JwtAuthenticationFilterIntegrationTest {
 
     @MockitoBean
     private UserPhotoRepository userPhotoRepository;
+
+    @MockitoBean
+    private TryOnImageRepository tryOnImageRepository;
+
+    @MockitoBean
+    private TryOnUsageRepository tryOnUsageRepository;
+
+    @MockitoBean
+    private AiImageGenerationClient aiImageGenerationClient;
 
     @Autowired
     private WebApplicationContext context;

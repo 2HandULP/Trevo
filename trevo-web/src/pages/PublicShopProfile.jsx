@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import ReviewsSection from "../components/ReviewsSection";
+
 import { getShopProfile } from "../services/shopService";
 
 function sortCollections(collections) {

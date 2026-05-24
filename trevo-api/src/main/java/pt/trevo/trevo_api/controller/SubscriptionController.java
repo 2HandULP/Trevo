@@ -46,4 +46,5 @@ public class SubscriptionController {
         Long buyerId = securityUtils.requireUserId(authentication);
         return Map.of("pro", subscriptionService.isProUser(buyerId));
     }
+
 }

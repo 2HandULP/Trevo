@@ -76,6 +76,22 @@ CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
 `ENV-11` only prepares credentials and configuration. Actual upload validation
 is deferred to `SHOP-B01` and `SHOP-F05`.
 
+## HTTPS Deployment
+
+Deployment HTTPS is handled by a Caddy reverse proxy in
+`docker-compose.https.yml`. Caddy obtains and renews Let's Encrypt certificates
+for `PUBLIC_DOMAIN`, redirects HTTP to HTTPS, proxies `/api/*` to the backend,
+and proxies all other traffic to the frontend.
+
+```bash
+PUBLIC_DOMAIN=trevo.example.com
+ACME_EMAIL=admin@example.com
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d
+```
+
+See `docs/https-deployment.md` for DNS, environment variables, and routing
+details.
+
 ## Development (without Docker)
 
 If you prefer running services directly on your machine:

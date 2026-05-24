@@ -13,6 +13,10 @@ vi.mock("../services/shopService", () => ({
   getShopProfile: mockGetShopProfile,
 }));
 
+vi.mock("../components/ReviewsSection", () => ({
+  default: ({ shopId }) => <section data-testid="reviews-section">Reviews {shopId}</section>,
+}));
+
 globalThis.React = React;
 
 function renderPublicShopProfile() {
@@ -85,12 +89,12 @@ describe("PublicShopProfile", () => {
     expect(container.textContent).toContain("Roupa vintage curada.");
     expect(container.textContent).toContain("Avaliação: 4.6");
     expect(collectionNames(container)).toEqual(["Vestidos", "Casacos"]);
-    expect(allProductsLink.getAttribute("href")).toBe("/products?shopId=1");
+    expect(allProductsLink.getAttribute("href")).toBe("/shops/1/products");
     expect(
-      container.querySelector('a[href="/products?collectionId=1"]').textContent
+      container.querySelector('a[href="/shops/1/products?collectionId=1"]').textContent
     ).toBe("Vestidos");
     expect(
-      container.querySelector('a[href="/products?collectionId=2"]').textContent
+      container.querySelector('a[href="/shops/1/products?collectionId=2"]').textContent
     ).toBe("Casacos");
 
     unmount();

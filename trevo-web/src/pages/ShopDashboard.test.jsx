@@ -1,6 +1,7 @@
 import React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ShopDashboard from "./ShopDashboard";
 
@@ -19,7 +20,11 @@ function renderShopDashboard() {
   const root = createRoot(container);
 
   act(() => {
-    root.render(<ShopDashboard />);
+    root.render(
+      <MemoryRouter>
+        <ShopDashboard />
+      </MemoryRouter>
+    );
   });
 
   return {
@@ -72,6 +77,10 @@ describe("ShopDashboard", () => {
     );
     expect(container.textContent).toContain("Ainda não existem encomendas.");
 
+    expect(container.querySelector('a[href="/shop/payouts"]').textContent).toBe(
+      "Ver pagamentos"
+    );
+
     unmount();
   });
 
@@ -86,7 +95,7 @@ describe("ShopDashboard", () => {
 
     expect(alert).not.toBeNull();
     expect(alert.textContent).toContain(
-      "Não foi possível carregar o dashboard da loja"
+      "Não foi possível carregar o painel da loja"
     );
     expect(container.textContent).not.toContain("Network error");
 

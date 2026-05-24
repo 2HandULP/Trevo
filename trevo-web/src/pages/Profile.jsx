@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -23,6 +24,7 @@ function getErrorMessage(error, fallback) {
 }
 
 export default function Profile() {
+  const { t } = useTranslation("profile");
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
@@ -50,7 +52,7 @@ export default function Profile() {
         }
       } catch (loadError) {
         if (active) {
-          setError(getErrorMessage(loadError, "Não foi possível carregar o perfil"));
+          setError(getErrorMessage(loadError, t("loadProfileFailed")));
 
           if (loadError.response?.status === 401) {
             logout();
@@ -69,7 +71,7 @@ export default function Profile() {
     return () => {
       active = false;
     };
-  }, [logout, navigate]);
+  }, [logout, navigate, t]);
 
   function handleChange(event) {
     setForm((prev) => ({
@@ -84,7 +86,7 @@ export default function Profile() {
     setSuccess("");
 
     if (!form.fullName.trim() || !form.email.trim()) {
-      setError("Preenche nome e email");
+      setError(t("fillNameEmail"));
       return;
     }
 
@@ -92,12 +94,12 @@ export default function Profile() {
       (form.currentPassword && !form.newPassword) ||
       (!form.currentPassword && form.newPassword)
     ) {
-      setError("Preenche a password atual e a nova password");
+      setError(t("fillPasswords"));
       return;
     }
 
     if (form.newPassword && form.newPassword.length < 8) {
-      setError("A nova password deve ter pelo menos 8 caracteres");
+      setError(t("newPasswordTooShort"));
       return;
     }
 
@@ -124,9 +126,9 @@ export default function Profile() {
         currentPassword: "",
         newPassword: "",
       });
-      setSuccess("Perfil atualizado com sucesso");
+      setSuccess(t("profileUpdated"));
     } catch (updateError) {
-      setError(getErrorMessage(updateError, "Não foi possível atualizar o perfil"));
+      setError(getErrorMessage(updateError, t("updateProfileFailed")));
 
       if (updateError.response?.status === 401) {
         logout();
@@ -139,9 +141,9 @@ export default function Profile() {
 
   return (
     <div className="mx-auto my-16 max-w-lg p-8 text-black">
-      <h1>Perfil</h1>
+      <h1>{t("profile")}</h1>
 
-      {isLoading && <p>A carregar perfil...</p>}
+      {isLoading && <p>{t("loadingProfile")}</p>}
       {error && (
         <p className="text-red-600" role="alert">
           {error}
@@ -159,7 +161,7 @@ export default function Profile() {
             <input
               type="text"
               name="fullName"
-              placeholder="Nome"
+              placeholder={t("name")}
               value={form.fullName}
               onChange={handleChange}
             />
@@ -179,7 +181,7 @@ export default function Profile() {
             <input
               type="text"
               name="phone"
-              placeholder="Telefone"
+              placeholder={t("phone")}
               value={form.phone}
               onChange={handleChange}
             />
@@ -189,7 +191,7 @@ export default function Profile() {
             <input
               type="password"
               name="currentPassword"
-              placeholder="Password atual"
+              placeholder={t("currentPassword", { ns: "auth" })}
               value={form.currentPassword}
               onChange={handleChange}
             />
@@ -199,14 +201,14 @@ export default function Profile() {
             <input
               type="password"
               name="newPassword"
-              placeholder="Nova password"
+              placeholder={t("newPassword", { ns: "auth" })}
               value={form.newPassword}
               onChange={handleChange}
             />
           </div>
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "A guardar..." : "Guardar alterações"}
+            {isSubmitting ? t("saving") : t("saveChanges")}
           </button>
         </form>
       )}

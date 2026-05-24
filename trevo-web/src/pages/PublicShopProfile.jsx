@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReviewsSection from "../components/ReviewsSection";
+import { shopMediaAlt } from "../lib/imageAlt";
 import { getShopProfile } from "../services/shopService";
 
 function sortCollections(collections) {
@@ -71,7 +72,7 @@ export default function PublicShopProfile() {
           {shop.bannerUrl && (
             <img
               src={shop.bannerUrl}
-              alt={`Banner da loja ${shop.name}`}
+              alt={shopMediaAlt("Banner", shop.name)}
               className="block max-h-64 w-full object-cover"
             />
           )}
@@ -79,7 +80,7 @@ export default function PublicShopProfile() {
           {shop.logoUrl && (
             <img
               src={shop.logoUrl}
-              alt={`Logo da loja ${shop.name}`}
+              alt={shopMediaAlt("Logo", shop.name)}
               className="mt-4 block h-24 w-24 object-cover"
             />
           )}

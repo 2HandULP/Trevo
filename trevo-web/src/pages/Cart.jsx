@@ -4,6 +4,7 @@ import {
   removeCartItem,
   updateCartItem,
 } from "../services/cartService";
+import { productImageAlt } from "../lib/imageAlt";
 
 function formatPrice(value) {
   return new Intl.NumberFormat("pt-PT", {
@@ -136,7 +137,7 @@ export default function Cart() {
                       {item.image ? (
                         <img
                           src={item.image}
-                          alt={`Imagem de ${item.productName}`}
+                          alt={productImageAlt(item.productName)}
                           className="h-24 w-24 object-cover"
                         />
                       ) : (

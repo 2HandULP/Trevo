@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReviewForm from "../components/ReviewForm";
 import { useAuth } from "../hooks/useAuth";
+import { productImageAlt } from "../lib/imageAlt";
 import { normalizeRole, ROLES } from "../lib/roles";
 import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
@@ -32,16 +33,18 @@ function imageUrlFrom(image) {
   return image?.imageUrl || image?.url || image?.src || "";
 }
 
-function normalizeImages(images) {
+function normalizeImages(images, productName) {
   if (!Array.isArray(images)) {
     return [];
   }
+
+  const fallbackAlt = productImageAlt(productName);
 
   return images
     .map((image, index) => ({
       id: image?.id ?? imageUrlFrom(image) ?? index,
       url: imageUrlFrom(image),
-      alt: image?.alt || image?.altText || "Imagem do produto",
+      alt: image?.alt?.trim() || image?.altText?.trim() || fallbackAlt,
       displayOrder: image?.displayOrder ?? index,
     }))
     .filter((image) => image.url)
@@ -135,7 +138,10 @@ export default function ProductDetail() {
     };
   }, []);
 
-  const images = useMemo(() => normalizeImages(product?.images), [product]);
+  const images = useMemo(
+    () => normalizeImages(product?.images, product?.name),
+    [product]
+  );
   const variants = useMemo(() => product?.variants || [], [product]);
   const sizes = useMemo(
     () => uniqueValues(variants.map((variant) => variant.size)),

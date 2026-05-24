@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Register() {
+  const { t } = useTranslation("auth");
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -30,12 +32,12 @@ export default function Register() {
     e.preventDefault();
 
     if (!form.fullName || !form.email || !form.password) {
-      setError("Preenche todos os campos obrigatórios");
+      setError(t("fillRequiredFields"));
       return;
     }
 
     if (form.type === "owner" && (!form.nif || !form.shopName)) {
-      setError("Shop name e NIF são obrigatórios para Shop Owner");
+      setError(t("shopOwnerRequired"));
       return;
     }
 
@@ -44,10 +46,10 @@ export default function Register() {
       await register(form);
       setError("");
       navigate("/login", {
-        state: { message: "Conta criada com sucesso. Podes agora fazer login." },
+        state: { message: t("accountCreated") },
       });
     } catch (error) {
-      setError(error.response?.data?.message || "Não foi possível concluir o registo");
+      setError(error.response?.data?.message || t("registerFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -55,7 +57,7 @@ export default function Register() {
 
   return (
     <div style={{ padding: "20px", color: "black" }}>
-      <h1>Register</h1>
+      <h1>{t("registerTitle")}</h1>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
@@ -84,7 +86,7 @@ export default function Register() {
           <input
             type="password"
             name="password"
-            placeholder="Password"
+            placeholder={t("password")}
             value={form.password}
             onChange={handleChange}
           />
@@ -101,10 +103,10 @@ export default function Register() {
         </div>
 
         <div>
-          <label>Tipo:</label>
+          <label>{t("type")}</label>
           <select name="type" value={form.type} onChange={handleChange}>
-            <option value="buyer">Buyer</option>
-            <option value="owner">Shop Owner</option>
+            <option value="buyer">{t("buyer")}</option>
+            <option value="owner">{t("shopOwner")}</option>
           </select>
         </div>
 
@@ -134,7 +136,7 @@ export default function Register() {
         )}
 
         <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "A registar..." : "Registar"}
+          {isSubmitting ? t("registerSubmitting") : t("registerSubmit")}
         </button>
       </form>
     </div>

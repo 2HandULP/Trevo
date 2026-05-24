@@ -224,7 +224,7 @@ describe("Cart", () => {
 
     await flushPromises();
 
-    expect(container.textContent).toContain("O carrinho esta vazio.");
+    expect(container.textContent).toContain("O carrinho está vazio.");
 
     unmount();
   });
@@ -236,7 +236,7 @@ describe("Cart", () => {
     await flushPromises();
 
     expect(container.querySelector('[role="alert"]').textContent).toContain(
-      "Nao foi possivel carregar o carrinho"
+      "Não foi possível carregar o carrinho"
     );
 
     unmount();

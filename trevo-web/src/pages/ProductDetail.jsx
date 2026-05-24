@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import ReviewForm from "../components/ReviewForm";
 import { useAuth } from "../hooks/useAuth";
@@ -12,7 +13,12 @@ import { uploadBuyerPhotos } from "../services/userPhotoService";
 
 const REQUIRED_TRY_ON_PHOTOS = 3;
 
-const BODY_TYPES = ["Slim", "Athletic", "Regular", "Plus Size"];
+const BODY_TYPES = [
+  { value: "slim", labelKey: "bodyTypes.slim" },
+  { value: "athletic", labelKey: "bodyTypes.athletic" },
+  { value: "regular", labelKey: "bodyTypes.regular" },
+  { value: "plusSize", labelKey: "bodyTypes.plusSize" },
+];
 
 function formatPrice(price) {
   if (price === null || price === undefined || price === "") {
@@ -65,6 +71,7 @@ function getErrorMessage(error, fallback) {
 }
 
 export default function ProductDetail() {
+  const { t } = useTranslation("browse");
   const { productId } = useParams();
   const { isAuthenticated, role } = useAuth();
   const [product, setProduct] = useState(null);
@@ -77,7 +84,7 @@ export default function ProductDetail() {
   const [cartSuccess, setCartSuccess] = useState("");
   const [cartError, setCartError] = useState("");
   const [isTryOnOpen, setIsTryOnOpen] = useState(false);
-  const [selectedBodyType, setSelectedBodyType] = useState(BODY_TYPES[0]);
+  const [selectedBodyType, setSelectedBodyType] = useState(BODY_TYPES[0].value);
   const [isGeneratingTryOn, setIsGeneratingTryOn] = useState(false);
   const [generatedTryOnImage, setGeneratedTryOnImage] = useState("");
   const [isPro, setIsPro] = useState(null);
@@ -106,7 +113,7 @@ export default function ProductDetail() {
           setError(
             loadError.response?.data?.message ||
               loadError.response?.data?.detail ||
-              "Nao foi possivel carregar o produto"
+              t("loadProductFailed")
           );
         }
       } finally {
@@ -121,7 +128,7 @@ export default function ProductDetail() {
     return () => {
       active = false;
     };
-  }, [productId]);
+  }, [productId, t]);
 
   useEffect(() => {
     setCartSuccess("");
@@ -206,7 +213,7 @@ export default function ProductDetail() {
       setCartError(
         getErrorMessage(
           addError,
-          "Não foi possível adicionar o produto ao carrinho."
+          t("addToCartFailed")
         )
       );
     } finally {
@@ -301,10 +308,10 @@ export default function ProductDetail() {
 
     try {
       await uploadBuyerPhotos(seeItPhotos.map((photo) => photo.file));
-      setSeeItSuccess("Fotos carregadas com sucesso.");
+      setSeeItSuccess(t("photosUploaded"));
       setSeeItResultImage(images[activeImageIndex]?.url || seeItPhotos[0].previewUrl);
     } catch (uploadError) {
-      setSeeItError(getErrorMessage(uploadError, "Nao foi possivel carregar as fotos"));
+      setSeeItError(getErrorMessage(uploadError, t("uploadPhotosFailed")));
     } finally {
       setIsUploadingSeeIt(false);
     }
@@ -328,7 +335,7 @@ export default function ProductDetail() {
 
       {!isLoading && !error && product && (
         <div className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-          <section aria-label="Galeria do produto">
+          <section aria-label={t("productGallery")}>
             {images.length > 0 ? (
               <>
                 <div className="flex aspect-square items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50">
@@ -346,14 +353,14 @@ export default function ProductDetail() {
                       onClick={showPreviousImage}
                       className="rounded border border-gray-300 px-3 py-2 text-sm"
                     >
-                      Anterior
+                      {t("previous", { ns: "common" })}
                     </button>
                     <button
                       type="button"
                       onClick={showNextImage}
                       className="rounded border border-gray-300 px-3 py-2 text-sm"
                     >
-                      Proxima
+                      {t("next", { ns: "common" })}
                     </button>
                   </div>
                 )}
@@ -365,7 +372,7 @@ export default function ProductDetail() {
                         key={image.id}
                         type="button"
                         onClick={() => setActiveImageIndex(index)}
-                        aria-label={`Mostrar imagem ${index + 1}`}
+                        aria-label={t("showImage", { index: index + 1 })}
                         className={`h-20 w-20 overflow-hidden rounded border ${
                           activeImageIndex === index
                             ? "border-black"
@@ -391,7 +398,7 @@ export default function ProductDetail() {
 
           <section>
             <p className="text-sm uppercase tracking-wide text-gray-500">
-              {product.brand || "Marca nao indicada"}
+              {product.brand || t("brandMissing")}
             </p>
             <h1 className="mt-2 text-3xl font-semibold">{product.name}</h1>
             {product.price !== undefined && product.price !== null && (
@@ -405,20 +412,20 @@ export default function ProductDetail() {
 
             <div className="mt-6 space-y-2 text-sm">
               <p>
-                <span className="font-semibold">Marca:</span>{" "}
-                {product.brand || "Nao indicada"}
+                <span className="font-semibold">{t("brand")}:</span>{" "}
+                {product.brand || t("notIndicated")}
               </p>
               <p>
-                <span className="font-semibold">Materiais:</span>{" "}
-                {product.materials || "Nao indicados"}
+                <span className="font-semibold">{t("materials")}:</span>{" "}
+                {product.materials || t("notIndicatedPlural")}
               </p>
             </div>
 
             <div className="mt-8">
-              <h2 className="text-lg font-semibold">Tamanho</h2>
+              <h2 className="text-lg font-semibold">{t("size")}</h2>
               <div className="mt-3 flex flex-wrap gap-2">
                 {sizes.length === 0 && (
-                  <p className="text-sm text-gray-500">Sem tamanhos disponiveis</p>
+                  <p className="text-sm text-gray-500">{t("noSizes")}</p>
                 )}
                 {sizes.map((size) => (
                   <button
@@ -439,10 +446,10 @@ export default function ProductDetail() {
             </div>
 
             <div className="mt-6">
-              <h2 className="text-lg font-semibold">Cor</h2>
+              <h2 className="text-lg font-semibold">{t("color")}</h2>
               <div className="mt-3 flex flex-wrap gap-2">
                 {colors.length === 0 && (
-                  <p className="text-sm text-gray-500">Sem cores disponiveis</p>
+                  <p className="text-sm text-gray-500">{t("noColors")}</p>
                 )}
                 {colors.map((color) => (
                   <button
@@ -465,16 +472,16 @@ export default function ProductDetail() {
             <div className="mt-8 rounded border border-gray-200 bg-gray-50 p-4">
               {!selectedSize || !selectedColor ? (
                 <p className="text-sm text-gray-600">
-                  Seleciona tamanho e cor para ver o stock.
+                  {t("selectSizeColor")}
                 </p>
               ) : selectedVariant ? (
                 <p className="font-semibold">
                   {selectedVariant.stock > 0
-                    ? `${selectedVariant.stock} em stock`
-                    : "Sem stock"}
+                    ? t("inStock", { count: selectedVariant.stock })
+                    : t("outOfStock")}
                 </p>
               ) : (
-                <p className="font-semibold">Combinacao indisponivel</p>
+                <p className="font-semibold">{t("combinationUnavailable")}</p>
               )}
             </div>
 
@@ -484,7 +491,7 @@ export default function ProductDetail() {
               disabled={isAddToCartDisabled}
               className="mt-4 w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
             >
-              {isAddingToCart ? "A adicionar..." : "Adicionar ao carrinho"}
+              {isAddingToCart ? t("addingToCart") : t("addToCart")}
             </button>
 
             <button
@@ -492,7 +499,7 @@ export default function ProductDetail() {
               onClick={handleOpenTryOn}
               className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
             >
-              Virtual Try-On
+              {t("virtualTryOn")}
             </button>
 
             {canUseSeeItOnYourself && (
@@ -501,7 +508,7 @@ export default function ProductDetail() {
                 onClick={() => setIsSeeItOpen(true)}
                 className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
               >
-                See It On Yourself
+                {t("seeItOnYourself")}
               </button>
             )}
 
@@ -533,7 +540,7 @@ export default function ProductDetail() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 id="virtual-try-on-title" className="text-xl font-semibold">
-                    Virtual Try-On
+                    {t("tryOnTitle")}
                   </h2>
                   {isPro === true && (
                     <span
@@ -550,7 +557,7 @@ export default function ProductDetail() {
                   )}
                 </div>
                 <p className="mt-2 text-sm text-gray-600">
-                  Escolhe um modelo para simular o visual deste produto.
+                  {t("tryOnDescription")}
                 </p>
               </div>
               <button
@@ -558,7 +565,7 @@ export default function ProductDetail() {
                 onClick={() => setIsTryOnOpen(false)}
                 className="rounded border border-gray-300 px-3 py-1 text-sm"
               >
-                Fechar
+                {t("close", { ns: "common" })}
               </button>
             </div>
 
@@ -573,13 +580,13 @@ export default function ProductDetail() {
             )}
 
             <fieldset className="mt-6">
-              <legend className="font-semibold">Modelo</legend>
+              <legend className="font-semibold">{t("model")}</legend>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {BODY_TYPES.map((bodyType) => (
                   <label
-                    key={bodyType}
+                    key={bodyType.value}
                     className={`rounded border px-4 py-3 text-sm ${
-                      selectedBodyType === bodyType
+                      selectedBodyType === bodyType.value
                         ? "border-black bg-black text-white"
                         : "border-gray-300"
                     }`}
@@ -587,12 +594,12 @@ export default function ProductDetail() {
                     <input
                       type="radio"
                       name="bodyType"
-                      value={bodyType}
-                      checked={selectedBodyType === bodyType}
-                      onChange={() => setSelectedBodyType(bodyType)}
+                      value={bodyType.value}
+                      checked={selectedBodyType === bodyType.value}
+                      onChange={() => setSelectedBodyType(bodyType.value)}
                       className="mr-2"
                     />
-                    {bodyType}
+                    {t(bodyType.labelKey)}
                   </label>
                 ))}
               </div>
@@ -604,21 +611,21 @@ export default function ProductDetail() {
               disabled={isGeneratingTryOn || images.length === 0 || (isPro === false && tryOnUsed)}
               className="mt-6 w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
             >
-              {isGeneratingTryOn ? "A gerar try-on..." : "Generate Try-On"}
+              {isGeneratingTryOn ? t("generatingTryOn") : t("generateTryOn")}
             </button>
 
             {images.length === 0 && (
               <p className="mt-3 text-sm text-gray-600">
-                Este produto ainda nao tem imagem para simular.
+                {t("noTryOnImage")}
               </p>
             )}
 
             {generatedTryOnImage && (
               <div className="mt-6">
-                <h3 className="font-semibold">Resultado</h3>
+                <h3 className="font-semibold">{t("result")}</h3>
                 <img
                   src={generatedTryOnImage}
-                  alt={`Resultado Virtual Try-On ${selectedBodyType}`}
+                  alt={t("tryOnResultAlt", { bodyType: t(BODY_TYPES.find((bodyType) => bodyType.value === selectedBodyType)?.labelKey || BODY_TYPES[0].labelKey) })}
                   className="mt-3 aspect-square w-full rounded border border-gray-200 object-cover"
                 />
               </div>
@@ -638,10 +645,10 @@ export default function ProductDetail() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="see-it-on-yourself-title" className="text-xl font-semibold">
-                  See It On Yourself
+                  {t("seeItTitle")}
                 </h2>
                 <p className="mt-2 text-sm text-gray-600">
-                  Carrega exatamente 3 imagens para veres uma simulação personalizada.
+                  {t("seeItDescription")}
                 </p>
               </div>
               <button
@@ -649,14 +656,14 @@ export default function ProductDetail() {
                 onClick={closeSeeItModal}
                 className="rounded border border-gray-300 px-3 py-1 text-sm"
               >
-                Fechar
+                {t("close", { ns: "common" })}
               </button>
             </div>
 
             <form onSubmit={handleSeeItSubmit} className="mt-6 space-y-5">
               <div>
                 <label htmlFor="see-it-photos" className="block font-semibold">
-                  Imagens
+                  {t("images")}
                 </label>
                 <input
                   id="see-it-photos"
@@ -686,7 +693,7 @@ export default function ProductDetail() {
                     <li key={photo.previewUrl}>
                       <img
                         src={photo.previewUrl}
-                        alt={`Pre-visualizacao See It ${index + 1}`}
+                        alt={t("seeItPreviewAlt", { index: index + 1 })}
                         className="aspect-square w-full rounded object-cover"
                       />
                     </li>
@@ -699,16 +706,16 @@ export default function ProductDetail() {
                 disabled={isUploadingSeeIt || seeItPhotos.length !== REQUIRED_TRY_ON_PHOTOS}
                 className="w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
               >
-                {isUploadingSeeIt ? "A carregar..." : "Gerar resultado"}
+                {isUploadingSeeIt ? t("uploading") : t("generateResult")}
               </button>
             </form>
 
             {seeItResultImage && (
               <div className="mt-6">
-                <h3 className="font-semibold">Resultado personalizado</h3>
+                <h3 className="font-semibold">{t("customResult")}</h3>
                 <img
                   src={seeItResultImage}
-                  alt="Resultado See It On Yourself"
+                  alt={t("seeItResultAlt")}
                   className="mt-3 aspect-square w-full rounded border border-gray-200 object-cover"
                 />
               </div>

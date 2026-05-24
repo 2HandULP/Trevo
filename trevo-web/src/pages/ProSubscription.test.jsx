@@ -81,7 +81,7 @@ describe("ProSubscription", () => {
 
     await flushPromises();
 
-    expect(container.textContent).toContain("9,99 EUR / mes");
+    expect(container.textContent).toContain("9,99 EUR / mês");
     expect(container.textContent).toContain("Trevo Pro");
 
     unmount();
@@ -94,8 +94,8 @@ describe("ProSubscription", () => {
     await click(buttonByText(container, "Subscrever Pro"));
 
     expect(mockCreateSubscription).toHaveBeenCalledTimes(1);
-    expect(container.textContent).toContain("Subscricao Pro ativa.");
-    expect(container.textContent).toContain("Subscricao ativa");
+    expect(container.textContent).toContain("Subscrição Pro ativa.");
+    expect(container.textContent).toContain("Subscrição ativa");
 
     unmount();
   });
@@ -106,8 +106,8 @@ describe("ProSubscription", () => {
 
     await flushPromises();
 
-    expect(container.textContent).toContain("Subscricao ativa");
-    expect(buttonByText(container, "Cancelar subscricao")).not.toBeUndefined();
+    expect(container.textContent).toContain("Subscrição ativa");
+    expect(buttonByText(container, "Cancelar subscrição")).not.toBeUndefined();
 
     unmount();
   });
@@ -117,11 +117,11 @@ describe("ProSubscription", () => {
     const { container, unmount } = renderProSubscription();
 
     await flushPromises();
-    await click(buttonByText(container, "Cancelar subscricao"));
+    await click(buttonByText(container, "Cancelar subscrição"));
 
     expect(mockCancelSubscription).toHaveBeenCalledTimes(1);
-    expect(container.textContent).toContain("Subscricao Pro cancelada.");
-    expect(container.textContent).toContain("Ainda nao tens Pro ativo.");
+    expect(container.textContent).toContain("Subscrição Pro cancelada.");
+    expect(container.textContent).toContain("Ainda não tens Pro ativo.");
 
     unmount();
   });
@@ -131,7 +131,7 @@ describe("ProSubscription", () => {
     const { container, unmount } = renderProSubscription();
 
     expect(container.querySelector('[aria-live="polite"]').textContent).toContain(
-      "A carregar subscricao..."
+      "A carregar subscrição..."
     );
 
     unmount();

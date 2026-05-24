@@ -1,15 +1,32 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { getShopDashboard } from "../services/shopService";
 
-const statusLabels = {
-  PENDING: "Pendente",
-  ACTIVE: "Ativa",
-  SUSPENDED: "Suspensa",
+const statusLabelKeys = {
+  PENDING: "statuses.pending",
+  ACTIVE: "statuses.active",
+  SUSPENDED: "statuses.suspended",
 };
 
-function getStatusLabel(status) {
-  return statusLabels[status] || "Desconhecido";
+const orderStatusLabelKeys = {
+  PENDING_PAYMENT: "statuses.pendingPayment",
+  PLACED: "statuses.placed",
+  CONFIRMED: "statuses.confirmed",
+  SHIPPED: "statuses.shipped",
+  DELIVERED: "statuses.delivered",
+  RETURNED: "statuses.returned",
+  CANCELLED: "statuses.cancelled",
+};
+
+function getStatusLabel(status, t) {
+  return statusLabelKeys[status] ? t(statusLabelKeys[status]) : t("unknown");
+}
+
+function getOrderStatusLabel(status, t) {
+  return orderStatusLabelKeys[status]
+    ? t(orderStatusLabelKeys[status], { ns: "orders" })
+    : t("unknown");
 }
 
 function formatRevenue(total, currency) {
@@ -20,6 +37,7 @@ function formatRevenue(total, currency) {
 }
 
 export default function ShopDashboard() {
+  const { t } = useTranslation("shop");
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -40,7 +58,7 @@ export default function ShopDashboard() {
           setError(
             loadError.response?.data?.message ||
               loadError.response?.data?.detail ||
-              "Não foi possível carregar o dashboard da loja"
+              t("loadDashboardFailed")
           );
         }
       } finally {
@@ -55,7 +73,7 @@ export default function ShopDashboard() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   const shop = dashboard?.shop;
   const orders = dashboard?.orders || [];
@@ -63,9 +81,9 @@ export default function ShopDashboard() {
 
   return (
     <div className="mx-auto my-16 max-w-3xl p-8 text-black">
-      <h1>Dashboard da loja</h1>
+      <h1>{t("shopDashboard")}</h1>
 
-      {isLoading && <p aria-live="polite">A carregar dashboard...</p>}
+      {isLoading && <p aria-live="polite">{t("loadingDashboard")}</p>}
       {error && (
         <p role="alert" className="text-red-600">
           {error}
@@ -77,26 +95,26 @@ export default function ShopDashboard() {
           <section>
             <h2>{shop.name}</h2>
             <p>{shop.description}</p>
-            <p>Estado: {getStatusLabel(shop.status)}</p>
+            <p>{t("status")}: {getStatusLabel(shop.status, t)}</p>
           </section>
 
           <section>
-            <h2>Receita</h2>
+            <h2>{t("revenue")}</h2>
             <p>{formatRevenue(revenue.total, revenue.currency)}</p>
             <p>
-              <Link to="/shop/payouts">Ver pagamentos</Link>
+              <Link to="/shop/payouts">{t("viewPayouts")}</Link>
             </p>
           </section>
 
           <section>
-            <h2>Encomendas</h2>
+            <h2>{t("orders")}</h2>
             {orders.length === 0 ? (
-              <p>Ainda não existem encomendas.</p>
+              <p>{t("noOrders")}</p>
             ) : (
               <ul>
                 {orders.map((order) => (
                   <li key={order.id}>
-                    #{order.id} - {order.status}
+                    #{order.id} - {getOrderStatusLabel(order.status, t)}
                   </li>
                 ))}
               </ul>

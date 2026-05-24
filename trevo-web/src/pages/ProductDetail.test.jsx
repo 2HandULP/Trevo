@@ -168,7 +168,7 @@ describe("ProductDetail", () => {
       "https://example.test/front.jpg"
     );
 
-    clickButton(buttonByText(container, "Proxima"));
+    clickButton(buttonByText(container, "Seguinte"));
 
     expect(container.querySelector("section img").src).toBe(
       "https://example.test/back.jpg"
@@ -330,7 +330,7 @@ describe("ProductDetail", () => {
     unmount();
   });
 
-  it("shows the Virtual Try-On button on product detail", async () => {
+  it("shows the virtual try-on button on product detail", async () => {
     mockGetProduct.mockResolvedValue({
       ...baseProduct,
       images: [],
@@ -341,12 +341,12 @@ describe("ProductDetail", () => {
 
     await flushPromises();
 
-    expect(buttonByText(container, "Virtual Try-On")).not.toBeUndefined();
+    expect(buttonByText(container, "Experimentação virtual")).not.toBeUndefined();
 
     unmount();
   });
 
-  it("opens a Virtual Try-On modal when clicking the button", async () => {
+  it("opens a virtual try-on modal when clicking the button", async () => {
     mockGetProduct.mockResolvedValue({
       ...baseProduct,
       images: [],
@@ -356,18 +356,18 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
 
     const dialog = container.querySelector('[role="dialog"]');
 
     expect(dialog).not.toBeNull();
     expect(dialog.getAttribute("aria-modal")).toBe("true");
-    expect(dialog.textContent).toContain("Virtual Try-On");
+    expect(dialog.textContent).toContain("Experimentação virtual");
 
     unmount();
   });
 
-  it("shows at least four body type options in the Virtual Try-On modal", async () => {
+  it("shows at least four body type options in the virtual try-on modal", async () => {
     mockGetProduct.mockResolvedValue({
       ...baseProduct,
       images: [],
@@ -377,13 +377,13 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
 
     expect(container.querySelectorAll('input[name="bodyType"]').length).toBeGreaterThanOrEqual(4);
-    expect(container.textContent).toContain("Slim");
-    expect(container.textContent).toContain("Athletic");
+    expect(container.textContent).toContain("Magro");
+    expect(container.textContent).toContain("Atlético");
     expect(container.textContent).toContain("Regular");
-    expect(container.textContent).toContain("Plus Size");
+    expect(container.textContent).toContain("Tamanho grande");
 
     unmount();
   });
@@ -401,10 +401,10 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
-    await clickButtonAsync(buttonByText(container, "Generate Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
+    await clickButtonAsync(buttonByText(container, "Gerar experimentação"));
 
-    expect(container.textContent).toContain("A gerar try-on...");
+    expect(container.textContent).toContain("A gerar experimentação...");
 
     await act(async () => {
       vi.advanceTimersByTime(150);
@@ -412,7 +412,7 @@ describe("ProductDetail", () => {
     });
 
     const resultImage = container.querySelector(
-      'img[alt="Resultado Virtual Try-On Slim"]'
+      'img[alt="Resultado da experimentação virtual Magro"]'
     );
 
     expect(resultImage).not.toBeNull();
@@ -433,15 +433,15 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "See It On Yourself"));
+    clickButton(buttonByText(container, "Ver em si"));
     changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
       new File(["photo-1"], "photo-1.png", { type: "image/png" }),
       new File(["photo-2"], "photo-2.png", { type: "image/png" }),
       new File(["photo-3"], "photo-3.png", { type: "image/png" }),
     ]);
 
-    expect(container.querySelectorAll('img[alt^="Pre-visualizacao See It"]').length).toBe(3);
-    expect(container.querySelector('img[alt="Pre-visualizacao See It 1"]').src).toBe(
+    expect(container.querySelectorAll('img[alt^="Pré-visualização Ver em si"]').length).toBe(3);
+    expect(container.querySelector('img[alt="Pré-visualização Ver em si 1"]').src).toBe(
       "blob:photo-1.png"
     );
     expect(container.querySelector('[role="alert"]')).toBeNull();
@@ -458,7 +458,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "See It On Yourself"));
+    clickButton(buttonByText(container, "Ver em si"));
     changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
       new File(["photo-1"], "photo-1.png", { type: "image/png" }),
       new File(["photo-2"], "photo-2.png", { type: "image/png" }),
@@ -493,7 +493,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "See It On Yourself"));
+    clickButton(buttonByText(container, "Ver em si"));
 
     expect(buttonByText(container, "Gerar resultado").disabled).toBe(true);
 
@@ -519,7 +519,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "See It On Yourself"));
+    clickButton(buttonByText(container, "Ver em si"));
     changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
       new File(["photo-1"], "photo-1.png", { type: "image/png" }),
       new File(["not-image"], "not-image.txt", { type: "text/plain" }),
@@ -552,7 +552,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "See It On Yourself"));
+    clickButton(buttonByText(container, "Ver em si"));
     changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
       largeImage,
       new File(["photo-2"], "photo-2.png", { type: "image/png" }),
@@ -584,7 +584,7 @@ describe("ProductDetail", () => {
     ];
 
     await flushPromises();
-    clickButton(buttonByText(container, "See It On Yourself"));
+    clickButton(buttonByText(container, "Ver em si"));
     changeFiles(container.querySelector('input[name="seeItPhotos"]'), files);
     await flushPromises();
     await submitForm(container.querySelector('[role="dialog"] form'));
@@ -594,7 +594,7 @@ describe("ProductDetail", () => {
     expect(container.querySelector('[role="status"]').textContent).toContain(
       "Fotos carregadas com sucesso."
     );
-    expect(container.querySelector('img[alt="Resultado See It On Yourself"]').src).toBe(
+    expect(container.querySelector('img[alt="Resultado Ver em si"]').src).toBe(
       "https://example.test/front.jpg"
     );
 
@@ -610,7 +610,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "See It On Yourself"));
+    clickButton(buttonByText(container, "Ver em si"));
     changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
       new File(["photo-1"], "photo-1.png", { type: "image/png" }),
       new File(["photo-2"], "photo-2.png", { type: "image/png" }),
@@ -635,7 +635,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "See It On Yourself"));
+    clickButton(buttonByText(container, "Ver em si"));
     changeFiles(container.querySelector('input[name="seeItPhotos"]'), [
       new File(["photo-1"], "photo-1.png", { type: "image/png" }),
       new File(["photo-2"], "photo-2.png", { type: "image/png" }),
@@ -715,7 +715,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
     await flushPromises();
 
     expect(container.textContent).toContain("PRO · Ilimitado");
@@ -735,7 +735,7 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
     await flushPromises();
 
     expect(container.textContent).toContain("1 experimento gratuito");
@@ -755,12 +755,12 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
     await flushPromises();
 
     expect(container.textContent).toContain("Experimenta gratuito esgotado.");
     expect(container.textContent).toContain("Atualiza para Pro");
-    expect(buttonByText(container, "Generate Try-On").disabled).toBe(true);
+    expect(buttonByText(container, "Gerar experimentação").disabled).toBe(true);
 
     unmount();
   });
@@ -780,12 +780,12 @@ describe("ProductDetail", () => {
     const { container, unmount } = renderProductDetail();
 
     await flushPromises();
-    clickButton(buttonByText(container, "Virtual Try-On"));
+    clickButton(buttonByText(container, "Experimentação virtual"));
     await flushPromises();
 
     expect(container.textContent).toContain("1 experimento gratuito");
 
-    await clickButtonAsync(buttonByText(container, "Generate Try-On"));
+    await clickButtonAsync(buttonByText(container, "Gerar experimentação"));
 
     await act(async () => {
       vi.advanceTimersByTime(150);
@@ -793,7 +793,7 @@ describe("ProductDetail", () => {
     });
 
     expect(container.textContent).toContain("Experimenta gratuito esgotado.");
-    expect(buttonByText(container, "Generate Try-On").disabled).toBe(true);
+    expect(buttonByText(container, "Gerar experimentação").disabled).toBe(true);
 
     unmount();
     vi.useRealTimers();

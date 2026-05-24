@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { getBuyerOrder, getBuyerOrders } from "../services/orderService";
 
-const statusLabels = {
-  PENDING_PAYMENT: "Pagamento pendente",
-  PLACED: "Criada",
-  CONFIRMED: "Confirmada",
-  SHIPPED: "Enviada",
-  DELIVERED: "Entregue",
-  RETURNED: "Devolvida",
-  CANCELLED: "Cancelada",
+const statusLabelKeys = {
+  PENDING_PAYMENT: "statuses.pendingPayment",
+  PLACED: "statuses.placed",
+  CONFIRMED: "statuses.confirmed",
+  SHIPPED: "statuses.shipped",
+  DELIVERED: "statuses.delivered",
+  RETURNED: "statuses.returned",
+  CANCELLED: "statuses.cancelled",
 };
 
 const PAGE_SIZE = 20;
@@ -21,9 +22,9 @@ function formatPrice(value) {
   }).format(Number(value || 0));
 }
 
-function formatDate(value) {
+function formatDate(value, t) {
   if (!value) {
-    return "Data indisponivel";
+    return t("dateUnavailable");
   }
 
   return new Intl.DateTimeFormat("pt-PT", {
@@ -40,11 +41,12 @@ function getErrorMessage(error, fallback) {
   );
 }
 
-function statusLabel(status) {
-  return statusLabels[status] || status;
+function statusLabel(status, t) {
+  return statusLabelKeys[status] ? t(statusLabelKeys[status]) : status;
 }
 
 export default function OrderHistory() {
+  const { t } = useTranslation("orders");
   const [orderPage, setOrderPage] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [error, setError] = useState("");
@@ -72,7 +74,7 @@ export default function OrderHistory() {
         }
       } catch (loadError) {
         if (active) {
-          setError(getErrorMessage(loadError, "Nao foi possivel carregar as encomendas"));
+          setError(getErrorMessage(loadError, t("loadOrdersFailed")));
         }
       } finally {
         if (active) {
@@ -86,7 +88,7 @@ export default function OrderHistory() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, t]);
 
   async function handleSelectOrder(orderId) {
     setSelectedOrder(null);
@@ -98,7 +100,7 @@ export default function OrderHistory() {
       setSelectedOrder(order);
     } catch (selectError) {
       setDetailError(
-        getErrorMessage(selectError, "Nao foi possivel carregar o detalhe")
+        getErrorMessage(selectError, t("loadDetailsFailed"))
       );
     } finally {
       setIsLoadingDetail(false);
@@ -112,11 +114,11 @@ export default function OrderHistory() {
 
   return (
     <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      <h1 className="text-3xl font-semibold">Historico de encomendas</h1>
+      <h1 className="text-3xl font-semibold">{t("ordersHistory")}</h1>
 
       {isLoading && (
         <p className="mt-6" aria-live="polite">
-          A carregar encomendas...
+          {t("loadingOrders")}
         </p>
       )}
       {error && (
@@ -125,12 +127,12 @@ export default function OrderHistory() {
         </p>
       )}
       {isEmpty && (
-        <p className="mt-6 text-gray-600">Ainda nao existem encomendas.</p>
+        <p className="mt-6 text-gray-600">{t("emptyOrders")}</p>
       )}
 
       {!isLoading && !error && orders.length > 0 && (
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
-          <section aria-label="Lista de encomendas">
+          <section aria-label={t("orderList")}>
             <ul className="space-y-3">
               {orders.map((order) => (
                 <li key={order.id}>
@@ -140,18 +142,18 @@ export default function OrderHistory() {
                     className="w-full border border-gray-200 p-4 text-left"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-semibold">Order #{order.id}</p>
+                      <p className="font-semibold">{t("orderNumber", { id: order.id })}</p>
                       <span className="border border-gray-300 px-2 py-1 text-xs font-semibold">
-                        {statusLabel(order.status)}
+                        {statusLabel(order.status, t)}
                       </span>
                     </div>
                     <p className="mt-2">{order.shopName}</p>
                     <p className="text-sm text-gray-600">
-                      {formatDate(order.createdAt)}
+                      {formatDate(order.createdAt, t)}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                      <span>Total: {formatPrice(order.totalAmount)}</span>
-                      <span>Pagamento: {order.paymentMethod}</span>
+                      <span>{t("total")}: {formatPrice(order.totalAmount)}</span>
+                      <span>{t("payment")}: {order.paymentMethod}</span>
                     </div>
                   </button>
                 </li>
@@ -165,10 +167,10 @@ export default function OrderHistory() {
                 disabled={isFirstPage}
                 className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Anterior
+                {t("previous", { ns: "common" })}
               </button>
               <span className="text-sm text-gray-600">
-                Página {page + 1} de {Math.max(totalPages, 1)}
+                {t("pageOf", { ns: "browse", page: page + 1, total: Math.max(totalPages, 1) })}
               </span>
               <button
                 type="button"
@@ -176,16 +178,16 @@ export default function OrderHistory() {
                 disabled={isLastPage}
                 className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Seguinte
+                {t("next", { ns: "common" })}
               </button>
             </div>
           </section>
 
-          <section aria-label="Detalhe da encomenda">
-            <h2 className="text-xl font-semibold">Detalhe</h2>
+          <section aria-label={t("orderDetails")}>
+            <h2 className="text-xl font-semibold">{t("details")}</h2>
             {isLoadingDetail && (
               <p className="mt-4" aria-live="polite">
-                A carregar detalhe...
+                {t("loadingDetails")}
               </p>
             )}
             {detailError && (
@@ -195,23 +197,23 @@ export default function OrderHistory() {
             )}
             {!isLoadingDetail && !detailError && !selectedOrder && (
               <p className="mt-4 text-gray-600">
-                Seleciona uma encomenda para ver os detalhes.
+                {t("selectOrder")}
               </p>
             )}
             {!isLoadingDetail && !detailError && selectedOrder && (
               <div className="mt-4 border border-gray-200 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold">
-                    Order #{selectedOrder.id}
+                    {t("orderNumber", { id: selectedOrder.id })}
                   </h3>
                   <span className="border border-gray-300 px-2 py-1 text-xs font-semibold">
-                    {statusLabel(selectedOrder.status)}
+                    {statusLabel(selectedOrder.status, t)}
                   </span>
                 </div>
                 <p className="mt-2">{selectedOrder.shopName}</p>
                 {selectedOrder.trackingNumber && (
                   <p className="mt-2 text-sm">
-                    Tracking: {selectedOrder.trackingNumber}
+                    {t("tracking")}: {selectedOrder.trackingNumber}
                   </p>
                 )}
 
@@ -222,12 +224,10 @@ export default function OrderHistory() {
                         <div>
                           <p className="font-semibold">{item.productName}</p>
                           <p className="text-sm text-gray-600">
-                            Tamanho: {item.size || "N/A"} · Cor:{" "}
-                            {item.color || "N/A"}
+                            {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Quantidade: {item.quantity} x{" "}
-                            {formatPrice(item.unitPrice)}
+                            {t("quantityUnit", { quantity: item.quantity, unitPrice: formatPrice(item.unitPrice) })}
                           </p>
                         </div>
                         <p className="font-semibold">
@@ -239,13 +239,13 @@ export default function OrderHistory() {
                 </ul>
 
                 <p className="mt-5 text-xl font-semibold">
-                  Total: {formatPrice(selectedOrder.totalAmount)}
+                  {t("total")}: {formatPrice(selectedOrder.totalAmount)}
                 </p>
                 <Link
                   to={`/orders/${selectedOrder.id}/receipt`}
                   className="mt-5 inline-block border border-gray-300 px-4 py-2 font-semibold"
                 >
-                  Ver recibo
+                  {t("viewReceipt")}
                 </Link>
               </div>
             )}

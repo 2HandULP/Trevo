@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../hooks/useAuth";
 import { normalizeRole, ROLES } from "../lib/roles";
 import { getShopReviews, respondToReview } from "../services/reviewService";
 
 const PAGE_SIZE = 5;
 
-function getErrorMessage(error, fallback) {
+function getErrorMessage(error, fallback, t) {
   if (error.response?.status === 409) {
-    return "Esta avaliação já tem resposta.";
+    return t("reviewAlreadyAnswered");
   }
 
   return (
@@ -17,9 +18,9 @@ function getErrorMessage(error, fallback) {
   );
 }
 
-function formatDate(value) {
+function formatDate(value, t) {
   if (!value) {
-    return "Data indisponível";
+    return t("dateUnavailable");
   }
 
   return new Intl.DateTimeFormat("pt-PT", {
@@ -28,10 +29,11 @@ function formatDate(value) {
 }
 
 function Stars({ rating }) {
+  const { t } = useTranslation("reviews");
   const roundedRating = Math.round(Number(rating || 0));
 
   return (
-    <span aria-label={`${Number(rating || 0).toFixed(1)} estrelas`}>
+    <span aria-label={t("stars", { rating: Number(rating || 0).toFixed(1) })}>
       {[1, 2, 3, 4, 5].map((star) => (
         <span key={star} aria-hidden="true" className="text-yellow-500">
           {star <= roundedRating ? "★" : "☆"}
@@ -50,6 +52,7 @@ function getResponseText(response) {
 }
 
 export default function ReviewsSection({ shopId }) {
+  const { t } = useTranslation("reviews");
   const { isAuthenticated, role } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [page, setPage] = useState(0);
@@ -91,7 +94,7 @@ export default function ReviewsSection({ shopId }) {
       } catch (loadError) {
         if (isActive()) {
           setError(
-            getErrorMessage(loadError, "Não foi possível carregar avaliações")
+            getErrorMessage(loadError, t("loadFailed"), t)
           );
         }
       } finally {
@@ -100,7 +103,7 @@ export default function ReviewsSection({ shopId }) {
         }
       }
     },
-    [shopId]
+    [shopId, t]
   );
 
   useEffect(() => {
@@ -149,7 +152,7 @@ export default function ReviewsSection({ shopId }) {
       closeResponseForm();
     } catch (submitError) {
       setResponseError(
-        getErrorMessage(submitError, "Não foi possível enviar a resposta")
+        getErrorMessage(submitError, t("responseFailed"), t)
       );
     } finally {
       setIsSubmittingResponse(false);
@@ -162,18 +165,18 @@ export default function ReviewsSection({ shopId }) {
 
   return (
     <section className="mt-8">
-      <h2>Avaliações</h2>
+      <h2>{t("reviews")}</h2>
 
       {averageRating != null && (
         <p>
-          Média: <Stars rating={averageRating} />{" "}
+          {t("average")}: <Stars rating={averageRating} />{" "}
           {Number(averageRating).toFixed(1)}
         </p>
       )}
 
       {isLoading && (
         <p className="mt-3" aria-live="polite">
-          A carregar avaliações...
+          {t("loading")}
         </p>
       )}
       {error && (
@@ -187,12 +190,12 @@ export default function ReviewsSection({ shopId }) {
               onClick={() => loadReviews(0, "replace")}
               className="mt-2 border border-gray-300 px-3 py-2"
             >
-              Tentar novamente
+              {t("retry")}
             </button>
           )}
         </div>
       )}
-      {isEmpty && <p>Sem avaliações</p>}
+      {isEmpty && <p>{t("empty")}</p>}
 
       {reviews.length > 0 && (
         <ul className="mt-4 space-y-4">
@@ -202,11 +205,11 @@ export default function ReviewsSection({ shopId }) {
                 <p className="font-semibold">{review.buyerName}</p>
                 <Stars rating={review.rating} />
               </div>
-              <p className="text-sm text-gray-600">{formatDate(review.createdAt)}</p>
+              <p className="text-sm text-gray-600">{formatDate(review.createdAt, t)}</p>
               {review.comment && <p className="mt-2">{review.comment}</p>}
               {review.response && (
                 <div className="mt-3 border-l-2 border-gray-300 pl-3">
-                  <p className="text-sm font-semibold">Resposta da loja</p>
+                  <p className="text-sm font-semibold">{t("shopResponse")}</p>
                   <p className="mt-1">{getResponseText(review.response)}</p>
                 </div>
               )}
@@ -215,7 +218,7 @@ export default function ReviewsSection({ shopId }) {
                   {activeResponseReviewId === review.id ? (
                     <form onSubmit={(event) => handleResponseSubmit(event, review.id)}>
                       <label className="sr-only" htmlFor={`review-response-${review.id}`}>
-                        Resposta
+                        {t("response")}
                       </label>
                       <textarea
                         id={`review-response-${review.id}`}
@@ -235,7 +238,7 @@ export default function ReviewsSection({ shopId }) {
                           disabled={!responseText.trim() || isSubmittingResponse}
                           className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          Enviar resposta
+                          {t("sendResponse")}
                         </button>
                         <button
                           type="button"
@@ -243,7 +246,7 @@ export default function ReviewsSection({ shopId }) {
                           disabled={isSubmittingResponse}
                           className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          Cancelar
+                          {t("cancel")}
                         </button>
                       </div>
                     </form>
@@ -253,7 +256,7 @@ export default function ReviewsSection({ shopId }) {
                       onClick={() => openResponseForm(review.id)}
                       className="border border-gray-300 px-3 py-2"
                     >
-                      Responder
+                      {t("reply")}
                     </button>
                   )}
                 </div>
@@ -270,7 +273,7 @@ export default function ReviewsSection({ shopId }) {
           disabled={isLoading}
           className="mt-4 border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Carregar mais
+          {t("loadMore")}
         </button>
       )}
     </section>

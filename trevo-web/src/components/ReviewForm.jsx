@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createReview } from "../services/reviewService";
 
-function getErrorMessage(error, fallback) {
+function getErrorMessage(error, fallback, t) {
   if (error.response?.status === 409) {
-    return "Já avaliou esta loja.";
+    return t("alreadyReviewed");
   }
 
   return (
@@ -14,6 +15,7 @@ function getErrorMessage(error, fallback) {
 }
 
 export default function ReviewForm({ shopId }) {
+  const { t } = useTranslation("reviews");
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,13 +39,13 @@ export default function ReviewForm({ shopId }) {
         rating,
         comment: comment.trim() ? comment.trim() : null,
       });
-      setSuccess("Avaliação enviada com sucesso.");
+      setSuccess(t("reviewSent"));
       setHasSubmitted(true);
       setComment("");
       setRating(0);
     } catch (submitError) {
       setError(
-        getErrorMessage(submitError, "Não foi possível enviar a avaliação.")
+        getErrorMessage(submitError, t("submitFailed"), t)
       );
     } finally {
       setIsSubmitting(false);
@@ -52,7 +54,7 @@ export default function ReviewForm({ shopId }) {
 
   return (
     <section className="mt-10 border-t border-gray-200 pt-8">
-      <h2 className="text-xl font-semibold">Avaliar esta loja</h2>
+      <h2 className="text-xl font-semibold">{t("reviewShop")}</h2>
 
       {hasSubmitted ? (
         <p className="mt-4 text-green-600" role="status" aria-live="polite">
@@ -61,14 +63,16 @@ export default function ReviewForm({ shopId }) {
       ) : (
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         <div>
-          <p className="text-sm font-semibold">Classificação</p>
-          <div className="mt-2 flex gap-2" aria-label="Classificação por estrelas">
+          <p className="text-sm font-semibold">{t("rating")}</p>
+          <div className="mt-2 flex gap-2" aria-label={t("stars", { rating: t("rating") })}>
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 type="button"
                 onClick={() => setRating(star)}
-                aria-label={`${star} estrela${star === 1 ? "" : "s"}`}
+                aria-label={t(star === 1 ? "starOne" : "starMany", {
+                  count: star,
+                })}
                 aria-pressed={rating >= star}
                 className="text-2xl text-yellow-500"
               >
@@ -79,7 +83,7 @@ export default function ReviewForm({ shopId }) {
         </div>
 
         <label className="block">
-          <span className="text-sm font-semibold">Comentário opcional</span>
+          <span className="text-sm font-semibold">{t("optionalComment")}</span>
           <textarea
             value={comment}
             onChange={(event) => setComment(event.target.value)}
@@ -93,7 +97,7 @@ export default function ReviewForm({ shopId }) {
           disabled={rating === 0 || isSubmitting}
           className="rounded border border-black bg-black px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
         >
-          {isSubmitting ? "A enviar..." : "Enviar avaliação"}
+          {isSubmitting ? t("submitting") : t("submitReview")}
         </button>
 
         {error && (

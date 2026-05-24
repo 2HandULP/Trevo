@@ -101,7 +101,7 @@ describe("ReceiptView", () => {
     await flushPromises();
 
     expect(mockGetBuyerOrder).toHaveBeenCalledWith("42");
-    expect(container.textContent).toContain("Encomenda #42");
+    expect(container.textContent).toContain("Encomenda n.º 42");
     expect(container.textContent).toContain("South Shop");
     expect(container.textContent).toContain("PAYPAL");
     expect(container.textContent).toContain("Enviada");

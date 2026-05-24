@@ -128,11 +128,11 @@ describe("OrderHistory", () => {
 
     await flushPromises();
 
-    expect(container.textContent).toContain("Order #10");
+    expect(container.textContent).toContain("Encomenda n.º 10");
     expect(container.textContent).toContain("North Shop");
     expect(container.textContent).toContain("59,98");
     expect(container.textContent).toContain("Criada");
-    expect(container.textContent).toContain("Order #11");
+    expect(container.textContent).toContain("Encomenda n.º 11");
     expect(container.textContent).toContain("South Shop");
     expect(container.textContent).toContain("Enviada");
 
@@ -145,12 +145,12 @@ describe("OrderHistory", () => {
     await flushPromises();
     await click(
       [...container.querySelectorAll("button")].find((button) =>
-        button.textContent.includes("Order #11")
+        button.textContent.includes("Encomenda n.º 11")
       )
     );
 
     expect(mockGetBuyerOrder).toHaveBeenCalledWith(11);
-    expect(container.textContent).toContain("Tracking: TRACK-123");
+    expect(container.textContent).toContain("Seguimento: TRACK-123");
     expect(container.textContent).toContain("Linen Shirt");
     expect(container.textContent).toContain("Tamanho: M");
     expect(container.textContent).toContain("Cor: Blue");
@@ -200,7 +200,7 @@ describe("OrderHistory", () => {
     await flushPromises();
     await click(
       [...container.querySelectorAll("button")].find((button) =>
-        button.textContent.includes("Order #11")
+        button.textContent.includes("Encomenda n.º 11")
       )
     );
     await flushPromises();
@@ -224,7 +224,7 @@ describe("OrderHistory", () => {
 
     await flushPromises();
 
-    expect(container.textContent).toContain("Ainda nao existem encomendas.");
+    expect(container.textContent).toContain("Ainda não existem encomendas.");
 
     unmount();
   });
@@ -236,7 +236,7 @@ describe("OrderHistory", () => {
     await flushPromises();
 
     expect(container.querySelector('[role="alert"]').textContent).toContain(
-      "Nao foi possivel carregar as encomendas"
+      "Não foi possível carregar as encomendas"
     );
 
     unmount();

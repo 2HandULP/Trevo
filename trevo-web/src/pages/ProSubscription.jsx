@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   cancelSubscription,
   createSubscription,
   getProStatus,
 } from "../services/subscriptionService";
-
-const PRO_PRICE = "9,99 EUR / mes";
 
 function getErrorMessage(error, fallback) {
   return (
@@ -16,6 +15,7 @@ function getErrorMessage(error, fallback) {
 }
 
 export default function ProSubscription() {
+  const { t } = useTranslation("shop");
   const [isPro, setIsPro] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -35,7 +35,7 @@ export default function ProSubscription() {
         }
       } catch (loadError) {
         if (active) {
-          setError(getErrorMessage(loadError, "Nao foi possivel carregar a subscricao"));
+          setError(getErrorMessage(loadError, t("loadSubscriptionFailed")));
         }
       } finally {
         if (active) {
@@ -49,7 +49,7 @@ export default function ProSubscription() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   async function handleSubscribe() {
     setError("");
@@ -59,9 +59,9 @@ export default function ProSubscription() {
     try {
       await createSubscription();
       setIsPro(true);
-      setSuccess("Subscricao Pro ativa.");
+      setSuccess(t("subscriptionActivated"));
     } catch (subscribeError) {
-      setError(getErrorMessage(subscribeError, "Nao foi possivel ativar a subscricao Pro"));
+      setError(getErrorMessage(subscribeError, t("activateSubscriptionFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -75,9 +75,9 @@ export default function ProSubscription() {
     try {
       await cancelSubscription();
       setIsPro(false);
-      setSuccess("Subscricao Pro cancelada.");
+      setSuccess(t("subscriptionCanceled"));
     } catch (cancelError) {
-      setError(getErrorMessage(cancelError, "Nao foi possivel cancelar a subscricao Pro"));
+      setError(getErrorMessage(cancelError, t("cancelSubscriptionFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -85,12 +85,12 @@ export default function ProSubscription() {
 
   return (
     <main className="mx-auto my-10 max-w-3xl px-4 text-black">
-      <p className="text-sm font-semibold uppercase text-gray-500">Plano Pro</p>
-      <h1 className="mt-1 text-3xl font-semibold">Subscricao Pro</h1>
+      <p className="text-sm font-semibold uppercase text-gray-500">{t("proPlan")}</p>
+      <h1 className="mt-1 text-3xl font-semibold">{t("proSubscription")}</h1>
 
       {isLoading && (
         <p className="mt-6" aria-live="polite">
-          A carregar subscricao...
+          {t("loadingSubscription")}
         </p>
       )}
       {error && (
@@ -105,28 +105,28 @@ export default function ProSubscription() {
       )}
 
       {!isLoading && (
-        <section className="mt-8 border border-gray-200 p-6" aria-label="Detalhes do plano Pro">
+        <section className="mt-8 border border-gray-200 p-6" aria-label={t("proPlan")}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold">Trevo Pro</h2>
+              <h2 className="text-2xl font-semibold">{t("trevoPro")}</h2>
               <p className="mt-2 text-gray-700">
-                Acesso ao plano Pro para usar funcionalidades premium da conta buyer.
+                {t("proDescription")}
               </p>
             </div>
-            <p className="text-2xl font-semibold">{PRO_PRICE}</p>
+            <p className="text-2xl font-semibold">{t("proPrice")}</p>
           </div>
 
           <ul className="mt-6 list-disc space-y-2 pl-5 text-gray-700">
-            <li>Estado Pro associado a tua conta buyer.</li>
-            <li>Gestao simples da subscricao nesta pagina.</li>
-            <li>Podes cancelar a subscricao quando ja nao precisares.</li>
+            <li>{t("proBenefitAccount")}</li>
+            <li>{t("proBenefitManage")}</li>
+            <li>{t("proBenefitCancel")}</li>
           </ul>
 
           {isPro ? (
             <div className="mt-8 border border-green-200 bg-green-50 p-4">
-              <p className="font-semibold text-green-800">Subscricao ativa</p>
+              <p className="font-semibold text-green-800">{t("subscriptionActive")}</p>
               <p className="mt-2 text-sm text-green-700">
-                O teu plano Pro esta ativo.
+                {t("proActiveMessage")}
               </p>
               <button
                 type="button"
@@ -134,14 +134,14 @@ export default function ProSubscription() {
                 disabled={isSubmitting}
                 className="mt-5 border border-red-300 px-4 py-2 font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? "A cancelar..." : "Cancelar subscricao"}
+                {isSubmitting ? t("canceling") : t("cancelSubscription")}
               </button>
             </div>
           ) : (
             <div className="mt-8 border border-gray-200 bg-gray-50 p-4">
-              <p className="font-semibold">Ainda nao tens Pro ativo.</p>
+              <p className="font-semibold">{t("noActivePro")}</p>
               <p className="mt-2 text-sm text-gray-700">
-                Ativa a subscricao Pro para associar este plano a tua conta buyer.
+                {t("activateProMessage")}
               </p>
               <button
                 type="button"
@@ -149,7 +149,7 @@ export default function ProSubscription() {
                 disabled={isSubmitting}
                 className="mt-5 bg-black px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? "A subscrever..." : "Subscrever Pro"}
+                {isSubmitting ? t("subscribing") : t("subscribePro")}
               </button>
             </div>
           )}

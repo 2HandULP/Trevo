@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { redirectTo } from "../lib/checkoutRedirect";
 import { loadStripe } from "@stripe/stripe-js";
 import StripePaymentForm from "./StripePaymentForm";
@@ -55,6 +56,7 @@ function getStripePublishableKey() {
 }
 
 export default function Checkout() {
+  const { t } = useTranslation("checkout");
   const [cart, setCart] = useState(null);
   const [orders, setOrders] = useState([]);
   const [pendingStripeOrders, setPendingStripeOrders] = useState([]);
@@ -83,7 +85,7 @@ export default function Checkout() {
         }
       } catch (loadError) {
         if (active) {
-          setError(getErrorMessage(loadError, "Não foi possível carregar o checkout"));
+          setError(getErrorMessage(loadError, t("loadCheckoutFailed")));
         }
       } finally {
         if (active) {
@@ -97,7 +99,7 @@ export default function Checkout() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   const shops = cart?.shops || [];
   const isEmpty = !isLoading && !error && shops.length === 0 && orders.length === 0;
@@ -127,13 +129,11 @@ export default function Checkout() {
     if (pendingStripeOrders.length > 0) return;
     if (!hasValidCart || !paymentMethod) return;
     if (paymentMethod === "STRIPE" && shops.length !== 1) {
-      setError(
-        "O pagamento Stripe só suporta uma loja por checkout neste momento."
-      );
+      setError(t("stripeSingleShopOnly"));
       return;
     }
     if (paymentMethod === "STRIPE" && !stripePromise) {
-      setError("Stripe não está configurado neste ambiente.");
+      setError(t("stripeNotConfigured"));
       return;
     }
 
@@ -150,7 +150,7 @@ export default function Checkout() {
 
       setOrders(createdOrders);
     } catch (checkoutError) {
-      setError(getErrorMessage(checkoutError, "Não foi possível confirmar a encomenda"));
+      setError(getErrorMessage(checkoutError, t("confirmOrderFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +169,7 @@ export default function Checkout() {
       await checkoutOrder("PAYPAL");
       redirectTo(PAYPAL_MOCK_REDIRECT_URL);
     } catch (checkoutError) {
-      setError(getErrorMessage(checkoutError, "Não foi possível iniciar o PayPal"));
+      setError(getErrorMessage(checkoutError, t("startPayPalFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -186,9 +186,9 @@ export default function Checkout() {
     try {
       setIsSubmitting(true);
       await checkoutOrder("MBWAY", { phone: normalizedMbWayPhone });
-      setMbWayMessage(`Pedido MB WAY iniciado para o número ${normalizedMbWayPhone}`);
+      setMbWayMessage(t("mbWayStarted", { phone: normalizedMbWayPhone }));
     } catch (checkoutError) {
-      setError(getErrorMessage(checkoutError, "Não foi possível iniciar o MB WAY"));
+      setError(getErrorMessage(checkoutError, t("startMbWayFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -202,28 +202,28 @@ export default function Checkout() {
   if (orders.length > 0) {
     return (
       <main className="mx-auto my-10 max-w-4xl px-4 text-black">
-        <h1 className="text-3xl font-semibold">Encomenda confirmada</h1>
+        <h1 className="text-3xl font-semibold">{t("orderConfirmed")}</h1>
         <p className="mt-4 text-gray-700">
-          O checkout foi registado com sucesso.
+          {t("checkoutRegistered")}
         </p>
 
         <section className="mt-8">
-          <h2 className="text-xl font-semibold">Encomendas criadas</h2>
+          <h2 className="text-xl font-semibold">{t("createdOrders")}</h2>
           <ul className="mt-4 space-y-3">
             {orders.map((order) => (
               <li key={order.id} className="border border-gray-200 p-4">
                 <p className="font-semibold">
-                  Encomenda n.º {order.id} - {order.shopName}
+                  {t("orderNumberShop", { id: order.id, shopName: order.shopName })}
                 </p>
-                <p className="text-sm text-gray-700">Estado: {order.status}</p>
+                <p className="text-sm text-gray-700">{t("status")}: {order.status}</p>
                 <p className="text-sm text-gray-700">
-                  Total: {formatPrice(order.totalAmount)}
+                  {t("total")}: {formatPrice(order.totalAmount)}
                 </p>
               </li>
             ))}
           </ul>
           <p className="mt-6 text-2xl font-semibold">
-            Total: {formatPrice(successTotal)}
+            {t("total")}: {formatPrice(successTotal)}
           </p>
         </section>
       </main>
@@ -232,23 +232,23 @@ export default function Checkout() {
 
   return (
     <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      <h1 className="text-3xl font-semibold">Checkout</h1>
+      <h1 className="text-3xl font-semibold">{t("checkout")}</h1>
 
-      {isLoading && <p className="mt-6">A carregar checkout...</p>}
+      {isLoading && <p className="mt-6">{t("loadingCheckout")}</p>}
       {error && (
         <p className="mt-6 text-red-600" role="alert">
           {error}
         </p>
       )}
       {isEmpty && (
-        <p className="mt-6 text-gray-600">O carrinho está vazio.</p>
+        <p className="mt-6 text-gray-600">{t("emptyCart")}</p>
       )}
 
       {!isLoading && !isEmpty && shops.length > 0 && (
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section aria-labelledby="order-summary-title">
             <h2 id="order-summary-title" className="text-xl font-semibold">
-              Resumo da encomenda
+              {t("orderSummary")}
             </h2>
 
             <div className="mt-4 space-y-6">
@@ -257,7 +257,7 @@ export default function Checkout() {
                   <div className="flex items-center justify-between gap-4">
                     <h3 className="font-semibold">{shop.shopName}</h3>
                     <p className="font-semibold">
-                      Subtotal: {formatPrice(shop.subtotal)}
+                      {t("subtotal")}: {formatPrice(shop.subtotal)}
                     </p>
                   </div>
 
@@ -268,10 +268,10 @@ export default function Checkout() {
                           <div>
                             <p className="font-semibold">{item.productName}</p>
                             <p className="text-gray-600">
-                              Tamanho: {item.size || "N/A"} · Cor: {item.color || "N/A"}
+                              {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                             </p>
                             <p className="text-gray-600">
-                              Quantidade: {item.quantity} x {formatPrice(item.unitPrice)}
+                              {t("quantityUnit", { quantity: item.quantity, unitPrice: formatPrice(item.unitPrice) })}
                             </p>
                           </div>
                           <p className="font-semibold">
@@ -286,17 +286,17 @@ export default function Checkout() {
             </div>
 
             <p className="mt-6 text-2xl font-semibold">
-              Total geral: {formatPrice(cart.grandTotal)}
+              {t("grandTotal")}: {formatPrice(cart.grandTotal)}
             </p>
           </section>
 
           <aside aria-labelledby="payment-title">
             <h2 id="payment-title" className="text-xl font-semibold">
-              Pagamento
+              {t("payment")}
             </h2>
 
             <label className="mt-4 block text-sm font-semibold" htmlFor="paymentMethod">
-              Método de pagamento
+              {t("paymentMethod")}
             </label>
             <select
               id="paymentMethod"
@@ -319,14 +319,14 @@ export default function Checkout() {
                 disabled={isSubmitting || orders.length > 0 || !hasValidCart}
                 className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "A iniciar PayPal..." : "Pagar com PayPal"}
+                {isSubmitting ? t("startingPayPal") : t("payWithPayPal")}
               </button>
             )}
 
             {paymentMethod === "MBWAY" && (
               <form onSubmit={handleMbWayPayment} className="mt-5">
                 <label className="block text-sm font-semibold" htmlFor="mbWayPhone">
-                  Número de telemóvel
+                  {t("phoneNumber")}
                 </label>
                 <input
                   id="mbWayPhone"
@@ -341,7 +341,7 @@ export default function Checkout() {
                   disabled={isMbWaySubmitDisabled}
                   className="mt-4 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSubmitting ? "A iniciar MB WAY..." : "Iniciar MB WAY"}
+                  {isSubmitting ? t("startingMbWay") : t("startMbWay")}
                 </button>
                 {mbWayMessage && (
                   <p className="mt-3 text-sm text-green-700" role="status">
@@ -353,7 +353,7 @@ export default function Checkout() {
 
             {paymentMethod === "STRIPE" && !stripePromise && (
               <p className="mt-5 text-red-600" role="alert">
-                Stripe não está configurado neste ambiente.
+                {t("stripeNotConfigured")}
               </p>
             )}
 
@@ -370,7 +370,7 @@ export default function Checkout() {
                 disabled={isConfirmDisabled}
                 className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "A confirmar..." : "Confirmar encomenda"}
+                {isSubmitting ? t("confirming") : t("confirmOrder")}
               </button>
             )}
           </aside>

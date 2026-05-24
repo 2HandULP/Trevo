@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   getCart,
   removeCartItem,
   updateCartItem,
 } from "../services/cartService";
-import { productImageAlt } from "../lib/imageAlt";
 
 function formatPrice(value) {
   return new Intl.NumberFormat("pt-PT", {
@@ -22,6 +22,7 @@ function getErrorMessage(error, fallback) {
 }
 
 export default function Cart() {
+  const { t } = useTranslation("checkout");
   const [cart, setCart] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +47,7 @@ export default function Cart() {
         }
       } catch (loadError) {
         if (active) {
-          setError(getErrorMessage(loadError, "Nao foi possivel carregar o carrinho"));
+          setError(getErrorMessage(loadError, t("loadCartFailed")));
         }
       } finally {
         if (active) {
@@ -60,7 +61,7 @@ export default function Cart() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   async function handleQuantityChange(item, nextQuantity) {
     if (nextQuantity < 1) {
@@ -73,7 +74,7 @@ export default function Cart() {
       setCart(updatedCart);
       setError("");
     } catch (updateError) {
-      setError(getErrorMessage(updateError, "Nao foi possivel atualizar o carrinho"));
+      setError(getErrorMessage(updateError, t("updateCartFailed")));
     } finally {
       setPendingVariantId(null);
     }
@@ -85,7 +86,7 @@ export default function Cart() {
       await removeCartItem(item.variantId);
       await loadCart();
     } catch (removeError) {
-      setError(getErrorMessage(removeError, "Nao foi possivel remover o item"));
+      setError(getErrorMessage(removeError, t("removeItemFailed")));
     } finally {
       setPendingVariantId(null);
     }
@@ -96,16 +97,16 @@ export default function Cart() {
 
   return (
     <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      <h1 className="text-3xl font-semibold">Carrinho</h1>
+      <h1 className="text-3xl font-semibold">{t("cart")}</h1>
 
-      {isLoading && <p className="mt-6">A carregar carrinho...</p>}
+      {isLoading && <p className="mt-6">{t("loadingCart")}</p>}
       {error && (
         <p className="mt-6 text-red-600" role="alert">
           {error}
         </p>
       )}
       {isEmpty && (
-        <p className="mt-6 text-gray-600">O carrinho esta vazio.</p>
+        <p className="mt-6 text-gray-600">{t("emptyCart")}</p>
       )}
 
       {!isLoading && !error && shops.length > 0 && (
@@ -121,7 +122,7 @@ export default function Cart() {
                   {shop.shopName}
                 </h2>
                 <p className="font-semibold">
-                  Subtotal: {formatPrice(shop.subtotal)}
+                  {t("subtotal")}: {formatPrice(shop.subtotal)}
                 </p>
               </div>
 
@@ -137,25 +138,25 @@ export default function Cart() {
                       {item.image ? (
                         <img
                           src={item.image}
-                          alt={productImageAlt(item.productName)}
+                          alt={t("productImageAlt", { name: item.productName || t("unnamedProduct") })}
                           className="h-24 w-24 object-cover"
                         />
                       ) : (
                         <div className="flex h-24 w-24 items-center justify-center bg-gray-100 text-sm text-gray-500">
-                          Sem imagem
+                          {t("noImage")}
                         </div>
                       )}
 
                       <div>
                         <h3 className="font-semibold">{item.productName}</h3>
                         <p className="mt-1 text-sm text-gray-600">
-                          Tamanho: {item.size || "N/A"} · Cor: {item.color || "N/A"}
+                          {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                         </p>
                         <p className="mt-2 text-sm">
-                          Preco unitario: {formatPrice(item.unitPrice)}
+                          {t("unitPrice")}: {formatPrice(item.unitPrice)}
                         </p>
                         <p className="text-sm font-semibold">
-                          Subtotal: {formatPrice(item.subtotal)}
+                          {t("subtotal")}: {formatPrice(item.subtotal)}
                         </p>
                       </div>
 
@@ -166,12 +167,12 @@ export default function Cart() {
                             handleQuantityChange(item, item.quantity - 1)
                           }
                           disabled={isPending || item.quantity <= 1}
-                          aria-label={`Diminuir quantidade de ${item.productName}`}
+                          aria-label={t("decreaseQuantity", { name: item.productName })}
                           className="h-9 w-9 border border-gray-300 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           -
                         </button>
-                        <span aria-label={`Quantidade de ${item.productName}`}>
+                        <span aria-label={t("quantityOf", { name: item.productName })}>
                           {item.quantity}
                         </span>
                         <button
@@ -180,7 +181,7 @@ export default function Cart() {
                             handleQuantityChange(item, item.quantity + 1)
                           }
                           disabled={isPending}
-                          aria-label={`Aumentar quantidade de ${item.productName}`}
+                          aria-label={t("increaseQuantity", { name: item.productName })}
                           className="h-9 w-9 border border-gray-300 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           +
@@ -191,7 +192,7 @@ export default function Cart() {
                           disabled={isPending}
                           className="ml-2 border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          Remover
+                          {t("remove")}
                         </button>
                       </div>
                     </li>
@@ -203,7 +204,7 @@ export default function Cart() {
 
           <div className="flex justify-end">
             <p className="text-2xl font-semibold">
-              Total geral: {formatPrice(cart.grandTotal)}
+              {t("grandTotal")}: {formatPrice(cart.grandTotal)}
             </p>
           </div>
         </div>

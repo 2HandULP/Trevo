@@ -4,10 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterAll;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +21,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -31,10 +35,13 @@ import pt.trevo.trevo_api.persistence.entity.Shop;
 import pt.trevo.trevo_api.persistence.entity.ShopStatus;
 import pt.trevo.trevo_api.persistence.entity.Status;
 import pt.trevo.trevo_api.persistence.entity.User;
+import pt.trevo.trevo_api.persistence.entity.Variant;
 import pt.trevo.trevo_api.persistence.repository.ProductRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
+import pt.trevo.trevo_api.persistence.repository.VariantRepository;
 
+@Tag("performance")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -44,6 +51,7 @@ class CrudLatencyTest {
     private static final int ITERATIONS = 100;
     private static final long P95_MS    = 300;
 
+    // Container lifecycle (start/stop) is managed by the Testcontainers JUnit extension.
     @Container
     @ServiceConnection
     @SuppressWarnings("resource")
@@ -54,18 +62,24 @@ class CrudLatencyTest {
 
     @Autowired private TestRestTemplate  restTemplate;
     @Autowired private JwtService        jwtService;
+    @Autowired private ObjectMapper      objectMapper;
     @Autowired private UserRepository    userRepository;
     @Autowired private ShopRepository    shopRepository;
     @Autowired private ProductRepository productRepository;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired private VariantRepository variantRepository;
 
     private HttpHeaders ownerHeaders;
     private Long        shopId;
-    private Long        userId;
     private Long        productId;
     private String      createBody;
     private String      updateBody;
+
+    // Pre-created variant IDs consumed one-per-iteration by the DELETE test.
+    private final List<Long>    variantIds   = new ArrayList<>();
+    private final AtomicInteger variantIndex = new AtomicInteger(0);
+
+    // No @AfterAll cleanup — the Testcontainers container is destroyed after the class,
+    // taking the entire database with it.
 
     @BeforeAll
     void setUp() throws Exception {
@@ -76,7 +90,6 @@ class CrudLatencyTest {
             .role(Role.SHOP_OWNER)
             .status(Status.ACTIVE)
             .build());
-        userId = owner.getId();
 
         Shop shop = shopRepository.save(Shop.builder()
             .owner(owner)
@@ -100,23 +113,31 @@ class CrudLatencyTest {
         ownerHeaders.setBearerAuth(jwtService.generateToken(owner));
         ownerHeaders.setContentType(MediaType.APPLICATION_JSON);
 
+        // Use Spring-configured ObjectMapper so any registered modules (JavaTimeModule, etc.)
+        // are always in sync with what the application expects.
         createBody = objectMapper.writeValueAsString(
             new CreateProductRequest("LatencyProduct", "Test", new BigDecimal("19.99"), "Brand", null));
         updateBody = objectMapper.writeValueAsString(
             new UpdateProductRequest("UpdatedName", null, null, null, null));
-    }
 
-    @AfterAll
-    void cleanup() {
-        productRepository.deleteAll(productRepository.findByShopId(shopId));
-        shopRepository.deleteById(shopId);
-        userRepository.deleteById(userId);
+        // Pre-create exactly WARMUP + ITERATIONS unique variants for the DELETE test so
+        // each iteration has a fresh variant to delete.
+        for (int i = 0; i < WARMUP + ITERATIONS; i++) {
+            Variant v = variantRepository.save(Variant.builder()
+                .product(product)
+                .size("S")
+                .color("DelColor" + i)
+                .stock(1)
+                .build());
+            variantIds.add(v.getId());
+        }
     }
 
     @Test
     void getProduct_p95Under300ms() {
         String url = "/api/products/" + productId;
-        assertP95("GET " + url, () -> restTemplate.getForEntity(url, String.class));
+        assertP95("GET " + url,
+            () -> restTemplate.getForEntity(url, String.class));
     }
 
     @Test
@@ -128,11 +149,14 @@ class CrudLatencyTest {
     @Test
     void browseByShop_p95Under300ms() {
         String url = "/api/products?shopId=" + shopId;
-        assertP95("GET " + url, () -> restTemplate.getForEntity(url, String.class));
+        assertP95("GET " + url,
+            () -> restTemplate.getForEntity(url, String.class));
     }
 
     @Test
     void createProduct_p95Under300ms() {
+        // Each iteration commits a new product row; rows accumulate (up to 110 including warmup)
+        // but the Testcontainers container is destroyed after the class so no cleanup is needed.
         HttpEntity<String> entity = new HttpEntity<>(createBody, ownerHeaders);
         assertP95("POST /api/products",
             () -> restTemplate.postForEntity("/api/products", entity, String.class));
@@ -146,27 +170,35 @@ class CrudLatencyTest {
             () -> restTemplate.exchange(url, HttpMethod.PUT, entity, String.class));
     }
 
-    private void assertP95(String label, Runnable action) {
+    @Test
+    void deleteVariant_p95Under300ms() {
+        String base = "/api/products/" + productId + "/variants/";
+        assertP95("DELETE " + base + "{variantId}", () -> {
+            String url = base + variantIds.get(variantIndex.getAndIncrement());
+            return restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(ownerHeaders), Void.class);
+        });
+    }
+
+    private void assertP95(String label, Supplier<ResponseEntity<?>> action) {
+        // Warmup also validates that each endpoint returns a 2xx status.
+        // If an endpoint is broken, the test fails here rather than silently benchmarking errors.
         for (int i = 0; i < WARMUP; i++) {
-            action.run();
+            ResponseEntity<?> response = action.get();
+            assertThat(response.getStatusCode().is2xxSuccessful())
+                .as("Warmup [%s] returned unexpected status %s", label, response.getStatusCode())
+                .isTrue();
         }
 
         long[] durations = new long[ITERATIONS];
         for (int i = 0; i < ITERATIONS; i++) {
             long start = System.nanoTime();
-            action.run();
+            action.get();
             durations[i] = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
         }
 
-        long p95 = p95(durations);
+        long p95 = PerfTestUtils.p95(durations);
         assertThat(p95)
             .as("[%s] p95 was %dms, threshold %dms", label, p95, P95_MS)
             .isLessThan(P95_MS);
-    }
-
-    private static long p95(long[] durations) {
-        long[] sorted = Arrays.copyOf(durations, durations.length);
-        Arrays.sort(sorted);
-        return sorted[(int)(sorted.length * 0.95)];
     }
 }

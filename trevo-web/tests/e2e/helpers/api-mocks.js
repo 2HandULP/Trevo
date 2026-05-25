@@ -46,7 +46,8 @@ export async function mockProductSearch(page, results) {
 
 export async function mockProductDetail(page, product) {
   await page.route("**/api/products/*", (route) => {
-    if (route.request().method() === "GET") {
+    const url = route.request().url();
+    if (route.request().method() === "GET" && !url.includes("/search")) {
       return json(route, product);
     }
     return route.continue();

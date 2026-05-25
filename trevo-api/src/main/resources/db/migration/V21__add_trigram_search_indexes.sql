@@ -1,5 +1,9 @@
 -- NFR-03: Enable pg_trgm so that lower(col) LIKE '%keyword%' queries can use GIN indexes.
 -- The existing GIN indexes (to_tsvector) are for full-text search and are NOT used by LIKE.
+--
+-- NOTE: On managed databases (AWS RDS, Azure Database for PostgreSQL) pg_trgm is available
+-- but requires superuser or the provider's elevated role (e.g. rds_superuser on RDS).
+-- Verify the extension can be created in staging/production before deploying this migration.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Expression-based GIN trigram indexes matching the lower(col) LIKE pattern in

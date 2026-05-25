@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,16 +30,18 @@ import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.service.ProductService;
 
+@Tag("performance")
 @SpringBootTest
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ProductSearchPerformanceTest {
 
     private static final int PRODUCT_COUNT = 10_000;
-    private static final int WARMUP       = 10;
-    private static final int ITERATIONS   = 100;
-    private static final long P95_MS      = 500;
+    private static final int WARMUP        = 10;
+    private static final int ITERATIONS    = 100;
+    private static final long P95_MS       = 500;
 
+    // Container lifecycle (start/stop) is managed by the Testcontainers JUnit extension.
     @Container
     @ServiceConnection
     @SuppressWarnings("resource")
@@ -48,13 +50,12 @@ class ProductSearchPerformanceTest {
         .withUsername("trevo")
         .withPassword("trevo");
 
-    @Autowired private ProductService   productService;
+    @Autowired private ProductService    productService;
     @Autowired private ProductRepository productRepository;
-    @Autowired private ShopRepository   shopRepository;
-    @Autowired private UserRepository   userRepository;
+    @Autowired private ShopRepository    shopRepository;
+    @Autowired private UserRepository    userRepository;
 
     private Long shopId;
-    private Long userId;
 
     @BeforeAll
     void seedTenThousandProducts() {
@@ -65,7 +66,6 @@ class ProductSearchPerformanceTest {
             .role(Role.SHOP_OWNER)
             .status(Status.ACTIVE)
             .build());
-        userId = owner.getId();
 
         Shop shop = shopRepository.save(Shop.builder()
             .owner(owner)
@@ -95,12 +95,8 @@ class ProductSearchPerformanceTest {
         }
     }
 
-    @AfterAll
-    void cleanup() {
-        productRepository.deleteAll(productRepository.findByShopId(shopId));
-        shopRepository.deleteById(shopId);
-        userRepository.deleteById(userId);
-    }
+    // No @AfterAll cleanup — the Testcontainers container is destroyed after the class,
+    // taking the entire database with it.
 
     @Test
     void keywordSearch_p95Under500ms() {
@@ -143,7 +139,28 @@ class ProductSearchPerformanceTest {
             .isLessThan(P95_MS);
     }
 
-    // Returns the value at the 95th percentile (1-indexed: the 95th element out of 100).
+    @Test
+    void combinedKeywordAndPriceSearch_p95Under500ms() {
+        BigDecimal min = new BigDecimal("20.00");
+        BigDecimal max = new BigDecimal("200.00");
+
+        for (int i = 0; i < WARMUP; i++) {
+            productService.searchProducts("dress", min, max, null, null, PageRequest.of(0, 20));
+        }
+
+        long[] durations = new long[ITERATIONS];
+        for (int i = 0; i < ITERATIONS; i++) {
+            long start = System.nanoTime();
+            productService.searchProducts("dress", min, max, null, null, PageRequest.of(0, 20));
+            durations[i] = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+        }
+
+        long p95 = p95(durations);
+        assertThat(p95)
+            .as("combined keyword+price search p95 was %dms, threshold %dms", p95, P95_MS)
+            .isLessThan(P95_MS);
+    }
+
     private static long p95(long[] durations) {
         long[] sorted = Arrays.copyOf(durations, durations.length);
         Arrays.sort(sorted);

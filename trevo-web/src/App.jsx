@@ -24,6 +24,7 @@ import PayoutDashboard from "./pages/PayoutDashboard";
 import Checkout from "./pages/Checkout";
 import Cart from "./pages/Cart";
 import Unauthorized from "./pages/Unauthorized";
+import AppLayout from "./components/AppLayout";
 import NotificationIndicator from "./components/NotificationIndicator";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -31,7 +32,7 @@ import { ROLES } from "./lib/roles";
 
 export default function App() {
   return (
-    <>
+    <AppLayout>
       <NotificationIndicator />
       <Routes>
         <Route path="/" element={<Home />} />
@@ -82,6 +83,6 @@ export default function App() {
           <Route path="/admin" element={<Admin />} />
         </Route>
       </Routes>
-    </>
+    </AppLayout>
   );
 }

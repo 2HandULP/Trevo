@@ -127,7 +127,7 @@ export default function NotificationIndicator() {
   }
 
   return (
-    <div className="fixed right-4 top-4 z-50" ref={containerRef}>
+    <div className="fixed right-4 top-24 z-50" ref={containerRef}>
       <button
         type="button"
         aria-label="Notificacoes"

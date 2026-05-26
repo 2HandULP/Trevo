@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
+import MetricCard from "../components/MetricCard";
+import StatusBadge from "../components/StatusBadge";
 import { useAuth } from "../hooks/useAuth";
 import { fetchUserProfile } from "../lib/authApi";
 
@@ -51,22 +54,50 @@ export default function Dashboard() {
   }, [accessToken, logout, navigate, t]);
 
   return (
-    <div style={{ color: "black", fontSize: "24px", padding: "20px" }}>
-      <h1>{t("dashboard")}</h1>
-      <p>{t("authenticated")}: {isAuthenticated ? t("yes") : t("no")}</p>
-      {isLoading && <p>{t("loadingProfile")}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow={t("authenticated")}
+        title={t("dashboard")}
+        description={`${t("authenticated")}: ${isAuthenticated ? t("yes") : t("no")}`}
+      />
+
+      {isLoading && (
+        <div className="grid gap-4 sm:grid-cols-3" aria-live="polite">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="h-32 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" />
+          ))}
+        </div>
+      )}
+      {error && <p className="alert alert-error" role="alert">{error}</p>}
+
       {profile && (
         <>
-          <p>{t("profileLoaded")}</p>
-          <p>{t("accountType")}: {profile.role}</p>
-          <p>Email: {profile.email}</p>
-          <p>{t("name")}: {profile.fullName}</p>
-          <p>{t("accountStatus")}: {profile.status}</p>
-          {profile.shopName && <p>{t("shop")}: {profile.shopName}</p>}
-          {profile.shopStatus && <p>{t("shopStatus")}: {profile.shopStatus}</p>}
+          <div className="grid gap-4 md:grid-cols-3">
+            <MetricCard label={t("accountType")} value={profile.role} detail={t("profileLoaded")} />
+            <MetricCard label={t("accountStatus")} value={profile.status} />
+            <MetricCard label={t("role")} value={profile.shopName || profile.fullName || t("noRole")} />
+          </div>
+
+          <section className="page-card mt-8 p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-black uppercase text-[var(--color-muted)]">{t("name")}</p>
+                <h2 className="mt-1 text-2xl font-black">{profile.fullName}</h2>
+                <p className="mt-2 text-[var(--color-muted)]">Email: {profile.email}</p>
+              </div>
+              <StatusBadge status={profile.status}>{profile.status}</StatusBadge>
+            </div>
+            {(profile.shopName || profile.shopStatus) && (
+              <div className="mt-6 grid gap-4 border-t border-black/10 pt-6 sm:grid-cols-2">
+                {profile.shopName && <MetricCard label={t("shop")} value={profile.shopName} />}
+                {profile.shopStatus && (
+                  <MetricCard label={t("shopStatus")} value={profile.shopStatus} />
+                )}
+              </div>
+            )}
+          </section>
         </>
       )}
-    </div>
+    </main>
   );
 }

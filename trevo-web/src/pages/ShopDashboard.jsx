@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
+import MetricCard from "../components/MetricCard";
+import StatusBadge from "../components/StatusBadge";
 import { getShopDashboard } from "../services/shopService";
 
 const statusLabelKeys = {
@@ -80,41 +83,54 @@ export default function ShopDashboard() {
   const revenue = dashboard?.revenue || { total: 0, currency: "EUR" };
 
   return (
-    <div className="mx-auto my-16 max-w-3xl p-8 text-black">
-      <h1>{t("shopDashboard")}</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow={t("shopDashboard")}
+        title={shop?.name || t("shopDashboard")}
+        description={shop?.description || t("loadingDashboard")}
+        actions={<Link to="/shop/payouts" className="btn bg-white text-[var(--color-primary-dark)]">{t("viewPayouts")}</Link>}
+      />
 
-      {isLoading && <p aria-live="polite">{t("loadingDashboard")}</p>}
+      {isLoading && (
+        <div className="grid gap-4 md:grid-cols-3" aria-live="polite">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="h-32 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" />
+          ))}
+        </div>
+      )}
       {error && (
-        <p role="alert" className="text-red-600">
+        <p role="alert" className="alert alert-error">
           {error}
         </p>
       )}
 
       {!isLoading && !error && shop && (
         <>
-          <section>
-            <h2>{shop.name}</h2>
-            <p>{shop.description}</p>
-            <p>{t("status")}: {getStatusLabel(shop.status, t)}</p>
-          </section>
+          <div className="grid gap-4 md:grid-cols-3">
+            <MetricCard label={t("revenue")} value={formatRevenue(revenue.total, revenue.currency)} />
+            <MetricCard label={t("orders")} value={orders.length} />
+            <article className="data-card">
+              <p className="text-sm font-black uppercase text-[var(--color-muted)]">{t("status")}</p>
+              <p className="sr-only">{t("status")}: {getStatusLabel(shop.status, t)}</p>
+              <div className="mt-4">
+                <StatusBadge status={shop.status}>{getStatusLabel(shop.status, t)}</StatusBadge>
+              </div>
+            </article>
+          </div>
 
-          <section>
-            <h2>{t("revenue")}</h2>
-            <p>{formatRevenue(revenue.total, revenue.currency)}</p>
-            <p>
-              <Link to="/shop/payouts">{t("viewPayouts")}</Link>
-            </p>
-          </section>
-
-          <section>
-            <h2>{t("orders")}</h2>
+          <section className="page-card mt-8 p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-2xl font-black">{t("orders")}</h2>
+              <Link to="/shop/orders" className="btn btn-secondary">Ver encomendas</Link>
+            </div>
             {orders.length === 0 ? (
-              <p>{t("noOrders")}</p>
+              <p className="mt-6 text-[var(--color-muted)]">{t("noOrders")}</p>
             ) : (
-              <ul>
+              <ul className="mt-6 divide-y divide-black/10">
                 {orders.map((order) => (
-                  <li key={order.id}>
-                    #{order.id} - {getOrderStatusLabel(order.status, t)}
+                  <li key={order.id} className="flex items-center justify-between gap-4 py-4">
+                    <span className="font-black">#{order.id}</span>
+                    <StatusBadge status={order.status}>{getOrderStatusLabel(order.status, t)}</StatusBadge>
                   </li>
                 ))}
               </ul>
@@ -122,6 +138,6 @@ export default function ShopDashboard() {
           </section>
         </>
       )}
-    </div>
+    </main>
   );
 }

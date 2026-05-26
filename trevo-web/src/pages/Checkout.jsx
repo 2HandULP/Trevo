@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import DashboardHeader from "../components/DashboardHeader";
+import StatusBadge from "../components/StatusBadge";
 import { redirectTo } from "../lib/checkoutRedirect";
 import { loadStripe } from "@stripe/stripe-js";
 import StripePaymentForm from "./StripePaymentForm";
@@ -201,28 +203,29 @@ export default function Checkout() {
 
   if (orders.length > 0) {
     return (
-      <main className="mx-auto my-10 max-w-4xl px-4 text-black">
-        <h1 className="text-3xl font-semibold">{t("orderConfirmed")}</h1>
-        <p className="mt-4 text-gray-700">
-          {t("checkoutRegistered")}
-        </p>
+      <main className="page-shell">
+        <DashboardHeader
+          eyebrow={t("checkout")}
+          title={t("orderConfirmed")}
+          description={t("checkoutRegistered")}
+        />
 
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold">{t("createdOrders")}</h2>
+        <section className="page-card p-6">
+          <h2 className="text-2xl font-black">{t("createdOrders")}</h2>
           <ul className="mt-4 space-y-3">
             {orders.map((order) => (
-              <li key={order.id} className="border border-gray-200 p-4">
-                <p className="font-semibold">
+              <li key={order.id} className="rounded-lg border border-black/10 bg-[var(--color-surface-raised)] p-4">
+                <p className="font-black">
                   {t("orderNumberShop", { id: order.id, shopName: order.shopName })}
                 </p>
-                <p className="text-sm text-gray-700">{t("status")}: {order.status}</p>
-                <p className="text-sm text-gray-700">
+                <p className="mt-2 text-sm text-[var(--color-muted)]">{t("status")}: {order.status}</p>
+                <p className="text-sm text-[var(--color-muted)]">
                   {t("total")}: {formatPrice(order.totalAmount)}
                 </p>
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-2xl font-semibold">
+          <p className="mt-6 text-2xl font-black">
             {t("total")}: {formatPrice(successTotal)}
           </p>
         </section>
@@ -231,32 +234,36 @@ export default function Checkout() {
   }
 
   return (
-    <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      <h1 className="text-3xl font-semibold">{t("checkout")}</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow={t("checkout")}
+        title={t("checkout")}
+        description="Confirma a encomenda e escolhe um metodo de pagamento seguro."
+      />
 
-      {isLoading && <p className="mt-6">{t("loadingCheckout")}</p>}
+      {isLoading && <div className="h-72 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />}
       {error && (
-        <p className="mt-6 text-red-600" role="alert">
+        <p className="alert alert-error" role="alert">
           {error}
         </p>
       )}
       {isEmpty && (
-        <p className="mt-6 text-gray-600">{t("emptyCart")}</p>
+        <div className="page-card p-8 text-center text-[var(--color-muted)]">{t("emptyCart")}</div>
       )}
 
       {!isLoading && !isEmpty && shops.length > 0 && (
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <section aria-labelledby="order-summary-title">
-            <h2 id="order-summary-title" className="text-xl font-semibold">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="page-card p-6" aria-labelledby="order-summary-title">
+            <h2 id="order-summary-title" className="text-2xl font-black">
               {t("orderSummary")}
             </h2>
 
             <div className="mt-4 space-y-6">
               {shops.map((shop) => (
-                <section key={shop.shopId} className="border-b border-gray-200 pb-5">
+                <section key={shop.shopId} className="rounded-lg border border-black/10 bg-[var(--color-surface-raised)] p-4">
                   <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-semibold">{shop.shopName}</h3>
-                    <p className="font-semibold">
+                    <h3 className="font-black">{shop.shopName}</h3>
+                    <p className="font-black">
                       {t("subtotal")}: {formatPrice(shop.subtotal)}
                     </p>
                   </div>
@@ -266,15 +273,15 @@ export default function Checkout() {
                       <li key={item.cartItemId || item.variantId} className="text-sm">
                         <div className="flex justify-between gap-4">
                           <div>
-                            <p className="font-semibold">{item.productName}</p>
-                            <p className="text-gray-600">
+                            <p className="font-black">{item.productName}</p>
+                            <p className="text-[var(--color-muted)]">
                               {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                             </p>
-                            <p className="text-gray-600">
+                            <p className="text-[var(--color-muted)]">
                               {t("quantityUnit", { quantity: item.quantity, unitPrice: formatPrice(item.unitPrice) })}
                             </p>
                           </div>
-                          <p className="font-semibold">
+                          <p className="font-black">
                             {formatPrice(item.subtotal)}
                           </p>
                         </div>
@@ -285,66 +292,73 @@ export default function Checkout() {
               ))}
             </div>
 
-            <p className="mt-6 text-2xl font-semibold">
+            <p className="mt-6 text-2xl font-black">
               {t("grandTotal")}: {formatPrice(cart.grandTotal)}
             </p>
           </section>
 
-          <aside aria-labelledby="payment-title">
-            <h2 id="payment-title" className="text-xl font-semibold">
+          <aside className="page-card h-fit p-6 lg:sticky lg:top-28" aria-labelledby="payment-title">
+            <h2 id="payment-title" className="text-2xl font-black">
               {t("payment")}
             </h2>
+            <div className="mt-4">
+              <StatusBadge tone="success">Pagamento seguro</StatusBadge>
+            </div>
 
-            <label className="mt-4 block text-sm font-semibold" htmlFor="paymentMethod">
+            <label className="form-field mt-5" htmlFor="paymentMethod">
+              <span className="form-label">
               {t("paymentMethod")}
-            </label>
+              </span>
             <select
-              id="paymentMethod"
-              name="paymentMethod"
-              value={paymentMethod}
-              onChange={handlePaymentMethodChange}
-              className="mt-2 w-full border border-gray-300 p-2"
-            >
-              {paymentMethods.map((method) => (
-                <option key={method.value} value={method.value}>
-                  {method.label}
-                </option>
-              ))}
-            </select>
+                className="form-input"
+                id="paymentMethod"
+                name="paymentMethod"
+                value={paymentMethod}
+                onChange={handlePaymentMethodChange}
+              >
+                {paymentMethods.map((method) => (
+                  <option key={method.value} value={method.value}>
+                    {method.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             {paymentMethod === "PAYPAL" && (
               <button
                 type="button"
                 onClick={handlePayPalPayment}
                 disabled={isSubmitting || orders.length > 0 || !hasValidCart}
-                className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn btn-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? t("startingPayPal") : t("payWithPayPal")}
               </button>
             )}
 
             {paymentMethod === "MBWAY" && (
-              <form onSubmit={handleMbWayPayment} className="mt-5">
-                <label className="block text-sm font-semibold" htmlFor="mbWayPhone">
+              <form onSubmit={handleMbWayPayment} className="mt-5 space-y-4">
+                <label className="form-field" htmlFor="mbWayPhone">
+                  <span className="form-label">
                   {t("phoneNumber")}
-                </label>
+                  </span>
                 <input
-                  id="mbWayPhone"
-                  name="mbWayPhone"
-                  type="tel"
-                  value={mbWayPhone}
-                  onChange={(event) => setMbWayPhone(event.target.value)}
-                  className="mt-2 w-full border border-gray-300 p-2"
-                />
+                    className="form-input"
+                    id="mbWayPhone"
+                    name="mbWayPhone"
+                    type="tel"
+                    value={mbWayPhone}
+                    onChange={(event) => setMbWayPhone(event.target.value)}
+                  />
+                </label>
                 <button
                   type="submit"
                   disabled={isMbWaySubmitDisabled}
-                  className="mt-4 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="btn btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? t("startingMbWay") : t("startMbWay")}
                 </button>
                 {mbWayMessage && (
-                  <p className="mt-3 text-sm text-green-700" role="status">
+                  <p className="alert alert-success text-sm" role="status">
                     {mbWayMessage}
                   </p>
                 )}
@@ -352,7 +366,7 @@ export default function Checkout() {
             )}
 
             {paymentMethod === "STRIPE" && !stripePromise && (
-              <p className="mt-5 text-red-600" role="alert">
+              <p className="alert alert-error mt-5" role="alert">
                 {t("stripeNotConfigured")}
               </p>
             )}
@@ -368,7 +382,7 @@ export default function Checkout() {
                 type="button"
                 onClick={handleConfirm}
                 disabled={isConfirmDisabled}
-                className="mt-6 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn btn-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? t("confirming") : t("confirmOrder")}
               </button>

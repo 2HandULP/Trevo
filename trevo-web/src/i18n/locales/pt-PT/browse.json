@@ -63,5 +63,20 @@
   "noReviews": "Sem avaliações",
   "shopBannerAlt": "Banner da loja {{name}}",
   "shopLogoAlt": "Logo da loja {{name}}",
-  "anonymousShop": "sem nome"
+  "anonymousShop": "sem nome",
+  "marketplaceEyebrow": "Marketplace Trevo",
+  "marketplaceTitle": "Descobre pecas com curadoria e lojas independentes.",
+  "marketplaceDescription": "Filtra por estilo, preco, tamanho e cor para encontrares a proxima peca certa.",
+  "filters": "Filtros",
+  "applyFilters": "Aplicar filtros",
+  "featuredSelection": "Selecao em destaque",
+  "refineSearch": "Refinar pesquisa",
+  "shopProductsEyebrow": "Produtos da loja",
+  "sort": "Ordenar",
+  "all": "Todos",
+  "emptyProductsTitle": "Ainda nao ha produtos para mostrar",
+  "emptyProductsText": "Experimenta alterar os filtros ou voltar mais tarde para ver novas pecas.",
+  "shopCollectionsDescription": "Explora colecoes selecionadas por esta loja.",
+  "loadingProduct": "A carregar produto...",
+  "noImageAvailable": "Sem imagem disponivel"
 }

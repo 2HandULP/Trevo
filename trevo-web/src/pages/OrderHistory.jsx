@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
+import StatusBadge from "../components/StatusBadge";
 import { getBuyerOrder, getBuyerOrders } from "../services/orderService";
 
 const statusLabelKeys = {
@@ -113,21 +115,23 @@ export default function OrderHistory() {
   const isLastPage = totalPages === 0 || page >= totalPages - 1;
 
   return (
-    <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      <h1 className="text-3xl font-semibold">{t("ordersHistory")}</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow={t("ordersHistory")}
+        title={t("ordersHistory")}
+        description="Acompanha estados, detalhes e recibos das tuas encomendas."
+      />
 
       {isLoading && (
-        <p className="mt-6" aria-live="polite">
-          {t("loadingOrders")}
-        </p>
+        <div className="h-72 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />
       )}
       {error && (
-        <p className="mt-6 text-red-600" role="alert">
+        <p className="alert alert-error" role="alert">
           {error}
         </p>
       )}
       {isEmpty && (
-        <p className="mt-6 text-gray-600">{t("emptyOrders")}</p>
+        <div className="page-card p-8 text-center text-[var(--color-muted)]">{t("emptyOrders")}</div>
       )}
 
       {!isLoading && !error && orders.length > 0 && (
@@ -139,16 +143,14 @@ export default function OrderHistory() {
                   <button
                     type="button"
                     onClick={() => handleSelectOrder(order.id)}
-                    className="w-full border border-gray-200 p-4 text-left"
+                    className="w-full rounded-lg border border-black/10 bg-white p-5 text-left shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-semibold">{t("orderNumber", { id: order.id })}</p>
-                      <span className="border border-gray-300 px-2 py-1 text-xs font-semibold">
-                        {statusLabel(order.status, t)}
-                      </span>
+                      <p className="font-black">{t("orderNumber", { id: order.id })}</p>
+                      <StatusBadge status={order.status}>{statusLabel(order.status, t)}</StatusBadge>
                     </div>
-                    <p className="mt-2">{order.shopName}</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="mt-2 font-bold">{order.shopName}</p>
+                    <p className="text-sm text-[var(--color-muted)]">
                       {formatDate(order.createdAt, t)}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
@@ -165,18 +167,18 @@ export default function OrderHistory() {
                 type="button"
                 onClick={() => setPage((currentPage) => currentPage - 1)}
                 disabled={isFirstPage}
-                className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t("previous", { ns: "common" })}
               </button>
-              <span className="text-sm text-gray-600">
+              <span className="badge">
                 {t("pageOf", { ns: "browse", page: page + 1, total: Math.max(totalPages, 1) })}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((currentPage) => currentPage + 1)}
                 disabled={isLastPage}
-                className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t("next", { ns: "common" })}
               </button>
@@ -184,31 +186,27 @@ export default function OrderHistory() {
           </section>
 
           <section aria-label={t("orderDetails")}>
-            <h2 className="text-xl font-semibold">{t("details")}</h2>
+            <h2 className="text-2xl font-black">{t("details")}</h2>
             {isLoadingDetail && (
-              <p className="mt-4" aria-live="polite">
-                {t("loadingDetails")}
-              </p>
+              <div className="mt-4 h-56 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />
             )}
             {detailError && (
-              <p className="mt-4 text-red-600" role="alert">
+              <p className="alert alert-error mt-4" role="alert">
                 {detailError}
               </p>
             )}
             {!isLoadingDetail && !detailError && !selectedOrder && (
-              <p className="mt-4 text-gray-600">
+              <p className="surface-panel mt-4 p-5 text-[var(--color-muted)]">
                 {t("selectOrder")}
               </p>
             )}
             {!isLoadingDetail && !detailError && selectedOrder && (
-              <div className="mt-4 border border-gray-200 p-4">
+              <div className="page-card mt-4 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-lg font-black">
                     {t("orderNumber", { id: selectedOrder.id })}
                   </h3>
-                  <span className="border border-gray-300 px-2 py-1 text-xs font-semibold">
-                    {statusLabel(selectedOrder.status, t)}
-                  </span>
+                  <StatusBadge status={selectedOrder.status}>{statusLabel(selectedOrder.status, t)}</StatusBadge>
                 </div>
                 <p className="mt-2">{selectedOrder.shopName}</p>
                 {selectedOrder.trackingNumber && (
@@ -219,18 +217,18 @@ export default function OrderHistory() {
 
                 <ul className="mt-5 space-y-3">
                   {selectedOrder.items.map((item) => (
-                    <li key={item.id} className="border-t border-gray-200 pt-3">
+                    <li key={item.id} className="border-t border-black/10 pt-3">
                       <div className="flex justify-between gap-4">
                         <div>
-                          <p className="font-semibold">{item.productName}</p>
-                          <p className="text-sm text-gray-600">
+                          <p className="font-black">{item.productName}</p>
+                          <p className="text-sm text-[var(--color-muted)]">
                             {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-[var(--color-muted)]">
                             {t("quantityUnit", { quantity: item.quantity, unitPrice: formatPrice(item.unitPrice) })}
                           </p>
                         </div>
-                        <p className="font-semibold">
+                        <p className="font-black">
                           {formatPrice(item.subtotal)}
                         </p>
                       </div>
@@ -238,12 +236,12 @@ export default function OrderHistory() {
                   ))}
                 </ul>
 
-                <p className="mt-5 text-xl font-semibold">
+                <p className="mt-5 text-xl font-black">
                   {t("total")}: {formatPrice(selectedOrder.totalAmount)}
                 </p>
                 <Link
                   to={`/orders/${selectedOrder.id}/receipt`}
-                  className="mt-5 inline-block border border-gray-300 px-4 py-2 font-semibold"
+                  className="btn btn-secondary mt-5"
                 >
                   {t("viewReceipt")}
                 </Link>

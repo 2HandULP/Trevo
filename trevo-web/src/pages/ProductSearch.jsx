@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
-import { productImageAlt } from "../lib/imageAlt";
+import { useSearchParams } from "react-router-dom";
+import ProductCard from "../components/ProductCard";
 import { browseProducts, searchProducts } from "../services/productService";
 
 const FILTER_KEYS = ["q", "minPrice", "maxPrice", "size", "color"];
@@ -42,10 +42,6 @@ function pageNumber(page) {
 
 function totalPages(page) {
   return page?.totalPages ?? 0;
-}
-
-function productImage(product) {
-  return product.imageUrl || product.images?.[0]?.url || product.images?.[0]?.imageUrl || "";
 }
 
 export default function ProductSearch() {
@@ -146,24 +142,43 @@ export default function ProductSearch() {
   const hasNextPage = pageCount > 0 && currentPage + 1 < pageCount;
 
   return (
-    <main className="mx-auto my-10 grid max-w-6xl gap-6 text-black lg:grid-cols-[260px_1fr]">
-      <aside className="space-y-4 border border-gray-200 p-4">
-        <h1 className="text-2xl font-semibold">{t("products")}</h1>
+    <main className="page-shell">
+      <section className="mb-8 overflow-hidden rounded-lg bg-[linear-gradient(135deg,#0f5132,#17201b)] p-8 text-white shadow-[var(--shadow-soft)]">
+        <p className="text-sm font-black uppercase text-white/70">{t("marketplaceEyebrow")}</p>
+        <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,0.75fr)_minmax(280px,0.25fr)] lg:items-end">
+          <div>
+            <h1 className="max-w-3xl text-4xl font-black leading-tight md:text-5xl">
+              {t("marketplaceTitle")}
+            </h1>
+            <p className="mt-4 max-w-2xl leading-7 text-white/78">
+              {t("marketplaceDescription")}
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
+            <p className="text-3xl font-black">{products.length}</p>
+            <p className="text-sm font-bold text-white/70">{t("featuredSelection")}</p>
+          </div>
+        </div>
+      </section>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("search")}</span>
+      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <aside className="surface-panel h-fit space-y-4 p-5 lg:sticky lg:top-28">
+        <h2 className="text-xl font-black">{t("filters")}</h2>
+
+        <label className="form-field">
+          <span className="form-label">{t("search")}</span>
           <input
             aria-label={t("search")}
             name="q"
             value={filters.q}
             onChange={(event) => updateFilter("q", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
+            className="form-input"
             placeholder={t("searchPlaceholder")}
           />
         </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("minPrice")}</span>
+        <label className="form-field">
+          <span className="form-label">{t("minPrice")}</span>
           <input
             aria-label={t("minPrice")}
             name="minPrice"
@@ -171,12 +186,12 @@ export default function ProductSearch() {
             min="0"
             value={filters.minPrice}
             onChange={(event) => updateFilter("minPrice", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
+            className="form-input"
           />
         </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("maxPrice")}</span>
+        <label className="form-field">
+          <span className="form-label">{t("maxPrice")}</span>
           <input
             aria-label={t("maxPrice")}
             name="maxPrice"
@@ -184,64 +199,59 @@ export default function ProductSearch() {
             min="0"
             value={filters.maxPrice}
             onChange={(event) => updateFilter("maxPrice", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
+            className="form-input"
           />
         </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("size")}</span>
+        <label className="form-field">
+          <span className="form-label">{t("size")}</span>
           <input
             aria-label={t("size")}
             name="size"
             value={filters.size}
             onChange={(event) => updateFilter("size", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
+            className="form-input"
           />
         </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("color")}</span>
+        <label className="form-field">
+          <span className="form-label">{t("color")}</span>
           <input
             aria-label={t("color")}
             name="color"
             value={filters.color}
             onChange={(event) => updateFilter("color", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
+            className="form-input"
           />
         </label>
       </aside>
 
       <section>
-        {isLoading && <p aria-live="polite">{t("loadingProducts")}</p>}
+        {isLoading && (
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" aria-live="polite">
+            {[0, 1, 2, 3, 4, 5].map((item) => (
+              <div key={item} className="h-96 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" />
+            ))}
+          </div>
+        )}
         {error && (
-          <p role="alert" className="text-red-600">
+          <p role="alert" className="alert alert-error">
             {error}
           </p>
         )}
 
-        {!isLoading && !error && products.length === 0 && <p>{t("noProducts")}</p>}
+        {!isLoading && !error && products.length === 0 && (
+          <div className="page-card p-8 text-center">
+            <h2 className="text-2xl font-black">{t("emptyProductsTitle")}</h2>
+            <p className="mt-3 text-[var(--color-muted)]">{t("emptyProductsText")}</p>
+          </div>
+        )}
 
         {!error && products.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => {
-              const imageUrl = productImage(product);
-
-              return (
-                <article key={product.id} className="border border-gray-200 p-4">
-                  {imageUrl && (
-                    <img
-                      src={imageUrl}
-                      alt={productImageAlt(product.name)}
-                      className="mb-3 aspect-square w-full object-cover"
-                    />
-                  )}
-                  <h2 className="font-semibold">{product.name}</h2>
-                  {product.brand && <p>{product.brand}</p>}
-                  <p>{Number(product.price).toFixed(2)} EUR</p>
-                  <Link to={`/products/${product.id}`}>{t("viewProduct")}</Link>
-                </article>
-              );
-            })}
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} ctaLabel={t("viewProduct")} />
+            ))}
           </div>
         )}
 
@@ -251,24 +261,25 @@ export default function ProductSearch() {
               type="button"
               onClick={() => updatePage(currentPage - 1)}
               disabled={!hasPreviousPage || isLoading}
-              className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
               {t("previous", { ns: "common" })}
             </button>
-            <span>
+            <span className="badge">
               {t("pageOf", { page: currentPage + 1, total: pageCount })}
             </span>
             <button
               type="button"
               onClick={() => updatePage(currentPage + 1)}
               disabled={!hasNextPage || isLoading}
-              className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
               {t("next", { ns: "common" })}
             </button>
           </nav>
         )}
       </section>
+      </div>
     </main>
   );
 }

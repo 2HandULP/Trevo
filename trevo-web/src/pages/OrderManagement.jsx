@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import DashboardHeader from "../components/DashboardHeader";
+import MetricCard from "../components/MetricCard";
+import StatusBadge from "../components/StatusBadge";
 import { getShopOrders, updateOrderStatus } from "../services/orderService";
 
 const PAGE_SIZE = 20;
@@ -204,12 +207,21 @@ export default function OrderManagement() {
   }
 
   return (
-    <main className="mx-auto my-10 max-w-6xl px-4 text-black">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm uppercase text-gray-500">Loja</p>
-          <h1 className="text-3xl font-semibold">Gestao de encomendas</h1>
-        </div>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow="Loja"
+        title="Gestao de encomendas"
+        description="Acompanha pedidos por estado e avanca cada encomenda no fluxo operacional."
+      />
+
+      <div className="mb-6 grid gap-4 md:grid-cols-4">
+        {statusTabs.map((status) => (
+          <MetricCard
+            key={status}
+            label={statusLabel(status)}
+            value={orders.filter((order) => order.status === status).length}
+          />
+        ))}
       </div>
 
       <nav className="mt-6 flex flex-wrap gap-2" aria-label="Estados">
@@ -218,10 +230,8 @@ export default function OrderManagement() {
             key={status}
             type="button"
             onClick={() => setActiveStatus(status)}
-            className={`rounded border px-4 py-2 text-sm ${
-              activeStatus === status
-                ? "border-black bg-black text-white"
-                : "border-gray-300 bg-white"
+            className={`btn min-h-10 px-4 py-2 text-sm ${
+              activeStatus === status ? "btn-primary" : "btn-secondary"
             }`}
           >
             {statusLabel(status)}
@@ -229,33 +239,23 @@ export default function OrderManagement() {
         ))}
       </nav>
 
-      {isLoading && (
-        <p className="mt-6" aria-live="polite">
-          A carregar encomendas...
-        </p>
-      )}
+      {isLoading && <div className="mt-6 h-64 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />}
 
       {error && (
-        <div className="mt-6 space-y-3" role="alert">
-          <p className="text-red-600">{error}</p>
-          <button
-            type="button"
-            onClick={retryLoad}
-            className="border border-gray-300 px-4 py-2"
-          >
+        <div className="alert alert-error mt-6 space-y-3" role="alert">
+          <p>{error}</p>
+          <button type="button" onClick={retryLoad} className="btn btn-secondary">
             Tentar novamente
           </button>
         </div>
       )}
 
-      {updateError && (
-        <p className="mt-6 text-red-600" role="alert">
-          {updateError}
-        </p>
-      )}
+      {updateError && <p className="alert alert-error mt-6" role="alert">{updateError}</p>}
 
       {isEmpty && (
-        <p className="mt-6 text-gray-600">Nao existem encomendas neste estado.</p>
+        <div className="page-card mt-6 p-8 text-center text-[var(--color-muted)]">
+          Nao existem encomendas neste estado.
+        </div>
       )}
 
       {!isLoading && !error && filteredOrders.length > 0 && (
@@ -265,17 +265,12 @@ export default function OrderManagement() {
               const nextStatus = nextStatusByStatus[order.status];
 
               return (
-                <li
-                  key={order.id}
-                  className="border border-gray-200 bg-white p-4"
-                >
+                <li key={order.id} className="rounded-lg border border-black/10 bg-white p-5 shadow-[var(--shadow-card)]">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="text-lg font-semibold">Order #{order.id}</h2>
-                        <span className="border border-gray-300 px-2 py-1 text-xs font-semibold">
-                          {statusLabel(order.status)}
-                        </span>
+                        <h2 className="text-lg font-black">Order #{order.id}</h2>
+                        <StatusBadge status={order.status}>{statusLabel(order.status)}</StatusBadge>
                       </div>
                       {order.buyerName && (
                         <p className="mt-2 text-sm text-gray-700">
@@ -285,7 +280,7 @@ export default function OrderManagement() {
                       <p className="mt-2 text-sm text-gray-600">
                         {formatDate(order.createdAt)}
                       </p>
-                      <p className="mt-3 font-semibold">
+                      <p className="mt-3 font-black">
                         Total: {formatPrice(order.totalAmount)}
                       </p>
                     </div>
@@ -295,7 +290,7 @@ export default function OrderManagement() {
                         type="button"
                         onClick={() => handleUpdateStatus(order)}
                         disabled={updatingOrderId === order.id}
-                        className="border border-black px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                        className="btn btn-primary text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {updatingOrderId === order.id
                           ? "A atualizar..."
@@ -305,7 +300,7 @@ export default function OrderManagement() {
                   </div>
 
                   {Array.isArray(order.items) && order.items.length > 0 && (
-                    <ul className="mt-4 divide-y divide-gray-200 border-t border-gray-200">
+                    <ul className="mt-4 divide-y divide-black/10 border-t border-black/10">
                       {order.items.map((item) => (
                         <li
                           key={item.id || `${item.productId}-${item.variantId}`}
@@ -329,18 +324,18 @@ export default function OrderManagement() {
               type="button"
               onClick={() => setPage((currentPage) => currentPage - 1)}
               disabled={isFirstPage}
-              className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
               Anterior
             </button>
-            <span className="text-sm text-gray-600">
+            <span className="badge">
               Pagina {page + 1} de {Math.max(totalPages, 1)}
             </span>
             <button
               type="button"
               onClick={() => setPage((currentPage) => currentPage + 1)}
               disabled={isLastPage}
-              className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
               Seguinte
             </button>

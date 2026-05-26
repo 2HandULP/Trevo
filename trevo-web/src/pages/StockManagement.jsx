@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
 import {
   bulkUpdateVariantStock,
   getProduct,
@@ -104,48 +105,56 @@ export default function StockManagement() {
   const variants = product?.variants || [];
 
   return (
-    <div className="mx-auto my-16 max-w-4xl p-8 text-black">
-      <h1 className="text-3xl font-bold">Gestao de stock</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow="Inventario"
+        title="Gestao de stock"
+        description={product?.name || "Atualiza as quantidades disponiveis por variante."}
+      />
 
-      {isLoading && <p className="mt-4" aria-live="polite">A carregar produto...</p>}
+      {isLoading && <div className="h-80 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />}
       {error && (
-        <p className="mt-4 text-red-600" role="alert">
+        <p className="alert alert-error" role="alert">
           {error}
         </p>
       )}
       {success && (
-        <p className="mt-4 text-green-600" role="status" aria-live="polite">
+        <p className="alert alert-success" role="status" aria-live="polite">
           {success}
         </p>
       )}
 
       {!isLoading && product && (
-        <>
-          <h2 className="mt-6 text-xl font-semibold">{product.name}</h2>
-
+        <section className="page-card p-6">
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-black">{product.name}</h2>
+            <span className="badge">{variants.length} variantes</span>
+          </div>
           {variants.length === 0 ? (
-            <p className="mt-4">Este produto ainda nao tem variantes.</p>
+            <div className="surface-panel p-6 text-center text-[var(--color-muted)]">
+              Este produto ainda nao tem variantes.
+            </div>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-6">
+            <form onSubmit={handleSubmit}>
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-200 text-left">
+                <table className="w-full min-w-[560px] border-collapse text-left">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-200 px-4 py-3">Tamanho</th>
-                      <th className="border border-gray-200 px-4 py-3">Cor</th>
-                      <th className="border border-gray-200 px-4 py-3">Stock</th>
+                    <tr className="border-b border-black/10 bg-[var(--color-surface-raised)]">
+                      <th className="px-4 py-3 text-sm font-black uppercase text-[var(--color-muted)]">Tamanho</th>
+                      <th className="px-4 py-3 text-sm font-black uppercase text-[var(--color-muted)]">Cor</th>
+                      <th className="px-4 py-3 text-sm font-black uppercase text-[var(--color-muted)]">Stock</th>
                     </tr>
                   </thead>
                   <tbody>
                     {variants.map((variant) => (
-                      <tr key={variant.id}>
-                        <td className="border border-gray-200 px-4 py-3">
+                      <tr key={variant.id} className="border-b border-black/5">
+                        <td className="px-4 py-3 font-bold">
                           {variant.size}
                         </td>
-                        <td className="border border-gray-200 px-4 py-3">
+                        <td className="px-4 py-3 text-[var(--color-muted)]">
                           {variant.color}
                         </td>
-                        <td className="border border-gray-200 px-4 py-3">
+                        <td className="px-4 py-3">
                           <input
                             type="number"
                             name={`stock-${variant.id}`}
@@ -155,7 +164,7 @@ export default function StockManagement() {
                             onChange={(event) =>
                               handleStockChange(variant.id, event.target.value)
                             }
-                            className="w-28 rounded border border-gray-300 px-3 py-2"
+                            className="form-input w-28"
                           />
                         </td>
                       </tr>
@@ -167,14 +176,14 @@ export default function StockManagement() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="mt-6 rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+                className="btn btn-primary mt-6 disabled:opacity-50"
               >
                 {isSaving ? "A guardar..." : "Guardar alteracoes"}
               </button>
             </form>
           )}
-        </>
+        </section>
       )}
-    </div>
+    </main>
   );
 }

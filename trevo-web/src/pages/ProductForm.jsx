@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
 import { getShopDashboard, getShopProfile } from "../services/shopService";
 import {
   assignProductCollections,
@@ -286,96 +287,97 @@ export default function ProductForm({ mode }) {
   }
 
   return (
-    <div className="mx-auto my-16 max-w-3xl p-8 text-black">
-      <h1 className="text-3xl font-bold">
-        {isEditMode ? "Editar produto" : "Criar produto"}
-      </h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow="Catalogo"
+        title={isEditMode ? "Editar produto" : "Criar produto"}
+        description="Define os detalhes comerciais, variantes, imagens e colecoes do produto."
+      />
 
-      {isLoading && <p className="mt-4" aria-live="polite">A carregar produto...</p>}
-      {error && (
-        <p className="mt-4 text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="mt-4 text-green-600" aria-live="polite">
-          {success}
-        </p>
-      )}
+      {isLoading && <div className="h-96 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />}
+      {error && <p className="alert alert-error" role="alert">{error}</p>}
+      {success && <p className="alert alert-success" aria-live="polite">{success}</p>}
 
       {!isLoading && (
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          <section className="space-y-4">
-            <h2 className="text-xl font-semibold">Detalhes</h2>
-            <div>
-              <label htmlFor="product-name" className="block font-medium">Nome</label>
-              <input
-                id="product-name"
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
-            </div>
-            <div>
-              <label htmlFor="product-description" className="block font-medium">Descrição</label>
-              <textarea
-                id="product-description"
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
-            </div>
-            <div>
-              <label htmlFor="product-price" className="block font-medium">Preço</label>
-              <input
-                id="product-price"
-                type="number"
-                name="price"
-                min="0"
-                step="0.01"
-                value={form.price}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
-            </div>
-            <div>
-              <label htmlFor="product-brand" className="block font-medium">Marca</label>
-              <input
-                id="product-brand"
-                type="text"
-                name="brand"
-                value={form.brand}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
-            </div>
-            <div>
-              <label htmlFor="product-materials" className="block font-medium">Materiais</label>
-              <input
-                id="product-materials"
-                type="text"
-                name="materials"
-                value={form.materials}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
+        <form onSubmit={handleSubmit} className="mx-auto max-w-5xl space-y-6">
+          <section className="page-card space-y-4 p-6">
+            <h2 className="text-2xl font-black">Detalhes</h2>
+            <div className="grid gap-5 md:grid-cols-2">
+              <label htmlFor="product-name" className="form-field">
+                <span className="form-label">Nome</span>
+                <input
+                  id="product-name"
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  className="form-input"
+                />
+              </label>
+              <label htmlFor="product-description" className="form-field md:col-span-2">
+                <span className="form-label">Descrição</span>
+                <textarea
+                  id="product-description"
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  className="form-input min-h-32"
+                />
+              </label>
+              <label htmlFor="product-price" className="form-field">
+                <span className="form-label">Preço</span>
+                <input
+                  id="product-price"
+                  type="number"
+                  name="price"
+                  min="0"
+                  step="0.01"
+                  value={form.price}
+                  onChange={handleChange}
+                  className="form-input"
+                />
+              </label>
+              <label htmlFor="product-brand" className="form-field">
+                <span className="form-label">Marca</span>
+                <input
+                  id="product-brand"
+                  type="text"
+                  name="brand"
+                  value={form.brand}
+                  onChange={handleChange}
+                  className="form-input"
+                />
+              </label>
+              <label htmlFor="product-materials" className="form-field md:col-span-2">
+                <span className="form-label">Materiais</span>
+                <input
+                  id="product-materials"
+                  type="text"
+                  name="materials"
+                  value={form.materials}
+                  onChange={handleChange}
+                  className="form-input"
+                />
+              </label>
             </div>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-xl font-semibold">Variantes</h2>
+          <section className="page-card space-y-4 p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-2xl font-black">Variantes</h2>
+              <button type="button" onClick={addVariant} className="btn btn-secondary">
+                Adicionar variante
+              </button>
+            </div>
             {variants.map((variant, index) => (
-              <div key={variant.id || index} className="grid gap-3 rounded border border-gray-200 p-4 md:grid-cols-4">
+              <div key={variant.id || index} className="grid gap-3 rounded-lg border border-black/10 bg-[var(--color-surface-raised)] p-4 md:grid-cols-4">
                 <input
                   type="text"
                   name={`variant-size-${index}`}
                   placeholder="Tamanho"
                   value={variant.size}
                   onChange={(event) => handleVariantChange(index, "size", event.target.value)}
-                  className="rounded border border-gray-300 px-3 py-2"
+                  className="form-input"
                 />
                 <input
                   type="text"
@@ -383,7 +385,7 @@ export default function ProductForm({ mode }) {
                   placeholder="Cor"
                   value={variant.color}
                   onChange={(event) => handleVariantChange(index, "color", event.target.value)}
-                  className="rounded border border-gray-300 px-3 py-2"
+                  className="form-input"
                 />
                 <input
                   type="number"
@@ -392,28 +394,21 @@ export default function ProductForm({ mode }) {
                   min="0"
                   value={variant.stock}
                   onChange={(event) => handleVariantChange(index, "stock", event.target.value)}
-                  className="rounded border border-gray-300 px-3 py-2"
+                  className="form-input"
                 />
                 <button
                   type="button"
                   onClick={() => removeVariant(index)}
-                  className="rounded border border-red-300 px-3 py-2 text-red-700"
+                  className="btn min-h-11 border border-red-200 bg-red-50 px-3 py-2 text-red-700"
                 >
                   Remover
                 </button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addVariant}
-              className="rounded border border-gray-300 px-4 py-2"
-            >
-              Adicionar variante
-            </button>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-xl font-semibold">Imagens</h2>
+          <section className="page-card space-y-4 p-6">
+            <h2 className="text-2xl font-black">Imagens</h2>
             {/* TODO: ligar upload de imagens ao backend/Cloudinary quando o contrato de PROD/SHOP-F05 estiver disponível. */}
             <input
               type="file"
@@ -421,7 +416,7 @@ export default function ProductForm({ mode }) {
               accept="image/*"
               multiple
               onChange={handleImagesChange}
-              className="block w-full rounded border border-gray-300 px-3 py-2"
+              className="form-input"
             />
             {images.length > 0 && (
               <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -430,7 +425,7 @@ export default function ProductForm({ mode }) {
                     <img
                       src={image.url}
                       alt={`Pré-visualização ${index + 1}`}
-                      className="h-32 w-full rounded object-cover"
+                      className="h-32 w-full rounded-lg object-cover shadow-[var(--shadow-card)]"
                     />
                   </li>
                 ))}
@@ -438,14 +433,14 @@ export default function ProductForm({ mode }) {
             )}
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-xl font-semibold">Coleções</h2>
+          <section className="page-card space-y-4 p-6">
+            <h2 className="text-2xl font-black">Coleções</h2>
             {collections.length === 0 ? (
-              <p>Sem coleções disponíveis.</p>
+              <p className="text-[var(--color-muted)]">Sem coleções disponíveis.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {collections.map((collection) => (
-                  <label key={collection.id} className="flex items-center gap-2">
+                  <label key={collection.id} className="flex items-center gap-3 rounded-lg border border-black/10 bg-white p-4 font-bold shadow-[var(--shadow-card)]">
                     <input
                       type="checkbox"
                       name="collectionIds"
@@ -463,12 +458,12 @@ export default function ProductForm({ mode }) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+            className="btn btn-primary w-full disabled:opacity-50"
           >
             {isSubmitting ? "A guardar..." : "Guardar produto"}
           </button>
         </form>
       )}
-    </div>
+    </main>
   );
 }

@@ -325,24 +325,33 @@ export default function ProductDetail() {
     isAddingToCart;
 
   return (
-    <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      {isLoading && <p aria-live="polite">A carregar produto...</p>}
+    <main className="page-shell">
+      {isLoading && (
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]" aria-live="polite">
+          <div className="aspect-square animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" />
+          <div className="space-y-4">
+            <div className="h-8 w-2/3 animate-pulse rounded bg-white" />
+            <div className="h-12 w-full animate-pulse rounded bg-white" />
+            <div className="h-40 w-full animate-pulse rounded bg-white" />
+          </div>
+        </div>
+      )}
       {error && (
-        <p role="alert" className="text-red-600">
+        <p role="alert" className="alert alert-error">
           {error}
         </p>
       )}
 
       {!isLoading && !error && product && (
-        <div className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(340px,0.92fr)]">
           <section aria-label={t("productGallery")}>
             {images.length > 0 ? (
               <>
-                <div className="flex aspect-square items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50">
+                <div className="group flex aspect-[4/5] items-center justify-center overflow-hidden rounded-lg bg-white shadow-[var(--shadow-soft)] sm:aspect-square">
                   <img
                     src={images[activeImageIndex].url}
                     alt={images[activeImageIndex].alt}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                   />
                 </div>
 
@@ -351,14 +360,14 @@ export default function ProductDetail() {
                     <button
                       type="button"
                       onClick={showPreviousImage}
-                      className="rounded border border-gray-300 px-3 py-2 text-sm"
+                      className="btn btn-secondary min-h-10 px-4 py-2 text-sm"
                     >
                       {t("previous", { ns: "common" })}
                     </button>
                     <button
                       type="button"
                       onClick={showNextImage}
-                      className="rounded border border-gray-300 px-3 py-2 text-sm"
+                      className="btn btn-secondary min-h-10 px-4 py-2 text-sm"
                     >
                       {t("next", { ns: "common" })}
                     </button>
@@ -366,17 +375,17 @@ export default function ProductDetail() {
                 )}
 
                 {images.length > 1 && (
-                  <div className="mt-4 flex gap-3">
+                  <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5">
                     {images.map((image, index) => (
                       <button
                         key={image.id}
                         type="button"
                         onClick={() => setActiveImageIndex(index)}
                         aria-label={t("showImage", { index: index + 1 })}
-                        className={`h-20 w-20 overflow-hidden rounded border ${
+                        className={`aspect-square overflow-hidden rounded-lg border-2 bg-white transition hover:-translate-y-0.5 ${
                           activeImageIndex === index
-                            ? "border-black"
-                            : "border-gray-200"
+                            ? "border-[var(--color-primary)] shadow-[var(--shadow-card)]"
+                            : "border-transparent opacity-75"
                         }`}
                       >
                         <img
@@ -390,33 +399,33 @@ export default function ProductDetail() {
                 )}
               </>
             ) : (
-              <div className="flex aspect-square items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-gray-500">
-                Sem imagem disponivel
+              <div className="flex aspect-square items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[var(--color-muted)] shadow-[var(--shadow-card)]">
+                {t("noImageAvailable")}
               </div>
             )}
           </section>
 
-          <section>
-            <p className="text-sm uppercase tracking-wide text-gray-500">
+          <section className="h-fit rounded-lg border border-black/10 bg-white p-6 shadow-[var(--shadow-soft)] lg:sticky lg:top-28">
+            <p className="badge">
               {product.brand || t("brandMissing")}
             </p>
-            <h1 className="mt-2 text-3xl font-semibold">{product.name}</h1>
+            <h1 className="mt-4 text-4xl font-black leading-tight">{product.name}</h1>
             {product.price !== undefined && product.price !== null && (
-              <p className="mt-3 text-2xl font-semibold">
+              <p className="mt-4 text-3xl font-black text-[var(--color-primary-dark)]">
                 {formatPrice(product.price)}
               </p>
             )}
             {product.description && (
-              <p className="mt-5 leading-7 text-gray-700">{product.description}</p>
+              <p className="mt-5 leading-7 text-[var(--color-muted)]">{product.description}</p>
             )}
 
-            <div className="mt-6 space-y-2 text-sm">
+            <div className="mt-6 grid gap-3 rounded-lg bg-[var(--color-surface-raised)] p-4 text-sm sm:grid-cols-2">
               <p>
-                <span className="font-semibold">{t("brand")}:</span>{" "}
+                <span className="block font-black">{t("brand")}</span>
                 {product.brand || t("notIndicated")}
               </p>
               <p>
-                <span className="font-semibold">{t("materials")}:</span>{" "}
+                <span className="block font-black">{t("materials")}</span>
                 {product.materials || t("notIndicatedPlural")}
               </p>
             </div>
@@ -433,10 +442,10 @@ export default function ProductDetail() {
                     type="button"
                     disabled={isSizeDisabled(size)}
                     onClick={() => setSelectedSize(size)}
-                    className={`rounded border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
+                    className={`min-h-11 rounded-lg border px-4 py-2 text-sm font-black transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 ${
                       selectedSize === size
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 bg-white"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                        : "border-black/10 bg-white"
                     }`}
                   >
                     {size}
@@ -457,10 +466,10 @@ export default function ProductDetail() {
                     type="button"
                     disabled={isColorDisabled(color)}
                     onClick={() => setSelectedColor(color)}
-                    className={`rounded border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
+                    className={`min-h-11 rounded-lg border px-4 py-2 text-sm font-black transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 ${
                       selectedColor === color
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 bg-white"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                        : "border-black/10 bg-white"
                     }`}
                   >
                     {color}
@@ -469,9 +478,9 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <div className="mt-8 rounded border border-gray-200 bg-gray-50 p-4">
+            <div className="mt-8 rounded-lg border border-black/10 bg-[var(--color-primary-soft)] p-4">
               {!selectedSize || !selectedColor ? (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm font-bold text-[var(--color-primary-dark)]">
                   {t("selectSizeColor")}
                 </p>
               ) : selectedVariant ? (
@@ -489,7 +498,7 @@ export default function ProductDetail() {
               type="button"
               onClick={handleAddToCart}
               disabled={isAddToCartDisabled}
-              className="mt-4 w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
+              className="btn btn-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isAddingToCart ? t("addingToCart") : t("addToCart")}
             </button>
@@ -497,7 +506,7 @@ export default function ProductDetail() {
             <button
               type="button"
               onClick={handleOpenTryOn}
-              className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
+              className="btn btn-secondary mt-3 w-full"
             >
               {t("virtualTryOn")}
             </button>
@@ -506,19 +515,19 @@ export default function ProductDetail() {
               <button
                 type="button"
                 onClick={() => setIsSeeItOpen(true)}
-                className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
+                className="btn btn-secondary mt-3 w-full"
               >
                 {t("seeItOnYourself")}
               </button>
             )}
 
             {cartSuccess && (
-              <p className="mt-3 text-green-600" role="status" aria-live="polite">
+              <p className="alert alert-success mt-3" role="status" aria-live="polite">
                 {cartSuccess}
               </p>
             )}
             {cartError && (
-              <p className="mt-3 text-red-600" role="alert">
+              <p className="alert alert-error mt-3" role="alert">
                 {cartError}
               </p>
             )}

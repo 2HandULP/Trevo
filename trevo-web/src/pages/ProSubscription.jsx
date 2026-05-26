@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import DashboardHeader from "../components/DashboardHeader";
+import StatusBadge from "../components/StatusBadge";
 import {
   cancelSubscription,
   createSubscription,
@@ -84,47 +86,57 @@ export default function ProSubscription() {
   }
 
   return (
-    <main className="mx-auto my-10 max-w-3xl px-4 text-black">
-      <p className="text-sm font-semibold uppercase text-gray-500">{t("proPlan")}</p>
-      <h1 className="mt-1 text-3xl font-semibold">{t("proSubscription")}</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow={t("proPlan")}
+        title={t("proSubscription")}
+        description={t("proDescription")}
+      />
 
       {isLoading && (
-        <p className="mt-6" aria-live="polite">
+        <div className="h-72 animate-pulse rounded-lg bg-white p-6 shadow-[var(--shadow-card)]" aria-live="polite">
           {t("loadingSubscription")}
-        </p>
+        </div>
       )}
       {error && (
-        <p className="mt-6 text-red-600" role="alert">
+        <p className="alert alert-error" role="alert">
           {error}
         </p>
       )}
       {success && (
-        <p className="mt-6 text-green-600" role="status" aria-live="polite">
+        <p className="alert alert-success" role="status" aria-live="polite">
           {success}
         </p>
       )}
 
       {!isLoading && (
-        <section className="mt-8 border border-gray-200 p-6" aria-label={t("proPlan")}>
+        <section className="page-card mx-auto max-w-4xl overflow-hidden" aria-label={t("proPlan")}>
+          <div className="bg-[linear-gradient(135deg,#17201b,#0f5132)] p-6 text-white sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold">{t("trevoPro")}</h2>
-              <p className="mt-2 text-gray-700">
+              <div className="mb-4">
+                <StatusBadge tone={isPro ? "success" : "neutral"}>
+                  {isPro ? t("subscriptionActive") : t("noActivePro")}
+                </StatusBadge>
+              </div>
+              <h2 className="text-3xl font-black">{t("trevoPro")}</h2>
+              <p className="mt-2 max-w-xl text-white/78">
                 {t("proDescription")}
               </p>
             </div>
-            <p className="text-2xl font-semibold">{t("proPrice")}</p>
+            <p className="text-3xl font-black">{t("proPrice")}</p>
+          </div>
           </div>
 
-          <ul className="mt-6 list-disc space-y-2 pl-5 text-gray-700">
-            <li>{t("proBenefitAccount")}</li>
-            <li>{t("proBenefitManage")}</li>
-            <li>{t("proBenefitCancel")}</li>
+          <ul className="grid gap-3 p-6 text-[var(--color-muted)] sm:grid-cols-3">
+            <li className="surface-panel p-4 font-bold">{t("proBenefitAccount")}</li>
+            <li className="surface-panel p-4 font-bold">{t("proBenefitManage")}</li>
+            <li className="surface-panel p-4 font-bold">{t("proBenefitCancel")}</li>
           </ul>
 
           {isPro ? (
-            <div className="mt-8 border border-green-200 bg-green-50 p-4">
-              <p className="font-semibold text-green-800">{t("subscriptionActive")}</p>
+            <div className="mx-6 mb-6 rounded-lg border border-green-200 bg-green-50 p-5">
+              <p className="font-black text-green-800">{t("subscriptionActive")}</p>
               <p className="mt-2 text-sm text-green-700">
                 {t("proActiveMessage")}
               </p>
@@ -132,22 +144,22 @@ export default function ProSubscription() {
                 type="button"
                 onClick={handleCancel}
                 disabled={isSubmitting}
-                className="mt-5 border border-red-300 px-4 py-2 font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn mt-5 border border-red-200 bg-white text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? t("canceling") : t("cancelSubscription")}
               </button>
             </div>
           ) : (
-            <div className="mt-8 border border-gray-200 bg-gray-50 p-4">
-              <p className="font-semibold">{t("noActivePro")}</p>
-              <p className="mt-2 text-sm text-gray-700">
+            <div className="mx-6 mb-6 rounded-lg border border-black/10 bg-[var(--color-surface-raised)] p-5">
+              <p className="font-black">{t("noActivePro")}</p>
+              <p className="mt-2 text-sm text-[var(--color-muted)]">
                 {t("activateProMessage")}
               </p>
               <button
                 type="button"
                 onClick={handleSubscribe}
                 disabled={isSubmitting}
-                className="mt-5 bg-black px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn btn-primary mt-5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? t("subscribing") : t("subscribePro")}
               </button>

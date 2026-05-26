@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import DashboardHeader from "../components/DashboardHeader";
+import MetricCard from "../components/MetricCard";
+import StatusBadge from "../components/StatusBadge";
 import { getPayoutBalance, getPayoutHistory } from "../services/payoutService";
 
 const PAGE_SIZE = 20;
@@ -95,7 +98,7 @@ export default function PayoutDashboard() {
       } catch (loadError) {
         if (active) {
           setError(
-            getErrorMessage(loadError, "NÃ£o foi possÃ­vel carregar pagamentos")
+            getErrorMessage(loadError, "Não foi possível carregar pagamentos")
           );
         }
       } finally {
@@ -117,54 +120,55 @@ export default function PayoutDashboard() {
   const isEmpty = !isLoading && !error && payouts.length === 0;
 
   return (
-    <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      <h1 className="text-3xl font-semibold">Pagamentos</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow="Loja"
+        title="Pagamentos"
+        description="Consulta saldo pendente e historico de pagamentos libertados."
+      />
 
-      {isLoading && (
-        <p className="mt-6" aria-live="polite">
-          A carregar pagamentos...
-        </p>
-      )}
-      {error && (
-        <p className="mt-6 text-red-600" role="alert">
-          {error}
-        </p>
+      {isLoading && <div className="h-72 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />}
+      {error && <p className="alert alert-error" role="alert">{error}</p>}
+
+      {!isLoading && !error && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <MetricCard label="Saldo pendente" value={formatCurrency(balance)} detail="Montante ainda por libertar" />
+          <MetricCard label="Pagamentos" value={payouts.length} detail="Nesta pagina" />
+          <MetricCard label="Pagina" value={`${page + 1}/${Math.max(totalPages, 1)}`} />
+        </div>
       )}
 
       {!isLoading && !error && (
-        <section className="mt-8 border border-gray-200 bg-gray-50 p-5">
-          <h2 className="text-lg font-semibold">Saldo pendente</h2>
-          <p className="mt-2 text-3xl font-semibold">{formatCurrency(balance)}</p>
-        </section>
-      )}
-
-      {!isLoading && !error && (
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold">Histórico de pagamentos</h2>
+        <section className="page-card mt-8 p-6">
+          <h2 className="text-2xl font-black">Histórico de pagamentos</h2>
 
           {isEmpty ? (
-            <p className="mt-4 text-gray-600">Ainda não existem pagamentos.</p>
+            <div className="surface-panel mt-4 p-6 text-center text-[var(--color-muted)]">
+              Ainda não existem pagamentos.
+            </div>
           ) : (
             <>
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full border-collapse text-left">
+                <table className="w-full min-w-[520px] border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="py-3 pr-4">Data</th>
-                      <th className="py-3 pr-4">Montante</th>
-                      <th className="py-3 pr-4">Estado</th>
+                    <tr className="border-b border-black/10 bg-[var(--color-surface-raised)]">
+                      <th className="px-4 py-3 text-sm font-black uppercase text-[var(--color-muted)]">Data</th>
+                      <th className="px-4 py-3 text-sm font-black uppercase text-[var(--color-muted)]">Montante</th>
+                      <th className="px-4 py-3 text-sm font-black uppercase text-[var(--color-muted)]">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {payouts.map((payout) => (
-                      <tr key={payout.id} className="border-b border-gray-100">
-                        <td className="py-3 pr-4">
+                      <tr key={payout.id} className="border-b border-black/5">
+                        <td className="px-4 py-3">
                           {formatDate(payout.releasedAt || payout.createdAt)}
                         </td>
-                        <td className="py-3 pr-4">
+                        <td className="px-4 py-3 font-black">
                           {formatCurrency(payout.payoutAmount)}
                         </td>
-                        <td className="py-3 pr-4">{getStatusLabel(payout.status)}</td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={payout.status}>{getStatusLabel(payout.status)}</StatusBadge>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -177,7 +181,7 @@ export default function PayoutDashboard() {
                     type="button"
                     onClick={() => loadPayouts(page - 1)}
                     disabled={!hasPreviousPage || isLoading}
-                    className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Anterior
                   </button>
@@ -185,7 +189,7 @@ export default function PayoutDashboard() {
                     type="button"
                     onClick={() => loadPayouts(page + 1)}
                     disabled={!hasNextPage || isLoading}
-                    className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Seguinte
                   </button>

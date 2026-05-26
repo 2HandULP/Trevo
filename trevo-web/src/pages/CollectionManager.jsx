@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
 import {
   createCollection,
   deleteCollection,
@@ -203,39 +204,36 @@ export default function CollectionManager() {
   }
 
   return (
-    <div className="mx-auto my-16 max-w-2xl p-8 text-black">
-      <h1 className="text-3xl font-bold">Gerir coleções</h1>
-      {shopName && <p className="mt-2">Loja: {shopName}</p>}
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow={shopName ? `Loja: ${shopName}` : "Loja"}
+        title="Gerir coleções"
+        description="Organiza colecoes, renomeia grupos e ajusta a ordem apresentada aos compradores."
+      />
 
-      {isLoading && <p className="mt-4" aria-live="polite">A carregar coleções...</p>}
-      {error && (
-        <p className="mt-4 text-red-600" role="alert">
-          {error}
-        </p>
-      )}
+      {isLoading && <div className="h-72 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />}
+      {error && <p className="alert alert-error" role="alert">{error}</p>}
 
       {!isLoading && (
-        <>
-          <form onSubmit={handleCreate} className="mt-6 flex gap-3">
+        <section className="page-card mx-auto max-w-3xl p-6">
+          <form onSubmit={handleCreate} className="flex flex-col gap-3 sm:flex-row">
             <input
               type="text"
               name="collectionName"
               placeholder="Nome da coleção"
               value={newCollectionName}
               onChange={(event) => setNewCollectionName(event.target.value)}
-              className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2"
+              className="form-input min-w-0 flex-1"
             />
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-            >
+            <button type="submit" disabled={isSubmitting} className="btn btn-primary">
               Criar
             </button>
           </form>
 
           {collections.length === 0 && (
-            <p className="mt-6">Esta loja ainda não tem coleções.</p>
+            <div className="surface-panel mt-6 p-6 text-center text-[var(--color-muted)]">
+              Esta loja ainda não tem coleções.
+            </div>
           )}
 
           <ul className="mt-6 space-y-3">
@@ -251,45 +249,41 @@ export default function CollectionManager() {
                 onDragEnter={() => setDropTargetId(collection.id)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => handleDrop(collection.id)}
-                className={`rounded border p-3 transition ${
+                className={`rounded-lg border p-4 transition ${
                   draggedId === collection.id
                     ? "border-gray-400 bg-gray-100 opacity-60"
                     : dropTargetId === collection.id
-                      ? "border-black bg-gray-50"
-                      : "border-gray-200 bg-white"
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]"
+                      : "border-black/10 bg-white shadow-[var(--shadow-card)]"
                 }`}
               >
                 {editingId === collection.id ? (
-                  <form onSubmit={handleRename} className="flex gap-3">
+                  <form onSubmit={handleRename} className="flex flex-col gap-3 sm:flex-row">
                     <input
                       type="text"
                       name="renameCollection"
                       value={editingName}
                       onChange={(event) => setEditingName(event.target.value)}
-                      className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2"
+                      className="form-input min-w-0 flex-1"
                     />
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-                    >
+                    <button type="submit" disabled={isSubmitting} className="btn btn-primary">
                       Guardar
                     </button>
                   </form>
                 ) : (
-                  <div className="flex items-center gap-3">
-                    <span>{collection.name}</span>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <span className="font-black">{collection.name}</span>
                     <button
                       type="button"
                       onClick={() => startRename(collection)}
-                      className="ml-auto rounded border border-gray-300 px-3 py-1"
+                      className="btn btn-secondary ml-auto min-h-10 px-3 py-1"
                     >
                       Renomear
                     </button>
                     <button
                       type="button"
                       onClick={() => setCollectionToDelete(collection)}
-                      className="rounded border border-red-300 px-3 py-1 text-red-700"
+                      className="btn min-h-10 border border-red-200 bg-red-50 px-3 py-1 text-red-700"
                     >
                       Apagar
                     </button>
@@ -298,7 +292,7 @@ export default function CollectionManager() {
               </li>
             ))}
           </ul>
-        </>
+        </section>
       )}
 
       {collectionToDelete && (
@@ -307,9 +301,9 @@ export default function CollectionManager() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-collection-title"
-            className="w-full max-w-md rounded bg-white p-6 shadow-xl"
+            className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
           >
-            <h2 id="delete-collection-title" className="text-xl font-semibold">
+            <h2 id="delete-collection-title" className="text-xl font-black">
               Confirmar apagar coleção
             </h2>
             <p className="mt-3">Apagar a coleção {collectionToDelete.name}?</p>
@@ -317,7 +311,7 @@ export default function CollectionManager() {
               <button
                 type="button"
                 onClick={() => setCollectionToDelete(null)}
-                className="rounded border border-gray-300 px-4 py-2"
+                className="btn btn-secondary"
               >
                 Cancelar
               </button>
@@ -325,7 +319,7 @@ export default function CollectionManager() {
                 type="button"
                 onClick={confirmDelete}
                 disabled={isSubmitting}
-                className="rounded bg-red-600 px-4 py-2 text-white disabled:opacity-50"
+                className="btn bg-red-600 text-white disabled:opacity-50"
               >
                 Confirmar
               </button>
@@ -333,6 +327,6 @@ export default function CollectionManager() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

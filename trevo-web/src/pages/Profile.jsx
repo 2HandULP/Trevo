@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
 import { useAuth } from "../hooks/useAuth";
 import {
   getCurrentUserProfile,
@@ -140,78 +141,92 @@ export default function Profile() {
   }
 
   return (
-    <div className="mx-auto my-16 max-w-lg p-8 text-black">
-      <h1>{t("profile")}</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow={t("profile")}
+        title={t("profile")}
+        description={t("loadingProfile")}
+      />
 
-      {isLoading && <p>{t("loadingProfile")}</p>}
+      {isLoading && <div className="h-96 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" />}
       {error && (
-        <p className="text-red-600" role="alert">
+        <p className="alert alert-error" role="alert">
           {error}
         </p>
       )}
       {success && (
-        <p className="text-green-600" role="status" aria-live="polite">
+        <p className="alert alert-success" role="status" aria-live="polite">
           {success}
         </p>
       )}
 
       {!isLoading && (
-        <form onSubmit={handleSubmit}>
-          <div>
+        <form onSubmit={handleSubmit} className="page-card mx-auto max-w-2xl space-y-5 p-6 sm:p-8">
+          <label className="form-field">
+            <span className="form-label">{t("name")}</span>
             <input
+              className="form-input"
               type="text"
               name="fullName"
               placeholder={t("name")}
               value={form.fullName}
               onChange={handleChange}
             />
-          </div>
+          </label>
 
-          <div>
+          <label className="form-field">
+            <span className="form-label">Email</span>
             <input
+              className="form-input"
               type="email"
               name="email"
               placeholder="Email"
               value={form.email}
               onChange={handleChange}
             />
-          </div>
+          </label>
 
-          <div>
+          <label className="form-field">
+            <span className="form-label">{t("phone")}</span>
             <input
+              className="form-input"
               type="text"
               name="phone"
               placeholder={t("phone")}
               value={form.phone}
               onChange={handleChange}
             />
-          </div>
+          </label>
 
-          <div>
+          <label className="form-field">
+            <span className="form-label">{t("currentPassword", { ns: "auth" })}</span>
             <input
+              className="form-input"
               type="password"
               name="currentPassword"
               placeholder={t("currentPassword", { ns: "auth" })}
               value={form.currentPassword}
               onChange={handleChange}
             />
-          </div>
+          </label>
 
-          <div>
+          <label className="form-field">
+            <span className="form-label">{t("newPassword", { ns: "auth" })}</span>
             <input
+              className="form-input"
               type="password"
               name="newPassword"
               placeholder={t("newPassword", { ns: "auth" })}
               value={form.newPassword}
               onChange={handleChange}
             />
-          </div>
+          </label>
 
-          <button type="submit" disabled={isSubmitting}>
+          <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
             {isSubmitting ? t("saving") : t("saveChanges")}
           </button>
         </form>
       )}
-    </div>
+    </main>
   );
 }

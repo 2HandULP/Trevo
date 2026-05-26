@@ -74,45 +74,63 @@ export default function ResetPassword() {
   }
 
   return (
-    <div style={{ maxWidth: "28rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
-      <h1>{t("resetPasswordTitle")}</h1>
-
-      {tokenStatus === "checking" && <p>{t("validatingLink")}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {tokenStatus === "valid" && (
-        <form onSubmit={handleSubmit}>
-          <div>
-            <input
-              type="password"
-              name="newPassword"
-              placeholder={t("newPassword")}
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-            />
-          </div>
-
-          <div>
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder={t("confirmPassword")}
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-            />
-          </div>
-
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? t("saving", { ns: "common" }) : t("resetPasswordSubmit")}
-          </button>
-        </form>
-      )}
-
-      {tokenStatus === "invalid" && (
-        <p>
-          <Link to="/forgot-password">{t("requestNewLink")}</Link>
+    <main className="page-shell">
+      <section className="mx-auto max-w-xl page-card p-8 sm:p-10">
+        <p className="text-sm font-black uppercase text-[var(--color-muted)]">
+          {t("forgotPasswordEyebrow")}
         </p>
-      )}
-    </div>
+        <h1 className="mt-3 text-4xl font-black">{t("resetPasswordTitle")}</h1>
+        <p className="mt-4 leading-7 text-[var(--color-muted)]">
+          {t("resetPasswordDescription")}
+        </p>
+
+        {tokenStatus === "checking" && (
+          <p className="alert mt-6 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)]" aria-live="polite">
+            {t("validatingLink")}
+          </p>
+        )}
+        {error && <p className="alert alert-error mt-6" role="alert">{error}</p>}
+
+        {tokenStatus === "valid" && (
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+            <label className="form-field">
+              <span className="form-label">{t("newPassword")}</span>
+              <input
+                className="form-input"
+                type="password"
+                name="newPassword"
+                placeholder={t("newPassword")}
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+            </label>
+
+            <label className="form-field">
+              <span className="form-label">{t("confirmPassword")}</span>
+              <input
+                className="form-input"
+                type="password"
+                name="confirmPassword"
+                placeholder={t("confirmPassword")}
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            </label>
+
+            <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
+              {isSubmitting ? t("saving", { ns: "common" }) : t("resetPasswordSubmit")}
+            </button>
+          </form>
+        )}
+
+        {tokenStatus === "invalid" && (
+          <p className="mt-6 text-center text-sm font-bold">
+            <Link className="text-[var(--color-primary)] underline-offset-4 hover:underline" to="/forgot-password">
+              {t("requestNewLink")}
+            </Link>
+          </p>
+        )}
+      </section>
+    </main>
   );
 }

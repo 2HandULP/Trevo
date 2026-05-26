@@ -32,38 +32,47 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div style={{ maxWidth: "28rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
-      <h1>{t("forgotPasswordTitle")}</h1>
-      <p>
-        {t("forgotPasswordDescription")}
-      </p>
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {submitted && (
-        <p style={{ color: "green" }}>
-          {t("forgotPasswordSuccess")}
+    <main className="page-shell">
+      <section className="mx-auto max-w-xl page-card p-8 sm:p-10">
+        <p className="text-sm font-black uppercase text-[var(--color-muted)]">
+          {t("forgotPasswordEyebrow")}
         </p>
-      )}
+        <h1 className="mt-3 text-4xl font-black">{t("forgotPasswordTitle")}</h1>
+        <p className="mt-4 leading-7 text-[var(--color-muted)]">
+          {t("forgotPasswordDescription")}
+        </p>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </div>
+        {error && <p className="alert alert-error mt-6" role="alert">{error}</p>}
+        {submitted && (
+          <p className="alert alert-success mt-6" role="status" aria-live="polite">
+            {t("forgotPasswordSuccess")}
+          </p>
+        )}
 
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? t("forgotPasswordSubmitting") : t("forgotPasswordSubmit")}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          <label className="form-field">
+            <span className="form-label">Email</span>
+            <input
+              className="form-input"
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
 
-      <p>
-        <Link to="/login">{t("backToLogin")}</Link>
-      </p>
-    </div>
+          <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
+            {isSubmitting ? t("forgotPasswordSubmitting") : t("forgotPasswordSubmit")}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm font-bold text-[var(--color-muted)]">
+          <Link className="text-[var(--color-primary)] underline-offset-4 hover:underline" to="/login">
+            {t("backToLogin")}
+          </Link>
+        </p>
+      </section>
+    </main>
   );
 }

@@ -62,20 +62,23 @@ function StripePaymentFormFields({ order, onSuccess }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-5 border border-gray-200 bg-gray-50 p-4">
-      <h3 className="font-semibold">{t("stripePayment")}</h3>
-      <div className="mt-3 border border-gray-300 bg-white p-3">
+    <form onSubmit={handleSubmit} className="surface-panel mt-5 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-black">{t("stripePayment")}</h3>
+        <span className="badge">Stripe</span>
+      </div>
+      <div className="mt-3 rounded-lg border border-black/10 bg-white p-4 shadow-inner">
         <CardElement />
       </div>
       {error && (
-        <p className="mt-3 text-sm text-red-600" role="alert">
+        <p className="alert alert-error mt-3 text-sm" role="alert">
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={!stripe || !elements || isSubmitting}
-        className="mt-4 w-full bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn btn-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isSubmitting ? t("confirmingStripePayment") : t("confirmStripePayment")}
       </button>
@@ -88,7 +91,7 @@ export default function StripePaymentForm({ order, onSuccess, stripePromise }) {
 
   if (!stripePromise) {
     return (
-      <p className="mt-5 text-red-600" role="alert">
+      <p className="alert alert-error mt-5" role="alert">
         {t("stripeNotConfigured")}
       </p>
     );

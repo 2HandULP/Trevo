@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DashboardHeader from "../components/DashboardHeader";
 import { uploadImage } from "../services/imageUploadService";
 import { createShop } from "../services/shopService";
 
@@ -141,23 +142,23 @@ export default function CreateShop() {
   }
 
   return (
-    <div className="mx-auto my-16 max-w-lg p-8 text-black">
-      <h1>Criar loja</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow="Loja"
+        title="Criar loja"
+        description="Configura a tua presenca no marketplace com identidade visual, descricao e dados fiscais."
+      />
 
-      {error && (
-        <p className="text-red-600" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <p className="alert alert-error" role="alert">{error}</p>}
       {success && (
-        <p className="text-green-600" role="status" aria-live="polite">
+        <p className="alert alert-success" role="status" aria-live="polite">
           {success}
         </p>
       )}
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="shop-name">Nome da loja</label>
+      <form onSubmit={handleSubmit} className="page-card mx-auto max-w-3xl space-y-6 p-6 sm:p-8">
+        <label className="form-field" htmlFor="shop-name">
+          <span className="form-label">Nome da loja</span>
           <input
             id="shop-name"
             type="text"
@@ -165,22 +166,24 @@ export default function CreateShop() {
             placeholder="Nome da loja"
             value={form.name}
             onChange={handleChange}
+            className="form-input"
           />
-        </div>
+        </label>
 
-        <div>
-          <label htmlFor="shop-description">Descrição</label>
+        <label className="form-field" htmlFor="shop-description">
+          <span className="form-label">Descricao</span>
           <textarea
             id="shop-description"
             name="description"
-            placeholder="Descrição"
+            placeholder="Descricao"
             value={form.description}
             onChange={handleChange}
+            className="form-input min-h-32"
           />
-        </div>
+        </label>
 
-        <div>
-          <label htmlFor="shop-nif">NIF</label>
+        <label className="form-field" htmlFor="shop-nif">
+          <span className="form-label">NIF</span>
           <input
             id="shop-nif"
             type="text"
@@ -188,61 +191,68 @@ export default function CreateShop() {
             placeholder="NIF"
             value={form.nif}
             onChange={handleChange}
+            className="form-input"
           />
+        </label>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="surface-panel p-4">
+            <label htmlFor="shop-logo" className="form-label">Logo</label>
+            <input
+              key={`logo-${imageInputResetKey}`}
+              id="shop-logo"
+              type="file"
+              name="logo"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleImageChange}
+              className="mt-3 block w-full text-sm"
+            />
+            {images.logo.previewUrl && (
+              <div className="mt-4">
+                <img src={images.logo.previewUrl} alt="Pré-visualização do logo" className="aspect-square w-32 rounded-lg object-cover" />
+                {images.logo.progress > 0 && (
+                  <progress
+                    aria-label="Progresso do upload do logo"
+                    max="100"
+                    value={images.logo.progress}
+                    className="mt-3 w-full"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="surface-panel p-4">
+            <label htmlFor="shop-banner" className="form-label">Banner</label>
+            <input
+              key={`banner-${imageInputResetKey}`}
+              id="shop-banner"
+              type="file"
+              name="banner"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleImageChange}
+              className="mt-3 block w-full text-sm"
+            />
+            {images.banner.previewUrl && (
+              <div className="mt-4">
+                <img src={images.banner.previewUrl} alt="Pré-visualização do banner" className="aspect-video w-full rounded-lg object-cover" />
+                {images.banner.progress > 0 && (
+                  <progress
+                    aria-label="Progresso do upload do banner"
+                    max="100"
+                    value={images.banner.progress}
+                    className="mt-3 w-full"
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div>
-          <label htmlFor="shop-logo">Logo</label>
-          <input
-            key={`logo-${imageInputResetKey}`}
-            id="shop-logo"
-            type="file"
-            name="logo"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            onChange={handleImageChange}
-          />
-          {images.logo.previewUrl && (
-            <div>
-              <img src={images.logo.previewUrl} alt="Pré-visualização do logo" />
-              {images.logo.progress > 0 && (
-                <progress
-                  aria-label="Progresso do upload do logo"
-                  max="100"
-                  value={images.logo.progress}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="shop-banner">Banner</label>
-          <input
-            key={`banner-${imageInputResetKey}`}
-            id="shop-banner"
-            type="file"
-            name="banner"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            onChange={handleImageChange}
-          />
-          {images.banner.previewUrl && (
-            <div>
-              <img src={images.banner.previewUrl} alt="Pré-visualização do banner" />
-              {images.banner.progress > 0 && (
-                <progress
-                  aria-label="Progresso do upload do banner"
-                  max="100"
-                  value={images.banner.progress}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        <button type="submit" disabled={isSubmitting}>
+        <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
           {isSubmitting ? "A criar..." : "Criar loja"}
         </button>
       </form>
-    </div>
+    </main>
   );
 }

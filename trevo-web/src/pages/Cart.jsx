@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader";
+import PurchaseSummary from "../components/PurchaseSummary";
 import {
   getCart,
   removeCartItem,
@@ -96,117 +99,127 @@ export default function Cart() {
   const isEmpty = !isLoading && !error && shops.length === 0;
 
   return (
-    <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      <h1 className="text-3xl font-semibold">{t("cart")}</h1>
+    <main className="page-shell">
+      <DashboardHeader
+        eyebrow={t("cart")}
+        title={t("cart")}
+        description="Revê os artigos, ajusta quantidades e confirma o total antes de finalizar."
+      />
 
-      {isLoading && <p className="mt-6">{t("loadingCart")}</p>}
+      {isLoading && <div className="h-72 animate-pulse rounded-lg bg-white shadow-[var(--shadow-card)]" aria-live="polite" />}
       {error && (
-        <p className="mt-6 text-red-600" role="alert">
+        <p className="alert alert-error" role="alert">
           {error}
         </p>
       )}
       {isEmpty && (
-        <p className="mt-6 text-gray-600">{t("emptyCart")}</p>
+        <div className="page-card p-8 text-center text-[var(--color-muted)]">{t("emptyCart")}</div>
       )}
 
       {!isLoading && !error && shops.length > 0 && (
-        <div className="mt-8 space-y-8">
-          {shops.map((shop) => (
-            <section
-              key={shop.shopId}
-              aria-labelledby={`shop-${shop.shopId}`}
-              className="border-b border-gray-200 pb-6"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <h2 id={`shop-${shop.shopId}`} className="text-xl font-semibold">
-                  {shop.shopName}
-                </h2>
-                <p className="font-semibold">
-                  {t("subtotal")}: {formatPrice(shop.subtotal)}
-                </p>
-              </div>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="space-y-6">
+            {shops.map((shop) => (
+              <section
+                key={shop.shopId}
+                aria-labelledby={`shop-${shop.shopId}`}
+                className="page-card p-5"
+              >
+                <div className="flex items-center justify-between gap-4 border-b border-black/10 pb-4">
+                  <h2 id={`shop-${shop.shopId}`} className="text-xl font-black">
+                    {shop.shopName}
+                  </h2>
+                  <p className="font-black">
+                    {t("subtotal")}: {formatPrice(shop.subtotal)}
+                  </p>
+                </div>
 
-              <ul className="mt-4 space-y-4">
-                {shop.items.map((item) => {
-                  const isPending = pendingVariantId === item.variantId;
+                <ul className="mt-4 space-y-4">
+                  {shop.items.map((item) => {
+                    const isPending = pendingVariantId === item.variantId;
 
-                  return (
-                    <li
-                      key={item.cartItemId || item.variantId}
-                      className="grid gap-4 border border-gray-200 p-4 md:grid-cols-[96px_minmax(0,1fr)_auto]"
-                    >
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={t("productImageAlt", { name: item.productName || t("unnamedProduct") })}
-                          className="h-24 w-24 object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-24 w-24 items-center justify-center bg-gray-100 text-sm text-gray-500">
-                          {t("noImage")}
+                    return (
+                      <li
+                        key={item.cartItemId || item.variantId}
+                        className="grid gap-4 rounded-lg border border-black/10 bg-[var(--color-surface-raised)] p-4 md:grid-cols-[112px_minmax(0,1fr)_auto]"
+                      >
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={t("productImageAlt", { name: item.productName || t("unnamedProduct") })}
+                            className="h-28 w-28 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-28 w-28 items-center justify-center rounded-lg bg-white text-sm font-bold text-[var(--color-muted)]">
+                            {t("noImage")}
+                          </div>
+                        )}
+
+                        <div>
+                          <h3 className="text-lg font-black">{item.productName}</h3>
+                          <p className="mt-1 text-sm text-[var(--color-muted)]">
+                            {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
+                          </p>
+                          <p className="mt-2 text-sm">
+                            {t("unitPrice")}: {formatPrice(item.unitPrice)}
+                          </p>
+                          <p className="text-sm font-black">
+                            {t("subtotal")}: {formatPrice(item.subtotal)}
+                          </p>
                         </div>
-                      )}
 
-                      <div>
-                        <h3 className="font-semibold">{item.productName}</h3>
-                        <p className="mt-1 text-sm text-gray-600">
-                          {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
-                        </p>
-                        <p className="mt-2 text-sm">
-                          {t("unitPrice")}: {formatPrice(item.unitPrice)}
-                        </p>
-                        <p className="text-sm font-semibold">
-                          {t("subtotal")}: {formatPrice(item.subtotal)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 md:justify-end">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleQuantityChange(item, item.quantity - 1)
-                          }
-                          disabled={isPending || item.quantity <= 1}
-                          aria-label={t("decreaseQuantity", { name: item.productName })}
-                          className="h-9 w-9 border border-gray-300 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          -
-                        </button>
-                        <span aria-label={t("quantityOf", { name: item.productName })}>
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleQuantityChange(item, item.quantity + 1)
-                          }
-                          disabled={isPending}
-                          aria-label={t("increaseQuantity", { name: item.productName })}
-                          className="h-9 w-9 border border-gray-300 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemove(item)}
-                          disabled={isPending}
-                          className="ml-2 border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          {t("remove")}
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-
-          <div className="flex justify-end">
-            <p className="text-2xl font-semibold">
-              {t("grandTotal")}: {formatPrice(cart.grandTotal)}
-            </p>
+                        <div className="flex items-center gap-2 md:justify-end">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(item, item.quantity - 1)
+                            }
+                            disabled={isPending || item.quantity <= 1}
+                            aria-label={t("decreaseQuantity", { name: item.productName })}
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-black/10 bg-white font-black disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            -
+                          </button>
+                          <span className="min-w-8 text-center font-black" aria-label={t("quantityOf", { name: item.productName })}>
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(item, item.quantity + 1)
+                            }
+                            disabled={isPending}
+                            aria-label={t("increaseQuantity", { name: item.productName })}
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-black/10 bg-white font-black disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            +
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(item)}
+                            disabled={isPending}
+                            className="btn btn-secondary ml-2 min-h-10 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {t("remove")}
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
           </div>
+          <PurchaseSummary
+            title={t("orderSummary")}
+            rows={shops.map((shop) => ({ label: shop.shopName, value: formatPrice(shop.subtotal) }))}
+            totalLabel={t("grandTotal")}
+            total={formatPrice(cart.grandTotal)}
+          >
+            <Link to="/checkout" className="btn btn-primary w-full">
+              {t("checkout")}
+            </Link>
+          </PurchaseSummary>
         </div>
       )}
     </main>

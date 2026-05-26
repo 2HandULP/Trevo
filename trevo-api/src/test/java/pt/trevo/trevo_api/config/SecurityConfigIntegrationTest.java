@@ -40,8 +40,11 @@ import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.ReviewRepository;
 import pt.trevo.trevo_api.persistence.repository.ShopRepository;
 import pt.trevo.trevo_api.persistence.repository.SubscriptionRepository;
+import pt.trevo.trevo_api.persistence.repository.TryOnImageRepository;
+import pt.trevo.trevo_api.persistence.repository.TryOnUsageRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.persistence.repository.VariantRepository;
+import pt.trevo.trevo_api.service.AiImageGenerationClient;
 import pt.trevo.trevo_api.service.UserPhotoService;
 
 @SpringBootTest(
@@ -109,6 +112,15 @@ class SecurityConfigIntegrationTest {
 
     @MockitoBean
     private UserPhotoService userPhotoService;
+
+    @MockitoBean
+    private TryOnImageRepository tryOnImageRepository;
+
+    @MockitoBean
+    private TryOnUsageRepository tryOnUsageRepository;
+
+    @MockitoBean
+    private AiImageGenerationClient aiImageGenerationClient;
 
     @Autowired
     private WebApplicationContext context;

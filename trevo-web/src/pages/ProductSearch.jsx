@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
+import { productImageAlt } from "../lib/imageAlt";
 import { browseProducts, searchProducts } from "../services/productService";
 
 const FILTER_KEYS = ["q", "minPrice", "maxPrice", "size", "color"];
@@ -230,7 +231,7 @@ export default function ProductSearch() {
                   {imageUrl && (
                     <img
                       src={imageUrl}
-                      alt={product.name}
+                      alt={productImageAlt(product.name)}
                       className="mb-3 aspect-square w-full object-cover"
                     />
                   )}

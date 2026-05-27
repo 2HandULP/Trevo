@@ -31,10 +31,10 @@ test.describe("Buyer Journey — Golden Path", () => {
     // --- Register ---
     await mockRegisterBuyer(page);
     await page.goto("/register");
-    await page.getByPlaceholder("Nome").fill("Buyer E2E");
-    await page.getByPlaceholder("Email").fill(`buyer-${Date.now()}@example.com`);
-    await page.getByPlaceholder("Palavra-passe").fill("Secret123!");
-    await page.getByPlaceholder("Telefone (opcional)").fill("912345678");
+    await page.getByLabel("Nome").fill("Buyer E2E");
+    await page.getByLabel("Email").first().fill(`buyer-${Date.now()}@example.com`);
+    await page.getByLabel("Palavra-passe").fill("Secret123!");
+    await page.getByLabel("Telefone").fill("912345678");
     await page.getByRole("button", { name: "Registar" }).click();
 
     await expect(page).toHaveURL(/\/login$/);
@@ -42,8 +42,8 @@ test.describe("Buyer Journey — Golden Path", () => {
     // --- Login ---
     await mockLogin(page);
     await mockUserProfile(page);
-    await page.getByPlaceholder("Email").fill("buyer-e2e@example.com");
-    await page.getByPlaceholder("Palavra-passe").fill("Secret123!");
+    await page.getByLabel("Email").fill("buyer-e2e@example.com");
+    await page.getByLabel("Palavra-passe").fill("Secret123!");
     await page.getByRole("button", { name: "Entrar" }).click();
 
     await expect(page).toHaveURL(/\/dashboard$/);
@@ -52,14 +52,14 @@ test.describe("Buyer Journey — Golden Path", () => {
     // --- Search Products ---
     await mockProductSearch(page, testProducts);
     await page.goto("/products");
-    await page.getByLabel("Pesquisar produtos").fill("vestido");
+    await page.getByLabel("Pesquisar").fill("vestido");
     // The search is debounced — wait for products to appear
     await expect(page.getByText("Vestido Floral")).toBeVisible();
-    await expect(page.getByText("49.99 EUR")).toBeVisible();
+    await expect(page.getByText("49,99")).toBeVisible();
 
     // --- View Product Detail ---
     await mockProductDetail(page, testProductDetail);
-    await page.getByRole("link", { name: "Ver produto" }).first().click();
+    await page.getByRole("link", { name: "Vestido Floral" }).first().click();
 
     await expect(page.getByRole("heading", { name: "Vestido Floral" })).toBeVisible();
     await expect(page.getByText("TrevoStyle").first()).toBeVisible();
@@ -85,7 +85,7 @@ test.describe("Buyer Journey — Golden Path", () => {
     await mockGetCart(page, testCart);
     await mockCheckout(page, testOrders);
     await page.goto("/checkout");
-    await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Finalizar compra" })).toBeVisible();
     await expect(page.getByText("Resumo da encomenda")).toBeVisible();
 
     await page.locator("#paymentMethod").selectOption("MBWAY");

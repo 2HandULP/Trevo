@@ -413,13 +413,13 @@ git commit -m "test(nfr-10): add E2E API mock helpers"
 This test walks through the full buyer flow sequentially. Each step asserts UI state before proceeding.
 
 **UI labels (Portuguese) from the actual components:**
-- Register: placeholders "Nome", "Email", "Password", "Telefone (opcional)"; button "Registar"
-- Login: placeholders "Email", "Password"; button "Entrar"
+- Register: placeholders "Nome", "Email", "Palavra-passe", "Telefone (opcional)"; button "Registar"
+- Login: placeholders "Email", "Palavra-passe"; button "Entrar"
 - Search: aria-label "Pesquisar produtos"; product link "Ver produto"
 - Product Detail: size/color buttons by text; "Adicionar ao carrinho"; success "Produto adicionado ao carrinho."
 - Cart: heading "Carrinho"; shop names as section headers; "Total geral:"
 - Checkout: heading "Checkout"; payment select `#paymentMethod`; MB WAY phone input `#mbWayPhone`; button "Iniciar MB WAY"; success text "Pedido MB WAY iniciado para o número..."
-- Order History: heading "Historico de encomendas"; order buttons "Order #501"
+- Order History: heading "Histórico de encomendas"; order buttons "Encomenda n.º 501"
 
 - [ ] **Step 1: Create the spec file with the golden path test**
 
@@ -454,7 +454,7 @@ test.describe("Buyer Journey — Golden Path", () => {
     await page.goto("/register");
     await page.getByPlaceholder("Nome").fill("Buyer E2E");
     await page.getByPlaceholder("Email").fill(`buyer-${Date.now()}@example.com`);
-    await page.getByPlaceholder("Password").fill("Secret123!");
+    await page.getByPlaceholder("Palavra-passe").fill("Secret123!");
     await page.getByPlaceholder("Telefone (opcional)").fill("912345678");
     await page.getByRole("button", { name: "Registar" }).click();
 
@@ -464,7 +464,7 @@ test.describe("Buyer Journey — Golden Path", () => {
     await mockLogin(page);
     await mockUserProfile(page);
     await page.getByPlaceholder("Email").fill("buyer-e2e@example.com");
-    await page.getByPlaceholder("Password").fill("Secret123!");
+    await page.getByPlaceholder("Palavra-passe").fill("Secret123!");
     await page.getByRole("button", { name: "Entrar" }).click();
 
     await expect(page).toHaveURL(/\/dashboard$/);
@@ -517,12 +517,12 @@ test.describe("Buyer Journey — Golden Path", () => {
     await mockGetOrders(page, testOrdersPage);
     await mockGetOrderDetail(page, testOrderDetail);
     await page.goto("/orders");
-    await expect(page.getByRole("heading", { name: "Historico de encomendas" })).toBeVisible();
-    await expect(page.getByText("Order #501")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Histórico de encomendas" })).toBeVisible();
+    await expect(page.getByText("Encomenda n.º 501")).toBeVisible();
     await expect(page.getByText("Criada")).toBeVisible();
 
     // Click order to see detail
-    await page.getByText("Order #501").click();
+    await page.getByText("Encomenda n.º 501").click();
     await expect(page.getByText("Vestido Floral")).toBeVisible();
   });
 });
@@ -606,8 +606,8 @@ test.describe("Buyer Journey — Edge Cases", () => {
 
     // Verify both orders in history
     await page.goto("/orders");
-    await expect(page.getByText("Order #501")).toBeVisible();
-    await expect(page.getByText("Order #502")).toBeVisible();
+    await expect(page.getByText("Encomenda n.º 501")).toBeVisible();
+    await expect(page.getByText("Encomenda n.º 502")).toBeVisible();
   });
 ```
 

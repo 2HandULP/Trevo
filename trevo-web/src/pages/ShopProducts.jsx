@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ImageOff } from "lucide-react";
 import { browseProducts } from "../services/productService";
 import { getShopProfile } from "../services/shopService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 const sortOptions = [
   { value: "createdAt,desc", label: "Mais recentes" },
-  { value: "name,asc", label: "Nome A-Z" },
-  { value: "price,asc", label: "Preco crescente" },
-  { value: "price,desc", label: "Preco decrescente" },
+  { value: "name,asc",       label: "Nome A–Z" },
+  { value: "price,asc",      label: "Preço crescente" },
+  { value: "price,desc",     label: "Preço decrescente" },
 ];
 
 function sortCollections(collections) {
@@ -15,47 +18,34 @@ function sortCollections(collections) {
 }
 
 function productsFromResponse(response) {
-  if (Array.isArray(response)) {
-    return response;
-  }
-
-  if (Array.isArray(response?.content)) {
-    return response.content;
-  }
-
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.content)) return response.content;
   return [];
 }
 
 function formatPrice(price) {
-  if (price === null || price === undefined || price === "") {
-    return "";
-  }
-
-  return new Intl.NumberFormat("pt-PT", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(price));
+  if (price === null || price === undefined || price === "") return "";
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(price));
 }
 
 function ProductCard({ product }) {
   return (
-    <article className="rounded border border-gray-200 bg-white p-4">
-      <div className="flex aspect-square items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-500">
-        Sem imagem
+    <Link to={`/products/${product.id}`} className="group card p-3 block transition-colors hover:border-clover-400">
+      <div className="aspect-square bg-ink-50 rounded flex items-center justify-center text-ink-300">
+        <ImageOff className="w-7 h-7" strokeWidth={1.5} />
       </div>
-      <div className="mt-4 space-y-2">
-        <h2 className="text-lg font-semibold">
-          <Link to={`/products/${product.id}`}>{product.name}</Link>
+      <div className="mt-3 space-y-1">
+        {product.brand && (
+          <p className="text-[11px] uppercase tracking-wider text-ink-500 font-medium">{product.brand}</p>
+        )}
+        <h2 className="text-sm font-semibold leading-snug group-hover:text-clover-700 transition-colors">
+          {product.name}
         </h2>
         {product.price !== undefined && product.price !== null && (
-          <p className="font-medium">{formatPrice(product.price)}</p>
-        )}
-        {product.brand && <p className="text-sm text-gray-600">Marca: {product.brand}</p>}
-        {product.materials && (
-          <p className="text-sm text-gray-600">Materiais: {product.materials}</p>
+          <p className="text-sm font-semibold tabular">{formatPrice(product.price)}</p>
         )}
       </div>
-    </article>
+    </Link>
   );
 }
 
@@ -82,7 +72,6 @@ export default function ShopProducts() {
     async function loadShop() {
       try {
         const profile = await getShopProfile(shopId);
-
         if (active) {
           setShop(profile);
           setShopError("");
@@ -92,18 +81,15 @@ export default function ShopProducts() {
           setShopError(
             loadError.response?.data?.message ||
               loadError.response?.data?.detail ||
-              "Nao foi possivel carregar a loja"
+              "Não foi possível carregar a loja."
           );
         }
       } finally {
-        if (active) {
-          setIsShopLoading(false);
-        }
+        if (active) setIsShopLoading(false);
       }
     }
 
     loadShop();
-
     return () => {
       active = false;
     };
@@ -117,32 +103,24 @@ export default function ShopProducts() {
       setProductsError("");
 
       try {
-        const params = collectionId
-          ? { collectionId, sort }
-          : { shopId, sort };
+        const params = collectionId ? { collectionId, sort } : { shopId, sort };
         const response = await browseProducts(params);
-
-        if (active) {
-          setProducts(productsFromResponse(response));
-        }
+        if (active) setProducts(productsFromResponse(response));
       } catch (loadError) {
         if (active) {
           setProducts([]);
           setProductsError(
             loadError.response?.data?.message ||
               loadError.response?.data?.detail ||
-              "Nao foi possivel carregar os produtos"
+              "Não foi possível carregar os produtos."
           );
         }
       } finally {
-        if (active) {
-          setIsProductsLoading(false);
-        }
+        if (active) setIsProductsLoading(false);
       }
     }
 
     loadProducts();
-
     return () => {
       active = false;
     };
@@ -150,15 +128,10 @@ export default function ShopProducts() {
 
   function updateParams(nextValues) {
     const nextParams = new URLSearchParams(searchParams);
-
     Object.entries(nextValues).forEach(([key, value]) => {
-      if (value) {
-        nextParams.set(key, value);
-      } else {
-        nextParams.delete(key);
-      }
+      if (value) nextParams.set(key, value);
+      else nextParams.delete(key);
     });
-
     setSearchParams(nextParams);
   }
 
@@ -171,46 +144,33 @@ export default function ShopProducts() {
   }
 
   return (
-    <main className="mx-auto my-10 max-w-6xl px-4 text-black">
-      {isShopLoading && <p aria-live="polite">A carregar loja...</p>}
-      {shopError && (
-        <p role="alert" className="text-red-600">
-          {shopError}
-        </p>
-      )}
+    <div className="page-shell">
+      {isShopLoading && <LoadingState label="A carregar loja..." />}
+      {shopError && <Alert variant="error">{shopError}</Alert>}
 
       {!isShopLoading && !shopError && shop && (
         <>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm uppercase text-gray-500">Produtos da loja</p>
-              <h1 className="text-3xl font-bold">{shop.name}</h1>
+              <p className="eyebrow text-clover-700">Produtos da loja</p>
+              <h1 className="h-page mt-2">{shop.name}</h1>
             </div>
 
-            <label className="text-sm font-medium">
-              Ordenar
-              <select
-                name="sort"
-                value={sort}
-                onChange={changeSort}
-                className="mt-1 block rounded border border-gray-300 px-3 py-2"
-              >
+            <label className="field max-w-[220px]">
+              <span className="field-label">Ordenar</span>
+              <select name="sort" value={sort} onChange={changeSort} className="select">
                 {sortOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
             </label>
           </div>
 
-          <nav className="mt-6 flex flex-wrap gap-2" aria-label="Colecoes">
+          <nav className="mt-6 flex flex-wrap gap-2" aria-label="Coleções">
             <button
               type="button"
               onClick={() => selectCollection("")}
-              className={`rounded border px-4 py-2 text-sm ${
-                !collectionId ? "border-black bg-black text-white" : "border-gray-300"
-              }`}
+              className={"opt-pill " + (!collectionId ? "opt-pill-selected" : "")}
             >
               Todos
             </button>
@@ -219,11 +179,7 @@ export default function ShopProducts() {
                 key={collection.id}
                 type="button"
                 onClick={() => selectCollection(String(collection.id))}
-                className={`rounded border px-4 py-2 text-sm ${
-                  collectionId === String(collection.id)
-                    ? "border-black bg-black text-white"
-                    : "border-gray-300"
-                }`}
+                className={"opt-pill " + (collectionId === String(collection.id) ? "opt-pill-selected" : "")}
               >
                 {collection.name}
               </button>
@@ -231,19 +187,15 @@ export default function ShopProducts() {
           </nav>
 
           <section className="mt-8">
-            {isProductsLoading && <p aria-live="polite">A carregar produtos...</p>}
-            {productsError && (
-              <p role="alert" className="text-red-600">
-                {productsError}
-              </p>
-            )}
+            {isProductsLoading && <LoadingState label="A carregar produtos..." />}
+            {productsError && <Alert variant="error">{productsError}</Alert>}
 
             {!isProductsLoading && !productsError && products.length === 0 && (
-              <p>Nenhum produto encontrado.</p>
+              <div className="card card-pad p-10 text-center text-ink-500">Nenhum produto encontrado.</div>
             )}
 
             {!isProductsLoading && !productsError && products.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -252,6 +204,6 @@ export default function ShopProducts() {
           </section>
         </>
       )}
-    </main>
+    </div>
   );
 }

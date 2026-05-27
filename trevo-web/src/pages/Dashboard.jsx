@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { fetchUserProfile } from "../lib/authApi";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 export default function Dashboard() {
   const { t } = useTranslation("common");
@@ -51,22 +54,50 @@ export default function Dashboard() {
   }, [accessToken, logout, navigate, t]);
 
   return (
-    <div style={{ color: "black", fontSize: "24px", padding: "20px" }}>
-      <h1>{t("dashboard")}</h1>
-      <p>{t("authenticated")}: {isAuthenticated ? t("yes") : t("no")}</p>
-      {isLoading && <p>{t("loadingProfile")}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {profile && (
-        <>
-          <p>{t("profileLoaded")}</p>
-          <p>{t("accountType")}: {profile.role}</p>
-          <p>Email: {profile.email}</p>
-          <p>{t("name")}: {profile.fullName}</p>
-          <p>{t("accountStatus")}: {profile.status}</p>
-          {profile.shopName && <p>{t("shop")}: {profile.shopName}</p>}
-          {profile.shopStatus && <p>{t("shopStatus")}: {profile.shopStatus}</p>}
-        </>
-      )}
+    <div className="page-shell">
+      <p className="eyebrow">{t("home", "Início")}</p>
+      <h1 className="h-page mt-2">{t("dashboard")}</h1>
+      <p className="mt-3 text-ink-500 flex items-center gap-2">
+        {isAuthenticated && <CheckCircle2 className="w-4 h-4 text-green-600" strokeWidth={2} />}
+        {t("authenticated")}: {isAuthenticated ? t("yes") : t("no")}
+      </p>
+
+      <div className="mt-8">
+        {isLoading && <LoadingState label={t("loadingProfile")} />}
+        {error && <Alert variant="error">{error}</Alert>}
+
+        {profile && (
+          <div className="card card-pad p-6 max-w-2xl">
+            <h2 className="text-lg font-semibold mb-1">{t("profileLoaded")}</h2>
+            <dl className="mt-4 grid grid-cols-[160px_1fr] gap-y-2.5 text-sm">
+              <dt className="text-ink-500">{t("accountType")}</dt>
+              <dd className="text-ink-900">{profile.role}</dd>
+              <dt className="text-ink-500">Email</dt>
+              <dd className="text-ink-900">{profile.email}</dd>
+              <dt className="text-ink-500">{t("name")}</dt>
+              <dd className="text-ink-900">{profile.fullName}</dd>
+              <dt className="text-ink-500">{t("accountStatus")}</dt>
+              <dd className="text-ink-900">{profile.status}</dd>
+              {profile.shopName && (
+                <>
+                  <dt className="text-ink-500">{t("shop")}</dt>
+                  <dd className="text-ink-900">{profile.shopName}</dd>
+                </>
+              )}
+              {profile.shopStatus && (
+                <>
+                  <dt className="text-ink-500">{t("shopStatus")}</dt>
+                  <dd className="text-ink-900">{profile.shopStatus}</dd>
+                </>
+              )}
+            </dl>
+            <Link to="/profile" className="btn-secondary mt-6 inline-flex">
+              Gerir conta
+              <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

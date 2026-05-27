@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Bell, Check } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { normalizeRole, ROLES } from "../lib/roles";
 import {
@@ -18,18 +19,12 @@ function getErrorMessage(error, fallback) {
 }
 
 function notificationsFromResponse(response) {
-  if (Array.isArray(response)) {
-    return response;
-  }
-
+  if (Array.isArray(response)) return response;
   return response?.notifications || [];
 }
 
 function formatDate(value) {
-  if (!value) {
-    return "";
-  }
-
+  if (!value) return "";
   return new Intl.DateTimeFormat("pt-PT", {
     dateStyle: "short",
     timeStyle: "short",
@@ -54,30 +49,20 @@ export default function NotificationIndicator() {
       setUnreadCount(response?.unreadCount || 0);
       setError("");
     } catch (loadError) {
-      setError(
-        getErrorMessage(loadError, "Nao foi possivel carregar notificacoes")
-      );
+      setError(getErrorMessage(loadError, "Não foi possível carregar notificações."));
     }
   }, []);
 
   useEffect(() => {
-    if (!isShopOwner) {
-      return undefined;
-    }
+    if (!isShopOwner) return undefined;
 
     loadNotifications();
-    const intervalId = window.setInterval(
-      loadNotifications,
-      POLLING_INTERVAL_MS
-    );
-
+    const intervalId = window.setInterval(loadNotifications, POLLING_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
   }, [isShopOwner, loadNotifications]);
 
   useEffect(() => {
-    if (!isOpen) {
-      return undefined;
-    }
+    if (!isOpen) return undefined;
 
     function handlePointerDown(event) {
       if (!containerRef.current?.contains(event.target)) {
@@ -89,55 +74,45 @@ export default function NotificationIndicator() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [isOpen]);
 
-  if (!isShopOwner) {
-    return null;
-  }
+  if (!isShopOwner) return null;
 
   async function handleMarkAsRead(notification) {
-    if (notification.read) {
-      return;
-    }
+    if (notification.read) return;
 
     setReadingId(notification.id);
     setError("");
 
     try {
-      const updatedNotification = await markNotificationAsRead(notification.id);
-      const nextNotification = {
+      const updated = await markNotificationAsRead(notification.id);
+      const next = {
         ...notification,
-        ...(updatedNotification || {}),
-        read: updatedNotification?.read ?? true,
+        ...(updated || {}),
+        read: updated?.read ?? true,
       };
 
-      setNotifications((currentNotifications) =>
-        currentNotifications.map((currentNotification) =>
-          currentNotification.id === notification.id
-            ? nextNotification
-            : currentNotification
-        )
+      setNotifications((current) =>
+        current.map((c) => (c.id === notification.id ? next : c))
       );
-      setUnreadCount((currentCount) => Math.max(currentCount - 1, 0));
+      setUnreadCount((c) => Math.max(c - 1, 0));
     } catch (readError) {
-      setError(
-        getErrorMessage(readError, "Nao foi possivel marcar como lida")
-      );
+      setError(getErrorMessage(readError, "Não foi possível marcar como lida."));
     } finally {
       setReadingId(null);
     }
   }
 
   return (
-    <div className="fixed right-4 top-4 z-50" ref={containerRef}>
+    <div className="fixed right-4 top-20 z-40" ref={containerRef}>
       <button
         type="button"
-        aria-label="Notificacoes"
+        aria-label="Notificações"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((currentIsOpen) => !currentIsOpen)}
-        className="relative rounded-full border border-gray-300 bg-white px-3 py-2 text-xl shadow-sm"
+        onClick={() => setIsOpen((v) => !v)}
+        className="relative w-10 h-10 inline-flex items-center justify-center rounded-full border border-ink-200 bg-white hover:bg-ink-50 shadow-sm transition-colors"
       >
-        <span aria-hidden="true">🔔</span>
+        <Bell className="w-[18px] h-[18px] text-ink-800" strokeWidth={1.7} />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1.5 text-xs font-semibold leading-5 text-white">
+          <span className="absolute -right-0.5 -top-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-clover-500 text-[10px] font-bold leading-[18px] text-white text-center tabular">
             {unreadCount}
           </span>
         )}
@@ -145,50 +120,53 @@ export default function NotificationIndicator() {
 
       <div aria-live="polite">
         {isOpen && (
-          <section className="mt-2 w-80 border border-gray-200 bg-white p-4 shadow-lg">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="font-semibold">Notificacoes</h2>
-              <span className="text-sm text-gray-600">
+          <section className="mt-2 w-80 rounded-md border border-ink-200 bg-white shadow-lg overflow-hidden">
+            <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-ink-100">
+              <h2 className="font-semibold text-sm">Notificações</h2>
+              <span className="text-xs text-ink-500">
                 {unreadCount} por ler
               </span>
             </div>
 
             {error && (
-              <p className="mt-3 text-sm text-red-600" role="alert">
+              <p className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-100" role="alert">
                 {error}
               </p>
             )}
 
             {notifications.length === 0 && !error && (
-              <p className="mt-4 text-sm text-gray-600">
-                Sem notificacoes.
+              <p className="px-4 py-8 text-center text-sm text-ink-500">
+                Sem notificações.
               </p>
             )}
 
             {notifications.length > 0 && (
-              <ul className="mt-4 max-h-96 space-y-3 overflow-y-auto">
+              <ul className="max-h-96 overflow-y-auto divide-y divide-ink-100">
                 {notifications.map((notification) => (
                   <li
                     key={notification.id}
-                    className={`border border-gray-200 p-3 ${
-                      notification.read ? "bg-white" : "bg-gray-50"
-                    }`}
+                    className={
+                      "px-4 py-3 " +
+                      (notification.read ? "bg-white" : "bg-clover-50/40")
+                    }
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{notification.title}</p>
-                        <p className="mt-1 text-sm text-gray-700">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm flex items-center gap-1.5">
+                          {!notification.read && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-clover-500 shrink-0" />
+                          )}
+                          {notification.title}
+                        </p>
+                        <p className="mt-1 text-sm text-ink-700 leading-snug">
                           {notification.message}
                         </p>
                         {notification.createdAt && (
-                          <p className="mt-2 text-xs text-gray-500">
+                          <p className="mt-2 text-[11px] text-ink-500 tabular">
                             {formatDate(notification.createdAt)}
                           </p>
                         )}
                       </div>
-                      {!notification.read && (
-                        <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-600" />
-                      )}
                     </div>
 
                     {!notification.read && (
@@ -196,8 +174,9 @@ export default function NotificationIndicator() {
                         type="button"
                         onClick={() => handleMarkAsRead(notification)}
                         disabled={readingId === notification.id}
-                        className="mt-3 border border-gray-300 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-clover-700 hover:text-clover-800 font-medium disabled:opacity-50"
                       >
+                        <Check className="w-3.5 h-3.5" strokeWidth={2} />
                         {readingId === notification.id
                           ? "A marcar..."
                           : "Marcar como lida"}

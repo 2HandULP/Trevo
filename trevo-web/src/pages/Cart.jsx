@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { Minus, Plus, Trash2, ImageOff, ShoppingBag, ArrowRight } from "lucide-react";
 import {
   getCart,
   removeCartItem,
   updateCartItem,
 } from "../services/cartService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 function formatPrice(value) {
   return new Intl.NumberFormat("pt-PT", {
@@ -64,9 +68,7 @@ export default function Cart() {
   }, [t]);
 
   async function handleQuantityChange(item, nextQuantity) {
-    if (nextQuantity < 1) {
-      return;
-    }
+    if (nextQuantity < 1) return;
 
     try {
       setPendingVariantId(item.variantId);
@@ -96,17 +98,23 @@ export default function Cart() {
   const isEmpty = !isLoading && !error && shops.length === 0;
 
   return (
-    <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      <h1 className="text-3xl font-semibold">{t("cart")}</h1>
+    <div className="page-shell max-w-5xl">
+      <h1 className="h-page">{t("cart")}</h1>
 
-      {isLoading && <p className="mt-6">{t("loadingCart")}</p>}
-      {error && (
-        <p className="mt-6 text-red-600" role="alert">
-          {error}
-        </p>
-      )}
+      {isLoading && <LoadingState label={t("loadingCart")} />}
+      {error && <Alert variant="error" className="mt-6">{error}</Alert>}
+
       {isEmpty && (
-        <p className="mt-6 text-gray-600">{t("emptyCart")}</p>
+        <div className="mt-10 card card-pad p-16 text-center">
+          <div className="w-12 h-12 mx-auto rounded bg-ink-50 border border-ink-100 flex items-center justify-center text-ink-400">
+            <ShoppingBag className="w-5 h-5" strokeWidth={1.7} />
+          </div>
+          <p className="mt-4 text-ink-500">{t("emptyCart")}</p>
+          <Link to="/products" className="btn-secondary mt-5 inline-flex">
+            Explorar produtos
+            <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
+          </Link>
+        </div>
       )}
 
       {!isLoading && !error && shops.length > 0 && (
@@ -115,84 +123,86 @@ export default function Cart() {
             <section
               key={shop.shopId}
               aria-labelledby={`shop-${shop.shopId}`}
-              className="border-b border-gray-200 pb-6"
+              className="border-b border-ink-100 pb-7"
             >
-              <div className="flex items-center justify-between gap-4">
-                <h2 id={`shop-${shop.shopId}`} className="text-xl font-semibold">
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <h2 id={`shop-${shop.shopId}`} className="text-lg font-semibold tracking-tight">
                   {shop.shopName}
                 </h2>
-                <p className="font-semibold">
-                  {t("subtotal")}: {formatPrice(shop.subtotal)}
+                <p className="text-sm text-ink-600">
+                  {t("subtotal")}: <span className="font-semibold text-ink-900 tabular">{formatPrice(shop.subtotal)}</span>
                 </p>
               </div>
 
-              <ul className="mt-4 space-y-4">
+              <ul className="space-y-3">
                 {shop.items.map((item) => {
                   const isPending = pendingVariantId === item.variantId;
 
                   return (
                     <li
                       key={item.cartItemId || item.variantId}
-                      className="grid gap-4 border border-gray-200 p-4 md:grid-cols-[96px_minmax(0,1fr)_auto]"
+                      className="card grid gap-4 p-4 md:grid-cols-[96px_minmax(0,1fr)_auto] items-center"
                     >
                       {item.image ? (
                         <img
                           src={item.image}
                           alt={t("productImageAlt", { name: item.productName || t("unnamedProduct") })}
-                          className="h-24 w-24 object-cover"
+                          className="h-24 w-24 object-cover rounded"
                         />
                       ) : (
-                        <div className="flex h-24 w-24 items-center justify-center bg-gray-100 text-sm text-gray-500">
-                          {t("noImage")}
+                        <div className="flex h-24 w-24 items-center justify-center bg-ink-50 rounded text-ink-300">
+                          <ImageOff className="w-5 h-5" strokeWidth={1.5} />
                         </div>
                       )}
 
                       <div>
-                        <h3 className="font-semibold">{item.productName}</h3>
-                        <p className="mt-1 text-sm text-gray-600">
+                        <h3 className="font-semibold text-ink-900">{item.productName}</h3>
+                        <p className="mt-1 text-xs text-ink-500">
                           {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                         </p>
-                        <p className="mt-2 text-sm">
-                          {t("unitPrice")}: {formatPrice(item.unitPrice)}
+                        <p className="mt-2 text-xs text-ink-500">
+                          {t("unitPrice")}: <span className="tabular">{formatPrice(item.unitPrice)}</span>
                         </p>
-                        <p className="text-sm font-semibold">
+                        <p className="text-sm font-semibold mt-1 tabular">
                           {t("subtotal")}: {formatPrice(item.subtotal)}
                         </p>
                       </div>
 
                       <div className="flex items-center gap-2 md:justify-end">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleQuantityChange(item, item.quantity - 1)
-                          }
-                          disabled={isPending || item.quantity <= 1}
-                          aria-label={t("decreaseQuantity", { name: item.productName })}
-                          className="h-9 w-9 border border-gray-300 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          -
-                        </button>
-                        <span aria-label={t("quantityOf", { name: item.productName })}>
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleQuantityChange(item, item.quantity + 1)
-                          }
-                          disabled={isPending}
-                          aria-label={t("increaseQuantity", { name: item.productName })}
-                          className="h-9 w-9 border border-gray-300 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          +
-                        </button>
+                        <div className="inline-flex items-center border border-ink-200 rounded">
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(item, item.quantity - 1)}
+                            disabled={isPending || item.quantity <= 1}
+                            aria-label={t("decreaseQuantity", { name: item.productName })}
+                            className="w-9 h-9 inline-flex items-center justify-center text-ink-700 hover:bg-ink-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+                          >
+                            <Minus className="w-3.5 h-3.5" strokeWidth={2} />
+                          </button>
+                          <span
+                            aria-label={t("quantityOf", { name: item.productName })}
+                            className="min-w-[36px] text-center text-sm tabular"
+                          >
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(item, item.quantity + 1)}
+                            disabled={isPending}
+                            aria-label={t("increaseQuantity", { name: item.productName })}
+                            className="w-9 h-9 inline-flex items-center justify-center text-ink-700 hover:bg-ink-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" strokeWidth={2} />
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleRemove(item)}
                           disabled={isPending}
-                          className="ml-2 border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                          className="ml-1 w-9 h-9 inline-flex items-center justify-center border border-ink-200 rounded text-ink-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-40 transition-colors"
+                          aria-label={t("remove")}
                         >
-                          {t("remove")}
+                          <Trash2 className="w-4 h-4" strokeWidth={1.7} />
                         </button>
                       </div>
                     </li>
@@ -202,13 +212,21 @@ export default function Cart() {
             </section>
           ))}
 
-          <div className="flex justify-end">
-            <p className="text-2xl font-semibold">
-              {t("grandTotal")}: {formatPrice(cart.grandTotal)}
-            </p>
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-4">
+            <Link to="/products" className="btn-secondary">Continuar a comprar</Link>
+            <div className="flex items-center justify-between sm:justify-end gap-6">
+              <span className="text-sm text-ink-500">{t("grandTotal")}</span>
+              <strong className="text-2xl font-bold tabular">
+                {formatPrice(cart.grandTotal)}
+              </strong>
+              <Link to="/checkout" className="btn-primary">
+                {t("checkout")}
+                <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
+              </Link>
+            </div>
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

@@ -6,6 +6,8 @@ import {
   getCurrentUserProfile,
   updateCurrentUserProfile,
 } from "../services/userService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 const initialForm = {
   fullName: "",
@@ -109,7 +111,6 @@ export default function Profile() {
       phone: form.phone.trim() || null,
     };
 
-    // TODO: adicionar verificação de email quando o backend suportar este fluxo.
     if (form.currentPassword || form.newPassword) {
       payload.currentPassword = form.currentPassword;
       payload.newPassword = form.newPassword;
@@ -140,78 +141,60 @@ export default function Profile() {
   }
 
   return (
-    <div className="mx-auto my-16 max-w-lg p-8 text-black">
-      <h1>{t("profile")}</h1>
+    <div className="page-shell-narrow">
+      <h1 className="h-page">{t("profile")}</h1>
+      <p className="mt-2 text-ink-500">Atualiza os teus dados pessoais e palavra-passe.</p>
 
-      {isLoading && <p>{t("loadingProfile")}</p>}
-      {error && (
-        <p className="text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="text-green-600" role="status" aria-live="polite">
-          {success}
-        </p>
-      )}
+      <div className="mt-8">
+        {isLoading && <LoadingState label={t("loadingProfile")} />}
+        {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+        {success && <Alert variant="success" className="mb-4">{success}</Alert>}
 
-      {!isLoading && (
-        <form onSubmit={handleSubmit}>
-          <div>
-            <input
-              type="text"
-              name="fullName"
-              placeholder={t("name")}
-              value={form.fullName}
-              onChange={handleChange}
-            />
-          </div>
+        {!isLoading && (
+          <form onSubmit={handleSubmit} className="card card-pad p-6 flex flex-col gap-5">
+            <section>
+              <h2 className="text-base font-semibold mb-4">Dados pessoais</h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="field">
+                  <label className="field-label" htmlFor="p-fullName">{t("name")}</label>
+                  <input id="p-fullName" className="input" type="text" name="fullName" value={form.fullName} onChange={handleChange} />
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="p-email">Email</label>
+                  <input id="p-email" className="input" type="email" name="email" value={form.email} onChange={handleChange} />
+                </div>
+                <div className="field sm:col-span-2">
+                  <label className="field-label" htmlFor="p-phone">{t("phone")}</label>
+                  <input id="p-phone" className="input" type="text" name="phone" value={form.phone} onChange={handleChange} />
+                </div>
+              </div>
+            </section>
 
-          <div>
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={handleChange}
-            />
-          </div>
+            <hr className="border-ink-100" />
 
-          <div>
-            <input
-              type="text"
-              name="phone"
-              placeholder={t("phone")}
-              value={form.phone}
-              onChange={handleChange}
-            />
-          </div>
+            <section>
+              <h2 className="text-base font-semibold mb-1">Alterar palavra-passe</h2>
+              <p className="text-xs text-ink-500 mb-4">Deixa em branco para manter a atual.</p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="field">
+                  <label className="field-label" htmlFor="p-curPwd">{t("currentPassword", { ns: "auth" })}</label>
+                  <input id="p-curPwd" className="input" type="password" name="currentPassword" value={form.currentPassword} onChange={handleChange} autoComplete="current-password" />
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="p-newPwd">{t("newPassword", { ns: "auth" })}</label>
+                  <input id="p-newPwd" className="input" type="password" name="newPassword" value={form.newPassword} onChange={handleChange} autoComplete="new-password" />
+                </div>
+              </div>
+            </section>
 
-          <div>
-            <input
-              type="password"
-              name="currentPassword"
-              placeholder={t("currentPassword", { ns: "auth" })}
-              value={form.currentPassword}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div>
-            <input
-              type="password"
-              name="newPassword"
-              placeholder={t("newPassword", { ns: "auth" })}
-              value={form.newPassword}
-              onChange={handleChange}
-            />
-          </div>
-
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? t("saving") : t("saveChanges")}
-          </button>
-        </form>
-      )}
+            <div className="flex justify-end">
+              <button type="submit" disabled={isSubmitting} className="btn-primary">
+                {isSubmitting ? t("saving") : t("saveChanges")}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

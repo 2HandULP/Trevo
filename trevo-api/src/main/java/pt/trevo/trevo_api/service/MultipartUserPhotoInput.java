@@ -4,8 +4,22 @@ import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.dto.CloudinaryUploadResult;
 
-public record MultipartUserPhotoInput(MultipartFile file) implements UserPhotoInput {
+public class MultipartUserPhotoInput implements UserPhotoInput {
+
+    private final MultipartFile file;
+    private final CloudinaryService cloudinaryService;
+    private String cachedUrl;
+
+    public MultipartUserPhotoInput(MultipartFile file) {
+        this(file, null);
+    }
+
+    public MultipartUserPhotoInput(MultipartFile file, CloudinaryService cloudinaryService) {
+        this.file = file;
+        this.cloudinaryService = cloudinaryService;
+    }
 
     @Override
     public String filename() {
@@ -29,5 +43,19 @@ public record MultipartUserPhotoInput(MultipartFile file) implements UserPhotoIn
         } catch (IOException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to read photo upload", exception);
         }
+    }
+
+    @Override
+    public String temporaryUrl() {
+        if (cachedUrl != null) {
+            return cachedUrl;
+        }
+        if (cloudinaryService == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                "CloudinaryService is required for temporary URL generation");
+        }
+        CloudinaryUploadResult result = cloudinaryService.uploadImage(bytes(), filename(), contentType());
+        cachedUrl = result.url();
+        return cachedUrl;
     }
 }

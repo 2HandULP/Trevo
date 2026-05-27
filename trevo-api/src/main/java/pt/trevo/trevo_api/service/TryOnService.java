@@ -1,13 +1,13 @@
 package pt.trevo.trevo_api.service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.TryOnImageResponse;
+import pt.trevo.trevo_api.dto.TryOnUsageResponse;
 import pt.trevo.trevo_api.persistence.entity.Product;
 import pt.trevo.trevo_api.persistence.entity.TryOnImage;
 import pt.trevo.trevo_api.persistence.entity.TryOnUsage;
@@ -20,8 +20,7 @@ import pt.trevo.trevo_api.persistence.repository.UserRepository;
 @Service
 public class TryOnService {
 
-    private static final int FREE_GENERATION_LIMIT_PER_PRODUCT = 1;
-    private static final int PERSONALIZED_PHOTO_COUNT = 3;
+    private static final int FREE_GENERATION_LIMIT = 3;
 
     private final AiImageGenerationClient aiImageGenerationClient;
     private final ProductRepository productRepository;
@@ -47,62 +46,41 @@ public class TryOnService {
     }
 
     @Transactional
-    public TryOnImageResponse generateTryOn(Long buyerId, Long productId, String modelIdentifier) {
-        String normalizedModelIdentifier = normalizeModelIdentifier(modelIdentifier);
+    public TryOnImageResponse generateTryOn(Long buyerId, Long productId, UserPhotoInput photo) {
         boolean proUser = subscriptionService.isProUser(buyerId);
         User buyer = findBuyer(buyerId);
         Product product = findProduct(productId);
         TryOnUsage usage = findOrCreateUsage(buyer, product);
+        String modelIdentifier = "personalized:" + buyerId;
 
-        Optional<TryOnImage> cachedImage = tryOnImageRepository.findFirstCachedForUsage(usage.getId(), normalizedModelIdentifier);
+        Optional<TryOnImage> cachedImage = tryOnImageRepository.findFirstCachedForUsage(usage.getId(), modelIdentifier);
         if (cachedImage.isPresent()) {
             return new TryOnImageResponse(cachedImage.get().getImageUrl());
         }
 
-        enforceFreeTierLimit(proUser, usage);
-        String imageUrl = aiImageGenerationClient.generateTryOn(product, normalizedModelIdentifier);
+        enforceFreeTierLimit(proUser, buyerId);
+        String imageUrl = aiImageGenerationClient.generateTryOn(product, photo);
         incrementUsage(usage);
-        persistImage(usage, imageUrl, normalizedModelIdentifier);
+        persistImage(usage, imageUrl, modelIdentifier);
 
         return new TryOnImageResponse(imageUrl);
     }
 
-    @Transactional
-    public TryOnImageResponse generatePersonalizedTryOn(Long buyerId, Long productId, List<UserPhotoInput> photos) {
-        if (!subscriptionService.isProUser(buyerId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Personalized try-on requires a Pro subscription");
-        }
-        if (photos == null || photos.size() != PERSONALIZED_PHOTO_COUNT) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exactly 3 photos are required");
-        }
-
-        User buyer = findBuyer(buyerId);
-        Product product = findProduct(productId);
-        TryOnUsage usage = findOrCreateUsage(buyer, product);
-        String personalizedModelIdentifier = personalizedModelIdentifier(buyerId);
-
-        Optional<TryOnImage> cachedImage = tryOnImageRepository.findFirstCachedForUsage(usage.getId(), personalizedModelIdentifier);
-        if (cachedImage.isPresent()) {
-            return new TryOnImageResponse(cachedImage.get().getImageUrl());
-        }
-
-        String imageUrl = aiImageGenerationClient.generatePersonalizedTryOn(product, List.copyOf(photos));
-
-        incrementUsage(usage);
-        persistImage(usage, imageUrl, personalizedModelIdentifier);
-
-        return new TryOnImageResponse(imageUrl);
+    public TryOnUsageResponse getUsage(Long buyerId) {
+        boolean proUser = subscriptionService.isProUser(buyerId);
+        int totalGenerations = tryOnUsageRepository.countTotalGenerations(buyerId);
+        int generationsLeft = proUser ? Integer.MAX_VALUE : Math.max(0, FREE_GENERATION_LIMIT - totalGenerations);
+        return new TryOnUsageResponse(proUser, totalGenerations, generationsLeft);
     }
 
-    private String personalizedModelIdentifier(Long buyerId) {
-        return "personalized:" + buyerId;
-    }
-
-    private String normalizeModelIdentifier(String modelIdentifier) {
-        if (modelIdentifier == null || modelIdentifier.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Model identifier is required");
+    private void enforceFreeTierLimit(boolean proUser, Long buyerId) {
+        if (!proUser) {
+            int totalGenerations = tryOnUsageRepository.countTotalGenerations(buyerId);
+            if (totalGenerations >= FREE_GENERATION_LIMIT) {
+                throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "Free users can generate up to " + FREE_GENERATION_LIMIT + " try-on images");
+            }
         }
-        return modelIdentifier.trim();
     }
 
     private User findBuyer(Long buyerId) {
@@ -124,12 +102,6 @@ public class TryOnService {
                 usage.setGenerationCount(0);
                 return usage;
             });
-    }
-
-    private void enforceFreeTierLimit(boolean proUser, TryOnUsage usage) {
-        if (!proUser && usage.getGenerationCount() >= FREE_GENERATION_LIMIT_PER_PRODUCT) {
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Free users can generate one try-on per product");
-        }
     }
 
     private void incrementUsage(TryOnUsage usage) {

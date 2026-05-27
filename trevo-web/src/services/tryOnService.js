@@ -1,26 +1,16 @@
 import apiClient from "../lib/apiClient";
 
-export async function getTryOnUsage(productId) {
-  const { data } = await apiClient.get(`/buyer/try-on/usage/${productId}`);
+export async function getTryOnUsage() {
+  const { data } = await apiClient.get("/buyer/try-on/usage");
   return data;
 }
 
-export async function generateTryOn(productId, modelIdentifier) {
-  const { data } = await apiClient.post("/buyer/try-on", {
-    productId,
-    modelIdentifier,
-  });
-  return data;
-}
-
-export async function generatePersonalizedTryOn(productId, photos) {
+export async function generateTryOn(productId, photo) {
   const formData = new FormData();
   formData.append("productId", productId);
-  photos.forEach((file) => {
-    formData.append("photos", file);
-  });
+  formData.append("photo", photo);
 
-  const { data } = await apiClient.post("/buyer/try-on/personalized", formData, {
+  const { data } = await apiClient.post("/buyer/try-on", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return data;

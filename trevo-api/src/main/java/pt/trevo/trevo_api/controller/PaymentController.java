@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.CreatePaymentIntentRequest;
+import pt.trevo.trevo_api.dto.PayPalCaptureResponse;
 import pt.trevo.trevo_api.dto.PaymentIntentResponse;
 import pt.trevo.trevo_api.persistence.entity.Order;
 import pt.trevo.trevo_api.persistence.entity.OrderStatus;
@@ -20,6 +21,7 @@ import pt.trevo.trevo_api.persistence.entity.PaymentMethod;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 import pt.trevo.trevo_api.security.SecurityUtils;
 import pt.trevo.trevo_api.service.PaymentService;
+import pt.trevo.trevo_api.service.PayPalService;
 import pt.trevo.trevo_api.service.StripeWebhookService;
 
 @RestController
@@ -27,17 +29,20 @@ import pt.trevo.trevo_api.service.StripeWebhookService;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final PayPalService payPalService;
     private final StripeWebhookService stripeWebhookService;
     private final OrderRepository orderRepository;
     private final SecurityUtils securityUtils;
 
     public PaymentController(
         PaymentService paymentService,
+        PayPalService payPalService,
         StripeWebhookService stripeWebhookService,
         OrderRepository orderRepository,
         SecurityUtils securityUtils
     ) {
         this.paymentService = paymentService;
+        this.payPalService = payPalService;
         this.stripeWebhookService = stripeWebhookService;
         this.orderRepository = orderRepository;
         this.securityUtils = securityUtils;
@@ -65,6 +70,18 @@ public class PaymentController {
         }
 
         return paymentService.createPaymentIntent(order);
+    }
+
+    @PostMapping("/paypal/capture")
+    @PreAuthorize("hasRole('BUYER')")
+    public PayPalCaptureResponse capturePayPalPayment(
+        @RequestBody java.util.Map<String, String> request
+    ) {
+        String paypalOrderId = request.get("paypalOrderId");
+        if (paypalOrderId == null || paypalOrderId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "paypalOrderId is required");
+        }
+        return payPalService.capturePayment(paypalOrderId);
     }
 
     @PostMapping("/stripe/webhook")

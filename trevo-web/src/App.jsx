@@ -22,6 +22,7 @@ import ProSubscription from "./pages/ProSubscription";
 import ReceiptView from "./pages/ReceiptView";
 import PayoutDashboard from "./pages/PayoutDashboard";
 import Checkout from "./pages/Checkout";
+import PayPalReturn from "./pages/PayPalReturn";
 import Cart from "./pages/Cart";
 import Unauthorized from "./pages/Unauthorized";
 import Header from "./components/Header";
@@ -56,6 +57,7 @@ export default function App() {
           <Route element={<RoleRoute allowedRoles={[ROLES.BUYER]} />}>
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/checkout/paypal/return" element={<PayPalReturn />} />
             <Route path="/orders" element={<OrderHistory />} />
             <Route path="/pro" element={<ProSubscription />} />
             <Route path="/orders/:orderId/receipt" element={<ReceiptView />} />

@@ -38,13 +38,18 @@ public class PayPalRestOrdersClient implements PayPalOrdersClient {
     private String cachedAccessToken;
     private Instant cachedAccessTokenExpiresAt = Instant.EPOCH;
 
+    private final String returnUrl;
+    private final String cancelUrl;
+
     @Autowired
     public PayPalRestOrdersClient(
         @Value("${PAYPAL_BASE_URL:https://api-m.sandbox.paypal.com}") String baseUrl,
         @Value("${PAYPAL_CLIENT_ID:}") String clientId,
-        @Value("${PAYPAL_CLIENT_SECRET:}") String clientSecret
+        @Value("${PAYPAL_CLIENT_SECRET:}") String clientSecret,
+        @Value("${PAYPAL_RETURN_URL:http://localhost:5173/checkout/paypal/return}") String returnUrl,
+        @Value("${PAYPAL_CANCEL_URL:http://localhost:5173/checkout}") String cancelUrl
     ) {
-        this(payPalRestClientBuilder(), baseUrl, clientId, clientSecret, Clock.systemUTC());
+        this(payPalRestClientBuilder(), baseUrl, clientId, clientSecret, Clock.systemUTC(), returnUrl, cancelUrl);
     }
 
     PayPalRestOrdersClient(
@@ -54,10 +59,25 @@ public class PayPalRestOrdersClient implements PayPalOrdersClient {
         String clientSecret,
         Clock clock
     ) {
+        this(restClientBuilder, baseUrl, clientId, clientSecret, clock,
+            "http://localhost:5173/checkout/paypal/return", "http://localhost:5173/checkout");
+    }
+
+    PayPalRestOrdersClient(
+        RestClient.Builder restClientBuilder,
+        String baseUrl,
+        String clientId,
+        String clientSecret,
+        Clock clock,
+        String returnUrl,
+        String cancelUrl
+    ) {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.clock = clock;
+        this.returnUrl = returnUrl;
+        this.cancelUrl = cancelUrl;
     }
 
     @Override
@@ -77,7 +97,8 @@ public class PayPalRestOrdersClient implements PayPalOrdersClient {
                     List.of(new PayPalPurchaseUnit(
                         orderId.toString(),
                         new PayPalAmount(currency, amount.toPlainString())
-                    ))
+                    )),
+                    new PayPalApplicationContext(returnUrl, cancelUrl)
                 ))
                 .retrieve()
                 .body(PayPalCreateOrderApiResponse.class);
@@ -194,7 +215,14 @@ public class PayPalRestOrdersClient implements PayPalOrdersClient {
 
     private record PayPalCreateOrderRequest(
         String intent,
-        @com.fasterxml.jackson.annotation.JsonProperty("purchase_units") List<PayPalPurchaseUnit> purchaseUnits
+        @com.fasterxml.jackson.annotation.JsonProperty("purchase_units") List<PayPalPurchaseUnit> purchaseUnits,
+        @com.fasterxml.jackson.annotation.JsonProperty("application_context") PayPalApplicationContext applicationContext
+    ) {
+    }
+
+    private record PayPalApplicationContext(
+        @com.fasterxml.jackson.annotation.JsonProperty("return_url") String returnUrl,
+        @com.fasterxml.jackson.annotation.JsonProperty("cancel_url") String cancelUrl
     ) {
     }
 

@@ -48,5 +48,12 @@
   "confirmStripePayment": "Confirmar pagamento Stripe",
   "startPayPalFailed": "Não foi possível iniciar o PayPal",
   "startMbWayFailed": "Não foi possível iniciar o MB WAY",
-  "mbWayStarted": "Pedido MB WAY iniciado para o número {{phone}}"
+  "mbWayStarted": "Pedido MB WAY iniciado para o número {{phone}}",
+  "paypalProcessing": "A processar pagamento PayPal...",
+  "paypalSuccess": "Pagamento confirmado",
+  "paypalPaymentConfirmed": "O teu pagamento PayPal foi processado com sucesso.",
+  "paypalFailed": "Pagamento falhou",
+  "paypalCaptureFailed": "Não foi possível processar o pagamento PayPal.",
+  "paypalMissingToken": "Token PayPal em falta.",
+  "viewOrders": "Ver encomendas"
 }

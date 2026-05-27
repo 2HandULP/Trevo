@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { CheckCircle2, ShoppingBag, CreditCard, Smartphone } from "lucide-react";
-import { redirectTo } from "../lib/checkoutRedirect";
 import { loadStripe } from "@stripe/stripe-js";
 import StripePaymentForm from "./StripePaymentForm";
 import { getCart } from "../services/cartService";
@@ -10,7 +9,6 @@ import { checkoutOrder } from "../services/orderService";
 import LoadingState from "../components/LoadingState";
 import Alert from "../components/Alert";
 
-const PAYPAL_MOCK_REDIRECT_URL = "/checkout/paypal/mock";
 
 const paymentMethods = [
   // Keep these values aligned with the backend PaymentMethod enum.
@@ -132,7 +130,8 @@ export default function Checkout() {
 
     try {
       setIsSubmitting(true);
-      const createdOrders = await checkoutOrder(paymentMethod);
+      const result = await checkoutOrder(paymentMethod);
+      const createdOrders = result.orders || result;
 
       if (paymentMethod === "STRIPE") {
         setPendingStripeOrders(createdOrders);
@@ -157,8 +156,12 @@ export default function Checkout() {
 
     try {
       setIsSubmitting(true);
-      await checkoutOrder("PAYPAL");
-      redirectTo(PAYPAL_MOCK_REDIRECT_URL);
+      const result = await checkoutOrder("PAYPAL");
+      if (result.approveUrl) {
+        window.location.href = result.approveUrl;
+        return;
+      }
+      setOrders(result.orders || result);
     } catch (checkoutError) {
       setError(getErrorMessage(checkoutError, t("startPayPalFailed")));
     } finally {

@@ -94,14 +94,15 @@ class OrderControllerIntegrationTest {
         CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
         OrderResponse order = sampleOrder(10L, OrderStatus.PLACED);
 
-        when(orderService.checkout(eq(1L), eq(PaymentMethod.MBWAY))).thenReturn(List.of(order));
+        when(orderService.checkout(eq(1L), eq(PaymentMethod.MBWAY)))
+            .thenReturn(new pt.trevo.trevo_api.dto.CheckoutResponse(List.of(order), null));
 
         mockMvc.perform(post("/api/buyer/orders/checkout")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$[0].id").value(10))
-            .andExpect(jsonPath("$[0].status").value("PLACED"))
+            .andExpect(jsonPath("$.orders[0].id").value(10))
+            .andExpect(jsonPath("$.orders[0].status").value("PLACED"))
             .andExpect(jsonPath("$[0].shopName").value("North Shop"));
     }
 

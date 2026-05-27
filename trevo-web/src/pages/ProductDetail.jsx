@@ -17,8 +17,7 @@ import { normalizeRole, ROLES } from "../lib/roles";
 import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
 import { getProStatus } from "../services/subscriptionService";
-import { getTryOnUsage } from "../services/tryOnService";
-import { uploadBuyerPhotos } from "../services/userPhotoService";
+import { generatePersonalizedTryOn, generateTryOn, getTryOnUsage } from "../services/tryOnService";
 import LoadingState from "../components/LoadingState";
 import Alert from "../components/Alert";
 
@@ -87,6 +86,7 @@ export default function ProductDetail() {
   const [selectedBodyType, setSelectedBodyType] = useState(BODY_TYPES[0].value);
   const [isGeneratingTryOn, setIsGeneratingTryOn] = useState(false);
   const [generatedTryOnImage, setGeneratedTryOnImage] = useState("");
+  const [tryOnError, setTryOnError] = useState("");
   const [isPro, setIsPro] = useState(null);
   const [tryOnUsed, setTryOnUsed] = useState(false);
   const [isSeeItOpen, setIsSeeItOpen] = useState(false);
@@ -235,13 +235,20 @@ export default function ProductDetail() {
 
   async function handleGenerateTryOn() {
     setGeneratedTryOnImage("");
+    setTryOnError("");
     setIsGeneratingTryOn(true);
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    setGeneratedTryOnImage(images[activeImageIndex]?.url || "");
-    setIsGeneratingTryOn(false);
 
-    if (isPro === false && !tryOnUsed) {
-      setTryOnUsed(true);
+    try {
+      const result = await generateTryOn(Number(productId), selectedBodyType);
+      setGeneratedTryOnImage(result.imageUrl);
+
+      if (isPro === false && !tryOnUsed) {
+        setTryOnUsed(true);
+      }
+    } catch (err) {
+      setTryOnError(getErrorMessage(err, t("tryOnFailed")));
+    } finally {
+      setIsGeneratingTryOn(false);
     }
   }
 
@@ -293,11 +300,14 @@ export default function ProductDetail() {
     setIsUploadingSeeIt(true);
 
     try {
-      await uploadBuyerPhotos(seeItPhotos.map((photo) => photo.file));
-      setSeeItSuccess(t("photosUploaded"));
-      setSeeItResultImage(images[activeImageIndex]?.url || seeItPhotos[0].previewUrl);
+      const result = await generatePersonalizedTryOn(
+        Number(productId),
+        seeItPhotos.map((photo) => photo.file)
+      );
+      setSeeItResultImage(result.imageUrl);
+      setSeeItSuccess(t("tryOnGenerated"));
     } catch (uploadError) {
-      setSeeItError(getErrorMessage(uploadError, t("uploadPhotosFailed")));
+      setSeeItError(getErrorMessage(uploadError, t("tryOnFailed")));
     } finally {
       setIsUploadingSeeIt(false);
     }
@@ -600,6 +610,12 @@ export default function ProductDetail() {
               <Sparkles className="w-4 h-4" strokeWidth={1.8} />
               {isGeneratingTryOn ? t("generatingTryOn") : t("generateTryOn")}
             </button>
+
+            {tryOnError && (
+              <p className="mt-3 text-sm text-red-600" role="alert">
+                {tryOnError}
+              </p>
+            )}
 
             {images.length === 0 && (
               <p className="mt-3 text-sm text-ink-500">{t("noTryOnImage")}</p>

@@ -33,6 +33,7 @@ import pt.trevo.trevo_api.dto.TryOnRequest;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.security.SecurityUtils;
+import pt.trevo.trevo_api.service.CloudinaryService;
 import pt.trevo.trevo_api.service.TryOnService;
 
 @WebMvcTest(TryOnController.class)
@@ -45,6 +46,7 @@ class TryOnControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean private TryOnService tryOnService;
+    @MockitoBean private CloudinaryService cloudinaryService;
     @MockitoBean private AppUserDetailsService appUserDetailsService;
     @MockitoBean private JwtService jwtService;
     @MockitoBean private UserRepository userRepository;

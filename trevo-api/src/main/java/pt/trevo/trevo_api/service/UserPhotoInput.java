@@ -9,4 +9,6 @@ public interface UserPhotoInput {
     long size();
 
     byte[] bytes();
+
+    String temporaryUrl();
 }

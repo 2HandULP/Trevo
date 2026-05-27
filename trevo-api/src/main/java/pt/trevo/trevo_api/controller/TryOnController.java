@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import pt.trevo.trevo_api.dto.TryOnImageResponse;
 import pt.trevo.trevo_api.dto.TryOnRequest;
 import pt.trevo.trevo_api.security.SecurityUtils;
+import pt.trevo.trevo_api.service.CloudinaryService;
 import pt.trevo.trevo_api.service.MultipartUserPhotoInput;
 import pt.trevo.trevo_api.service.TryOnService;
 import pt.trevo.trevo_api.service.UserPhotoInput;
@@ -30,15 +31,18 @@ public class TryOnController {
     private final TryOnService tryOnService;
     private final ImageUploadValidator imageUploadValidator;
     private final SecurityUtils securityUtils;
+    private final CloudinaryService cloudinaryService;
 
     public TryOnController(
         TryOnService tryOnService,
         ImageUploadValidator imageUploadValidator,
-        SecurityUtils securityUtils
+        SecurityUtils securityUtils,
+        CloudinaryService cloudinaryService
     ) {
         this.tryOnService = tryOnService;
         this.imageUploadValidator = imageUploadValidator;
         this.securityUtils = securityUtils;
+        this.cloudinaryService = cloudinaryService;
     }
 
     @PostMapping
@@ -61,7 +65,7 @@ public class TryOnController {
         }
         photos.forEach(photo -> imageUploadValidator.validateOptionalImage(photo, "photos"));
         List<UserPhotoInput> photoInputs = photos.stream()
-            .map(MultipartUserPhotoInput::new)
+            .map(photo -> new MultipartUserPhotoInput(photo, cloudinaryService))
             .map(UserPhotoInput.class::cast)
             .toList();
         Long buyerId = securityUtils.requireUserId(authentication);

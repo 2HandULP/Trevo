@@ -40,28 +40,28 @@ function getErrorMessage(payload) {
 }
 
 export function registerBuyer(payload) {
-  return apiRequest("/api/auth/register/buyer", {
+  return apiRequest("/auth/register/buyer", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 export function registerShopOwner(payload) {
-  return apiRequest("/api/auth/register/shop-owner", {
+  return apiRequest("/auth/register/shop-owner", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 export function loginUser(payload) {
-  return apiRequest("/api/auth/login", {
+  return apiRequest("/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 export function fetchUserProfile(accessToken) {
-  return apiRequest("/api/users/me", {
+  return apiRequest("/users/me", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -69,21 +69,21 @@ export function fetchUserProfile(accessToken) {
 }
 
 export function requestPasswordReset(email) {
-  return apiRequest("/api/auth/password-reset/request", {
+  return apiRequest("/auth/password-reset/request", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
 }
 
 export function validatePasswordResetToken(token) {
-  return apiRequest("/api/auth/password-reset/validate", {
+  return apiRequest("/auth/password-reset/validate", {
     method: "POST",
     body: JSON.stringify({ token }),
   });
 }
 
 export function confirmPasswordReset(token, newPassword) {
-  return apiRequest("/api/auth/password-reset/confirm", {
+  return apiRequest("/auth/password-reset/confirm", {
     method: "POST",
     body: JSON.stringify({ token, newPassword }),
   });

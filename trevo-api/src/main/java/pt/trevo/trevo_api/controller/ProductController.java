@@ -61,7 +61,7 @@ public class ProductController {
         @RequestParam(required = false) String q,
         @RequestParam(required = false) BigDecimal minPrice,
         @RequestParam(required = false) BigDecimal maxPrice,
-        @RequestParam(required = false) String size,
+        @RequestParam(name = "variantSize", required = false) String size,
         @RequestParam(required = false) String color,
         Pageable pageable
     ) {
@@ -222,6 +222,9 @@ public class ProductController {
     }
 
     private ProductResponse toProductResponse(Product product, List<Variant> variants) {
+        List<ProductResponse.ImageResponse> images = product.getImages().stream()
+            .map(img -> new ProductResponse.ImageResponse(img.getId(), img.getImageUrl(), img.getDisplayOrder()))
+            .toList();
         return new ProductResponse(
             product.getId(),
             product.getShop().getId(),
@@ -232,6 +235,7 @@ public class ProductController {
             product.getMaterials(),
             product.getStatus(),
             variants.stream().map(this::toVariantResponse).toList(),
+            images,
             product.getCreatedAt()
         );
     }

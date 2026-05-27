@@ -9,13 +9,13 @@
 
 -- Buyers (password: "password123" - bcrypt hash)
 INSERT INTO users (email, password_hash, full_name, phone, role, status) VALUES
-('buyer1@test.com', '$2a$12$LJ3m4ys5RkXMNfBpOX8Xz.UrI7GZUH6RZ1Eq5eJKHVGxP0yvzxvCi', 'Ana Silva', '+351912345678', 'BUYER', 'ACTIVE'),
-('buyer2@test.com', '$2a$12$LJ3m4ys5RkXMNfBpOX8Xz.UrI7GZUH6RZ1Eq5eJKHVGxP0yvzxvCi', 'João Santos', '+351923456789', 'BUYER', 'ACTIVE');
+('buyer1@test.com', '$2a$12$J69wp6V2TKcJEGipoy7Ja.p.jEekTWAGONrV23.wazV9e8piJvSgy', 'Ana Silva', '+351912345678', 'BUYER', 'ACTIVE'),
+('buyer2@test.com', '$2a$12$J69wp6V2TKcJEGipoy7Ja.p.jEekTWAGONrV23.wazV9e8piJvSgy', 'João Santos', '+351923456789', 'BUYER', 'ACTIVE');
 
 -- Shop Owners
 INSERT INTO users (email, password_hash, full_name, phone, role, status) VALUES
-('shop1@test.com', '$2a$12$LJ3m4ys5RkXMNfBpOX8Xz.UrI7GZUH6RZ1Eq5eJKHVGxP0yvzxvCi', 'Maria Costa', '+351934567890', 'SHOP_OWNER', 'ACTIVE'),
-('shop2@test.com', '$2a$12$LJ3m4ys5RkXMNfBpOX8Xz.UrI7GZUH6RZ1Eq5eJKHVGxP0yvzxvCi', 'Pedro Ferreira', '+351945678901', 'SHOP_OWNER', 'ACTIVE');
+('shop1@test.com', '$2a$12$J69wp6V2TKcJEGipoy7Ja.p.jEekTWAGONrV23.wazV9e8piJvSgy', 'Maria Costa', '+351934567890', 'SHOP_OWNER', 'ACTIVE'),
+('shop2@test.com', '$2a$12$J69wp6V2TKcJEGipoy7Ja.p.jEekTWAGONrV23.wazV9e8piJvSgy', 'Pedro Ferreira', '+351945678901', 'SHOP_OWNER', 'ACTIVE');
 
 -- IDs: buyer1=1, buyer2=2, shop1=3, shop2=4
 
@@ -60,16 +60,17 @@ INSERT INTO products (shop_id, name, description, price, brand, materials, statu
 -- ============================================================
 
 INSERT INTO product_images (product_id, image_url, display_order) VALUES
-(1, 'https://res.cloudinary.com/trevo/image/upload/v1/products/vestido_floral_1.jpg', 0),
-(1, 'https://res.cloudinary.com/trevo/image/upload/v1/products/vestido_floral_2.jpg', 1),
-(2, 'https://res.cloudinary.com/trevo/image/upload/v1/products/casaco_ganga_1.jpg', 0),
-(2, 'https://res.cloudinary.com/trevo/image/upload/v1/products/casaco_ganga_2.jpg', 1),
-(2, 'https://res.cloudinary.com/trevo/image/upload/v1/products/casaco_ganga_3.jpg', 2),
-(3, 'https://res.cloudinary.com/trevo/image/upload/v1/products/saia_plissada_1.jpg', 0),
-(4, 'https://res.cloudinary.com/trevo/image/upload/v1/products/tshirt_organica_1.jpg', 0),
-(4, 'https://res.cloudinary.com/trevo/image/upload/v1/products/tshirt_organica_2.jpg', 1),
-(5, 'https://res.cloudinary.com/trevo/image/upload/v1/products/calcas_cargo_1.jpg', 0),
-(5, 'https://res.cloudinary.com/trevo/image/upload/v1/products/calcas_cargo_2.jpg', 1);
+(1, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893881/products/vestido_floral_1.jpg', 0),
+(1, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893882/products/vestido_floral_2.jpg', 1),
+(1, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893884/products/vestido_floral_3.jpg', 2),
+(2, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893886/products/casaco_ganga_1.jpg', 0),
+(2, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893888/products/casaco_ganga_2.jpg', 1),
+(2, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893890/products/casaco_ganga_3.jpg', 2),
+(3, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893891/products/saia_plissada_1.jpg', 0),
+(4, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893893/products/tshirt_organica_1.jpg', 0),
+(5, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893894/products/calcas_cargo_1.jpg', 0),
+(5, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893896/products/calcas_cargo_2.jpg', 1),
+(5, 'https://res.cloudinary.com/djdnk4fdy/image/upload/v1779893897/products/calcas_cargo_3.jpg', 2);
 
 -- ============================================================
 -- 6. VARIANTS

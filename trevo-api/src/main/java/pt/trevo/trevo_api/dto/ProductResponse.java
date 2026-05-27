@@ -15,5 +15,9 @@ public record ProductResponse(
     String materials,
     ProductStatus status,
     List<VariantResponse> variants,
+    List<ImageResponse> images,
     LocalDateTime createdAt
-) {}
+) {
+
+    public record ImageResponse(Long id, String imageUrl, Integer displayOrder) {}
+}

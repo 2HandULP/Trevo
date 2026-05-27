@@ -7,7 +7,7 @@ import { browseProducts, searchProducts } from "../services/productService";
 import LoadingState from "../components/LoadingState";
 import Alert from "../components/Alert";
 
-const FILTER_KEYS = ["q", "minPrice", "maxPrice", "size", "color"];
+const FILTER_KEYS = ["q", "minPrice", "maxPrice", "variantSize", "color"];
 const SCOPE_KEYS = ["shopId", "collectionId"];
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -211,9 +211,9 @@ export default function ProductSearch() {
           <input
             id="f-size"
             aria-label={t("size")}
-            name="size"
-            value={filters.size}
-            onChange={(event) => updateFilter("size", event.target.value)}
+            name="variantSize"
+            value={filters.variantSize}
+            onChange={(event) => updateFilter("variantSize", event.target.value)}
             className="input"
             placeholder="S, M, 38…"
           />

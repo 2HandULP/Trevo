@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ImageOff,
+  Sparkles,
+  Camera,
+  X,
+  CheckCircle2,
+} from "lucide-react";
 import ReviewForm from "../components/ReviewForm";
 import { useAuth } from "../hooks/useAuth";
 import { productImageAlt } from "../lib/imageAlt";
@@ -10,6 +19,8 @@ import { getProduct } from "../services/productService";
 import { getProStatus } from "../services/subscriptionService";
 import { getTryOnUsage } from "../services/tryOnService";
 import { uploadBuyerPhotos } from "../services/userPhotoService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 const REQUIRED_TRY_ON_PHOTOS = 3;
 
@@ -24,28 +35,17 @@ function formatPrice(price) {
   if (price === null || price === undefined || price === "") {
     return "";
   }
-
-  return new Intl.NumberFormat("pt-PT", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(price));
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(price));
 }
 
 function imageUrlFrom(image) {
-  if (typeof image === "string") {
-    return image;
-  }
-
+  if (typeof image === "string") return image;
   return image?.imageUrl || image?.url || image?.src || "";
 }
 
 function normalizeImages(images, productName) {
-  if (!Array.isArray(images)) {
-    return [];
-  }
-
+  if (!Array.isArray(images)) return [];
   const fallbackAlt = productImageAlt(productName);
-
   return images
     .map((image, index) => ({
       id: image?.id ?? imageUrlFrom(image) ?? index,
@@ -198,9 +198,7 @@ export default function ProductDetail() {
   }
 
   async function handleAddToCart() {
-    if (!selectedVariant || selectedVariant.stock <= 0) {
-      return;
-    }
+    if (!selectedVariant || selectedVariant.stock <= 0) return;
 
     setCartSuccess("");
     setCartError("");
@@ -210,21 +208,14 @@ export default function ProductDetail() {
       await addCartItem(selectedVariant.id, 1);
       setCartSuccess("Produto adicionado ao carrinho.");
     } catch (addError) {
-      setCartError(
-        getErrorMessage(
-          addError,
-          t("addToCartFailed")
-        )
-      );
+      setCartError(getErrorMessage(addError, t("addToCartFailed")));
     } finally {
       setIsAddingToCart(false);
     }
   }
 
   async function loadTryOnStatus() {
-    if (!isAuthenticated || normalizeRole(role) !== ROLES.BUYER) {
-      return;
-    }
+    if (!isAuthenticated || normalizeRole(role) !== ROLES.BUYER) return;
     try {
       const [proStatus, usage] = await Promise.all([
         getProStatus(),
@@ -245,11 +236,7 @@ export default function ProductDetail() {
   async function handleGenerateTryOn() {
     setGeneratedTryOnImage("");
     setIsGeneratingTryOn(true);
-
-    await new Promise((resolve) => {
-      setTimeout(resolve, 150);
-    });
-
+    await new Promise((resolve) => setTimeout(resolve, 150));
     setGeneratedTryOnImage(images[activeImageIndex]?.url || "");
     setIsGeneratingTryOn(false);
 
@@ -266,7 +253,6 @@ export default function ProductDetail() {
 
     setSeeItPhotos((currentPhotos) => {
       currentPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-
       return files.map((file) => ({
         file,
         previewUrl: URL.createObjectURL(file),
@@ -325,58 +311,56 @@ export default function ProductDetail() {
     isAddingToCart;
 
   return (
-    <main className="mx-auto my-10 max-w-5xl px-4 text-black">
-      {isLoading && <p aria-live="polite">A carregar produto...</p>}
-      {error && (
-        <p role="alert" className="text-red-600">
-          {error}
-        </p>
-      )}
+    <div className="page-shell max-w-6xl">
+      {isLoading && <LoadingState label="A carregar produto..." />}
+      {error && <Alert variant="error">{error}</Alert>}
 
       {!isLoading && !error && product && (
-        <div className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <div className="grid gap-10 md:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+          {/* Gallery */}
           <section aria-label={t("productGallery")}>
             {images.length > 0 ? (
               <>
-                <div className="flex aspect-square items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50">
+                <div className="relative aspect-square overflow-hidden rounded border border-ink-200 bg-ink-50">
                   <img
                     src={images[activeImageIndex].url}
                     alt={images[activeImageIndex].alt}
                     className="h-full w-full object-cover"
                   />
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={showPreviousImage}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white border border-ink-200 flex items-center justify-center shadow-sm transition-colors"
+                        aria-label={t("previous", { ns: "common" })}
+                      >
+                        <ChevronLeft className="w-4 h-4" strokeWidth={1.8} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={showNextImage}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white border border-ink-200 flex items-center justify-center shadow-sm transition-colors"
+                        aria-label={t("next", { ns: "common" })}
+                      >
+                        <ChevronRight className="w-4 h-4" strokeWidth={1.8} />
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {images.length > 1 && (
-                  <div className="mt-4 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={showPreviousImage}
-                      className="rounded border border-gray-300 px-3 py-2 text-sm"
-                    >
-                      {t("previous", { ns: "common" })}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={showNextImage}
-                      className="rounded border border-gray-300 px-3 py-2 text-sm"
-                    >
-                      {t("next", { ns: "common" })}
-                    </button>
-                  </div>
-                )}
-
-                {images.length > 1 && (
-                  <div className="mt-4 flex gap-3">
+                  <div className="mt-3 flex gap-2 overflow-x-auto">
                     {images.map((image, index) => (
                       <button
                         key={image.id}
                         type="button"
                         onClick={() => setActiveImageIndex(index)}
                         aria-label={t("showImage", { index: index + 1 })}
-                        className={`h-20 w-20 overflow-hidden rounded border ${
+                        className={`shrink-0 h-16 w-16 overflow-hidden rounded transition-all ${
                           activeImageIndex === index
-                            ? "border-black"
-                            : "border-gray-200"
+                            ? "ring-2 ring-ink-900 ring-offset-2"
+                            : "border border-ink-200 hover:border-ink-400"
                         }`}
                       >
                         <img
@@ -390,42 +374,38 @@ export default function ProductDetail() {
                 )}
               </>
             ) : (
-              <div className="flex aspect-square items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-gray-500">
-                Sem imagem disponivel
+              <div className="flex aspect-square items-center justify-center rounded border border-dashed border-ink-300 bg-ink-50 text-ink-400">
+                <div className="flex flex-col items-center gap-2">
+                  <ImageOff className="w-7 h-7" strokeWidth={1.5} />
+                  <span className="text-xs">Sem imagem disponível</span>
+                </div>
               </div>
             )}
           </section>
 
+          {/* Buy panel */}
           <section>
-            <p className="text-sm uppercase tracking-wide text-gray-500">
-              {product.brand || t("brandMissing")}
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold">{product.name}</h1>
+            <p className="eyebrow">{product.brand || t("brandMissing")}</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight leading-tight">{product.name}</h1>
             {product.price !== undefined && product.price !== null && (
-              <p className="mt-3 text-2xl font-semibold">
-                {formatPrice(product.price)}
-              </p>
+              <p className="mt-3 text-2xl font-bold tabular">{formatPrice(product.price)}</p>
             )}
             {product.description && (
-              <p className="mt-5 leading-7 text-gray-700">{product.description}</p>
+              <p className="mt-5 leading-relaxed text-ink-600">{product.description}</p>
             )}
 
-            <div className="mt-6 space-y-2 text-sm">
-              <p>
-                <span className="font-semibold">{t("brand")}:</span>{" "}
-                {product.brand || t("notIndicated")}
-              </p>
-              <p>
-                <span className="font-semibold">{t("materials")}:</span>{" "}
-                {product.materials || t("notIndicatedPlural")}
-              </p>
-            </div>
+            <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+              <dt className="text-ink-500">{t("brand")}</dt>
+              <dd className="text-ink-900">{product.brand || t("notIndicated")}</dd>
+              <dt className="text-ink-500">{t("materials")}</dt>
+              <dd className="text-ink-900">{product.materials || t("notIndicatedPlural")}</dd>
+            </dl>
 
             <div className="mt-8">
-              <h2 className="text-lg font-semibold">{t("size")}</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <h2 className="text-sm font-semibold mb-2.5">{t("size")}</h2>
+              <div className="flex flex-wrap gap-2">
                 {sizes.length === 0 && (
-                  <p className="text-sm text-gray-500">{t("noSizes")}</p>
+                  <p className="text-sm text-ink-500">{t("noSizes")}</p>
                 )}
                 {sizes.map((size) => (
                   <button
@@ -433,11 +413,10 @@ export default function ProductDetail() {
                     type="button"
                     disabled={isSizeDisabled(size)}
                     onClick={() => setSelectedSize(size)}
-                    className={`rounded border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
-                      selectedSize === size
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 bg-white"
-                    }`}
+                    className={
+                      "opt-pill " +
+                      (selectedSize === size ? "opt-pill-selected" : "")
+                    }
                   >
                     {size}
                   </button>
@@ -446,10 +425,10 @@ export default function ProductDetail() {
             </div>
 
             <div className="mt-6">
-              <h2 className="text-lg font-semibold">{t("color")}</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <h2 className="text-sm font-semibold mb-2.5">{t("color")}</h2>
+              <div className="flex flex-wrap gap-2">
                 {colors.length === 0 && (
-                  <p className="text-sm text-gray-500">{t("noColors")}</p>
+                  <p className="text-sm text-ink-500">{t("noColors")}</p>
                 )}
                 {colors.map((color) => (
                   <button
@@ -457,11 +436,10 @@ export default function ProductDetail() {
                     type="button"
                     disabled={isColorDisabled(color)}
                     onClick={() => setSelectedColor(color)}
-                    className={`rounded border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
-                      selectedColor === color
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 bg-white"
-                    }`}
+                    className={
+                      "opt-pill " +
+                      (selectedColor === color ? "opt-pill-selected" : "")
+                    }
                   >
                     {color}
                   </button>
@@ -469,19 +447,25 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <div className="mt-8 rounded border border-gray-200 bg-gray-50 p-4">
+            {/* Stock status */}
+            <div
+              className={
+                "mt-6 px-3.5 py-2.5 rounded border text-sm " +
+                (!selectedSize || !selectedColor
+                  ? "bg-ink-50 border-ink-200 text-ink-600"
+                  : selectedVariant && selectedVariant.stock > 0
+                  ? "bg-green-50 border-green-200 text-green-700"
+                  : "bg-red-50 border-red-200 text-red-700")
+              }
+            >
               {!selectedSize || !selectedColor ? (
-                <p className="text-sm text-gray-600">
-                  {t("selectSizeColor")}
-                </p>
+                t("selectSizeColor")
               ) : selectedVariant ? (
-                <p className="font-semibold">
-                  {selectedVariant.stock > 0
-                    ? t("inStock", { count: selectedVariant.stock })
-                    : t("outOfStock")}
-                </p>
+                selectedVariant.stock > 0
+                  ? t("inStock", { count: selectedVariant.stock })
+                  : t("outOfStock")
               ) : (
-                <p className="font-semibold">{t("combinationUnavailable")}</p>
+                t("combinationUnavailable")
               )}
             </div>
 
@@ -489,107 +473,105 @@ export default function ProductDetail() {
               type="button"
               onClick={handleAddToCart}
               disabled={isAddToCartDisabled}
-              className="mt-4 w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
+              className="btn-primary w-full mt-4 py-3.5"
             >
               {isAddingToCart ? t("addingToCart") : t("addToCart")}
             </button>
 
-            <button
-              type="button"
-              onClick={handleOpenTryOn}
-              className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
-            >
-              {t("virtualTryOn")}
-            </button>
-
-            {canUseSeeItOnYourself && (
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setIsSeeItOpen(true)}
-                className="mt-3 w-full rounded border border-gray-300 px-4 py-3 font-semibold"
+                onClick={handleOpenTryOn}
+                className="btn-secondary py-3"
               >
-                {t("seeItOnYourself")}
+                <Sparkles className="w-4 h-4 text-clover-500" strokeWidth={1.8} />
+                {t("virtualTryOn")}
               </button>
-            )}
+
+              {canUseSeeItOnYourself && (
+                <button
+                  type="button"
+                  onClick={() => setIsSeeItOpen(true)}
+                  className="btn-secondary py-3"
+                >
+                  <Camera className="w-4 h-4 text-clover-500" strokeWidth={1.8} />
+                  {t("seeItOnYourself")}
+                </button>
+              )}
+            </div>
 
             {cartSuccess && (
-              <p className="mt-3 text-green-600" role="status" aria-live="polite">
-                {cartSuccess}
-              </p>
+              <Alert variant="success" className="mt-3">{cartSuccess}</Alert>
             )}
             {cartError && (
-              <p className="mt-3 text-red-600" role="alert">
-                {cartError}
-              </p>
+              <Alert variant="error" className="mt-3">{cartError}</Alert>
             )}
 
-            {canReviewShop && <ReviewForm shopId={product.shopId} />}
+            {canReviewShop && (
+              <div className="mt-10 pt-6 border-t border-ink-100">
+                <ReviewForm shopId={product.shopId} />
+              </div>
+            )}
           </section>
         </div>
       )}
 
+      {/* Virtual try-on modal */}
       {isTryOnOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/45 p-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="virtual-try-on-title"
-            className="w-full max-w-lg rounded bg-white p-6 shadow-xl"
+            className="w-full max-w-lg rounded-md bg-white p-6 shadow-xl"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 id="virtual-try-on-title" className="text-xl font-semibold">
+                  <h2 id="virtual-try-on-title" className="text-xl font-semibold tracking-tight">
                     {t("tryOnTitle")}
                   </h2>
                   {isPro === true && (
-                    <span
-                      className="rounded bg-yellow-400 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-yellow-900"
-                      aria-label="Conta Pro: gerações ilimitadas"
-                    >
+                    <span className="badge badge-pro" aria-label="Conta Pro: gerações ilimitadas">
                       PRO · Ilimitado
                     </span>
                   )}
                   {isPro === false && !tryOnUsed && (
-                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                      1 experimento gratuito
-                    </span>
+                    <span className="badge badge-neutral">1 experimento gratuito</span>
                   )}
                 </div>
-                <p className="mt-2 text-sm text-gray-600">
-                  {t("tryOnDescription")}
-                </p>
+                <p className="mt-2 text-sm text-ink-500">{t("tryOnDescription")}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsTryOnOpen(false)}
-                className="rounded border border-gray-300 px-3 py-1 text-sm"
+                className="w-8 h-8 rounded inline-flex items-center justify-center border border-ink-200 hover:bg-ink-50 transition-colors"
+                aria-label={t("close", { ns: "common" })}
               >
-                {t("close", { ns: "common" })}
+                <X className="w-4 h-4" strokeWidth={1.8} />
               </button>
             </div>
 
             {isPro === false && tryOnUsed && (
-              <div className="mt-4 rounded border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-                Experimenta gratuito esgotado.{" "}
-                <Link to="/pro" className="font-semibold underline">
+              <Alert variant="warning" className="mt-4">
+                Experimento gratuito esgotado.{" "}
+                <Link to="/pro" className="font-semibold underline text-clover-700">
                   Atualiza para Pro
                 </Link>{" "}
                 para gerações ilimitadas.
-              </div>
+              </Alert>
             )}
 
             <fieldset className="mt-6">
-              <legend className="font-semibold">{t("model")}</legend>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <legend className="text-sm font-semibold mb-2">{t("model")}</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
                 {BODY_TYPES.map((bodyType) => (
                   <label
                     key={bodyType.value}
-                    className={`rounded border px-4 py-3 text-sm ${
-                      selectedBodyType === bodyType.value
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300"
-                    }`}
+                    className={
+                      "opt-pill flex items-center gap-2 cursor-pointer " +
+                      (selectedBodyType === bodyType.value ? "opt-pill-selected" : "")
+                    }
                   >
                     <input
                       type="radio"
@@ -597,7 +579,7 @@ export default function ProductDetail() {
                       value={bodyType.value}
                       checked={selectedBodyType === bodyType.value}
                       onChange={() => setSelectedBodyType(bodyType.value)}
-                      className="mr-2"
+                      className="accent-clover-500"
                     />
                     {t(bodyType.labelKey)}
                   </label>
@@ -608,25 +590,36 @@ export default function ProductDetail() {
             <button
               type="button"
               onClick={handleGenerateTryOn}
-              disabled={isGeneratingTryOn || images.length === 0 || (isPro === false && tryOnUsed)}
-              className="mt-6 w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
+              disabled={
+                isGeneratingTryOn ||
+                images.length === 0 ||
+                (isPro === false && tryOnUsed)
+              }
+              className="btn-primary w-full mt-6 py-3"
             >
+              <Sparkles className="w-4 h-4" strokeWidth={1.8} />
               {isGeneratingTryOn ? t("generatingTryOn") : t("generateTryOn")}
             </button>
 
             {images.length === 0 && (
-              <p className="mt-3 text-sm text-gray-600">
-                {t("noTryOnImage")}
-              </p>
+              <p className="mt-3 text-sm text-ink-500">{t("noTryOnImage")}</p>
             )}
 
             {generatedTryOnImage && (
               <div className="mt-6">
-                <h3 className="font-semibold">{t("result")}</h3>
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-green-600" strokeWidth={1.8} />
+                  {t("result")}
+                </h3>
                 <img
                   src={generatedTryOnImage}
-                  alt={t("tryOnResultAlt", { bodyType: t(BODY_TYPES.find((bodyType) => bodyType.value === selectedBodyType)?.labelKey || BODY_TYPES[0].labelKey) })}
-                  className="mt-3 aspect-square w-full rounded border border-gray-200 object-cover"
+                  alt={t("tryOnResultAlt", {
+                    bodyType: t(
+                      BODY_TYPES.find((bodyType) => bodyType.value === selectedBodyType)
+                        ?.labelKey || BODY_TYPES[0].labelKey
+                    ),
+                  })}
+                  className="mt-3 aspect-square w-full rounded border border-ink-200 object-cover"
                 />
               </div>
             )}
@@ -634,35 +627,35 @@ export default function ProductDetail() {
         </div>
       )}
 
+      {/* "See it on yourself" modal */}
       {isSeeItOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/45 p-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="see-it-on-yourself-title"
-            className="w-full max-w-2xl rounded bg-white p-6 shadow-xl"
+            className="w-full max-w-2xl rounded-md bg-white p-6 shadow-xl"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="see-it-on-yourself-title" className="text-xl font-semibold">
+                <h2 id="see-it-on-yourself-title" className="text-xl font-semibold tracking-tight">
                   {t("seeItTitle")}
                 </h2>
-                <p className="mt-2 text-sm text-gray-600">
-                  {t("seeItDescription")}
-                </p>
+                <p className="mt-2 text-sm text-ink-500">{t("seeItDescription")}</p>
               </div>
               <button
                 type="button"
                 onClick={closeSeeItModal}
-                className="rounded border border-gray-300 px-3 py-1 text-sm"
+                className="w-8 h-8 rounded inline-flex items-center justify-center border border-ink-200 hover:bg-ink-50 transition-colors"
+                aria-label={t("close", { ns: "common" })}
               >
-                {t("close", { ns: "common" })}
+                <X className="w-4 h-4" strokeWidth={1.8} />
               </button>
             </div>
 
-            <form onSubmit={handleSeeItSubmit} className="mt-6 space-y-5">
-              <div>
-                <label htmlFor="see-it-photos" className="block font-semibold">
+            <form onSubmit={handleSeeItSubmit} className="mt-6 flex flex-col gap-5">
+              <div className="field">
+                <label htmlFor="see-it-photos" className="field-label">
                   {t("images")}
                 </label>
                 <input
@@ -672,20 +665,13 @@ export default function ProductDetail() {
                   accept="image/*"
                   multiple
                   onChange={handleSeeItPhotoChange}
-                  className="mt-2 block w-full rounded border border-gray-300 px-3 py-2"
+                  className="input file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-ink-100 file:text-ink-800 file:font-medium file:text-xs hover:file:bg-ink-200"
                 />
+                <p className="field-help">Carrega exatamente 3 imagens.</p>
               </div>
 
-              {seeItError && (
-                <p className="text-red-600" role="alert">
-                  {seeItError}
-                </p>
-              )}
-              {seeItSuccess && (
-                <p className="text-green-600" role="status" aria-live="polite">
-                  {seeItSuccess}
-                </p>
-              )}
+              {seeItError && <Alert variant="error">{seeItError}</Alert>}
+              {seeItSuccess && <Alert variant="success">{seeItSuccess}</Alert>}
 
               {seeItPhotos.length > 0 && (
                 <ul className="grid grid-cols-3 gap-3">
@@ -694,7 +680,7 @@ export default function ProductDetail() {
                       <img
                         src={photo.previewUrl}
                         alt={t("seeItPreviewAlt", { index: index + 1 })}
-                        className="aspect-square w-full rounded object-cover"
+                        className="aspect-square w-full rounded border border-ink-200 object-cover"
                       />
                     </li>
                   ))}
@@ -703,8 +689,10 @@ export default function ProductDetail() {
 
               <button
                 type="submit"
-                disabled={isUploadingSeeIt || seeItPhotos.length !== REQUIRED_TRY_ON_PHOTOS}
-                className="w-full rounded border border-black bg-black px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500"
+                disabled={
+                  isUploadingSeeIt || seeItPhotos.length !== REQUIRED_TRY_ON_PHOTOS
+                }
+                className="btn-primary w-full py-3"
               >
                 {isUploadingSeeIt ? t("uploading") : t("generateResult")}
               </button>
@@ -712,17 +700,20 @@ export default function ProductDetail() {
 
             {seeItResultImage && (
               <div className="mt-6">
-                <h3 className="font-semibold">{t("customResult")}</h3>
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-green-600" strokeWidth={1.8} />
+                  {t("customResult")}
+                </h3>
                 <img
                   src={seeItResultImage}
                   alt={t("seeItResultAlt")}
-                  className="mt-3 aspect-square w-full rounded border border-gray-200 object-cover"
+                  className="mt-3 aspect-square w-full rounded border border-ink-200 object-cover"
                 />
               </div>
             )}
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

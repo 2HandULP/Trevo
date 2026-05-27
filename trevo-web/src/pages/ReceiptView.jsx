@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
+import { Download, Receipt as ReceiptIcon } from "lucide-react";
 import { downloadReceiptPdf } from "../lib/receiptDownload";
 import { getBuyerOrder } from "../services/orderService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 const statusLabelKeys = {
   PENDING_PAYMENT: "statuses.pendingPayment",
@@ -15,21 +18,12 @@ const statusLabelKeys = {
 };
 
 function formatPrice(value) {
-  return new Intl.NumberFormat("pt-PT", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(value || 0));
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(value || 0));
 }
 
 function formatDate(value, t) {
-  if (!value) {
-    return t("dateUnavailable");
-  }
-
-  return new Intl.DateTimeFormat("pt-PT", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
+  if (!value) return t("dateUnavailable");
+  return new Intl.DateTimeFormat("pt-PT", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }
 
 function getErrorMessage(error, fallback) {
@@ -60,24 +54,18 @@ export default function ReceiptView() {
 
       try {
         const orderData = await getBuyerOrder(orderId);
-
-        if (active) {
-          setOrder(orderData);
-        }
+        if (active) setOrder(orderData);
       } catch (loadError) {
         if (active) {
           setOrder(null);
           setError(getErrorMessage(loadError, t("loadReceiptFailed")));
         }
       } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+        if (active) setIsLoading(false);
       }
     }
 
     loadOrder();
-
     return () => {
       active = false;
     };
@@ -87,13 +75,14 @@ export default function ReceiptView() {
   const isEmpty = !isLoading && !error && !order;
 
   return (
-    <main className="mx-auto my-10 max-w-4xl px-4 text-black">
+    <div className="page-shell max-w-3xl">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase text-gray-500">
-            {t("receiptInvoice")}
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold">
+          <div className="flex items-center gap-2 text-clover-700">
+            <ReceiptIcon className="w-4 h-4" strokeWidth={1.7} />
+            <p className="eyebrow text-clover-700">{t("receiptInvoice")}</p>
+          </div>
+          <h1 className="h-page mt-2">
             {order ? t("orderNumber", { id: order.id }) : t("receiptTitle")}
           </h1>
         </div>
@@ -101,81 +90,73 @@ export default function ReceiptView() {
           <button
             type="button"
             onClick={() => downloadReceiptPdf(order)}
-            className="border border-gray-300 px-4 py-2 font-semibold"
+            className="btn-secondary"
           >
+            <Download className="w-4 h-4" strokeWidth={1.8} />
             {t("downloadPdf")}
           </button>
         )}
       </div>
 
-      {isLoading && (
-        <p className="mt-6" aria-live="polite">
-          {t("loadingReceipt")}
-        </p>
-      )}
-      {error && (
-        <p className="mt-6 text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-      {isEmpty && (
-        <p className="mt-6 text-gray-600">
-          {t("receiptNotFound")}
-        </p>
-      )}
+      {isLoading && <LoadingState label={t("loadingReceipt")} />}
+      {error && <Alert variant="error" className="mt-6">{error}</Alert>}
+      {isEmpty && <p className="mt-6 text-ink-500">{t("receiptNotFound")}</p>}
 
       {!isLoading && !error && order && (
-        <section className="mt-8 border border-gray-200 p-5" aria-label={t("receiptData")}>
-          <dl className="grid gap-4 sm:grid-cols-2">
+        <section className="mt-8 card card-pad p-6" aria-label={t("receiptData")}>
+          <dl className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
             <div>
-              <dt className="text-sm text-gray-600">{t("orderNumberLabel")}</dt>
-              <dd className="font-semibold">#{order.id}</dd>
+              <dt className="text-xs text-ink-500 uppercase tracking-wider font-medium">{t("orderNumberLabel")}</dt>
+              <dd className="mt-1 font-semibold tabular">#{order.id}</dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-600">{t("date")}</dt>
-              <dd className="font-semibold">{formatDate(order.createdAt, t)}</dd>
+              <dt className="text-xs text-ink-500 uppercase tracking-wider font-medium">{t("date")}</dt>
+              <dd className="mt-1 font-semibold tabular">{formatDate(order.createdAt, t)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-600">{t("paymentMethod")}</dt>
-              <dd className="font-semibold">{order.paymentMethod || "N/A"}</dd>
+              <dt className="text-xs text-ink-500 uppercase tracking-wider font-medium">{t("paymentMethod")}</dt>
+              <dd className="mt-1 font-semibold">{order.paymentMethod || "N/A"}</dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-600">{t("status")}</dt>
-              <dd className="font-semibold">{statusLabel(order.status, t)}</dd>
+              <dt className="text-xs text-ink-500 uppercase tracking-wider font-medium">{t("status")}</dt>
+              <dd className="mt-1 font-semibold">{statusLabel(order.status, t)}</dd>
             </div>
-            <div>
-              <dt className="text-sm text-gray-600">{t("shop")}</dt>
-              <dd className="font-semibold">{order.shopName || "N/A"}</dd>
+            <div className="sm:col-span-2">
+              <dt className="text-xs text-ink-500 uppercase tracking-wider font-medium">{t("shop")}</dt>
+              <dd className="mt-1 font-semibold">{order.shopName || "N/A"}</dd>
             </div>
           </dl>
 
-          <h2 className="mt-8 text-xl font-semibold">{t("items")}</h2>
+          <hr className="my-6 border-ink-100" />
+
+          <h2 className="text-base font-semibold mb-3">{t("items")}</h2>
           {items.length === 0 ? (
-            <p className="mt-3 text-gray-600">{t("emptyItems")}</p>
+            <p className="text-sm text-ink-500">{t("emptyItems")}</p>
           ) : (
-            <ul className="mt-4 divide-y divide-gray-200">
+            <ul className="divide-y divide-ink-100">
               {items.map((item) => (
                 <li
                   key={item.id || `${item.productId}-${item.variantId}`}
-                  className="flex flex-wrap justify-between gap-4 py-4"
+                  className="flex flex-wrap justify-between gap-4 py-3 text-sm"
                 >
                   <div>
                     <p className="font-semibold">{item.productName}</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs text-ink-500 mt-0.5">
                       {t("quantityUnit", { quantity: item.quantity, unitPrice: formatPrice(item.unitPrice) })}
                     </p>
                   </div>
-                  <p className="font-semibold">{formatPrice(item.subtotal)}</p>
+                  <p className="font-semibold tabular">{formatPrice(item.subtotal)}</p>
                 </li>
               ))}
             </ul>
           )}
 
-          <p className="mt-6 text-right text-2xl font-semibold">
-            {t("total")}: {formatPrice(order.totalAmount)}
-          </p>
+          <div className="mt-6 pt-4 border-t border-ink-200 flex justify-between items-baseline">
+            <span className="text-sm text-ink-500">{t("total")}</span>
+            <strong className="text-2xl font-bold tabular">{formatPrice(order.totalAmount)}</strong>
+          </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }

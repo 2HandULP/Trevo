@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import {
-  bulkUpdateVariantStock,
-  getProduct,
-} from "../services/productService";
+import { useParams, Link } from "react-router-dom";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { bulkUpdateVariantStock, getProduct } from "../services/productService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 function getErrorMessage(error, fallback) {
   return (
@@ -33,7 +33,6 @@ export default function StockManagement() {
     async function loadProduct() {
       try {
         const loadedProduct = await getProduct(productId);
-
         if (active) {
           setProduct(loadedProduct);
           setStocks(
@@ -45,18 +44,13 @@ export default function StockManagement() {
           setError("");
         }
       } catch (loadError) {
-        if (active) {
-          setError(getErrorMessage(loadError, "Nao foi possivel carregar o produto"));
-        }
+        if (active) setError(getErrorMessage(loadError, "Não foi possível carregar o produto."));
       } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+        if (active) setIsLoading(false);
       }
     }
 
     loadProduct();
-
     return () => {
       active = false;
     };
@@ -93,9 +87,9 @@ export default function StockManagement() {
           return nextStocks;
         }, {})
       );
-      setSuccess("Stock atualizado com sucesso");
+      setSuccess("Stock atualizado com sucesso.");
     } catch (saveError) {
-      setError(getErrorMessage(saveError, "Nao foi possivel atualizar o stock"));
+      setError(getErrorMessage(saveError, "Não foi possível atualizar o stock."));
     } finally {
       setIsSaving(false);
     }
@@ -104,73 +98,79 @@ export default function StockManagement() {
   const variants = product?.variants || [];
 
   return (
-    <div className="mx-auto my-16 max-w-4xl p-8 text-black">
-      <h1 className="text-3xl font-bold">Gestao de stock</h1>
+    <div className="page-shell-narrow">
+      <Link
+        to={`/products/${productId}/edit`}
+        className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-900 mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" strokeWidth={1.7} />
+        Voltar ao produto
+      </Link>
+      <p className="eyebrow text-clover-700">Loja · Catálogo</p>
+      <h1 className="h-page mt-2">Gestão de stock</h1>
 
-      {isLoading && <p className="mt-4" aria-live="polite">A carregar produto...</p>}
-      {error && (
-        <p className="mt-4 text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="mt-4 text-green-600" role="status" aria-live="polite">
-          {success}
-        </p>
-      )}
+      {isLoading && <LoadingState label="A carregar produto..." />}
+      {error && <Alert variant="error" className="mt-6">{error}</Alert>}
+      {success && <Alert variant="success" className="mt-6">{success}</Alert>}
 
       {!isLoading && product && (
         <>
-          <h2 className="mt-6 text-xl font-semibold">{product.name}</h2>
+          <h2 className="mt-6 text-lg font-semibold tracking-tight">{product.name}</h2>
 
           {variants.length === 0 ? (
-            <p className="mt-4">Este produto ainda nao tem variantes.</p>
+            <div className="mt-6 card card-pad p-10 text-center">
+              <div className="w-12 h-12 mx-auto rounded bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+                <AlertTriangle className="w-5 h-5" strokeWidth={1.7} />
+              </div>
+              <p className="mt-4 text-ink-500">Este produto ainda não tem variantes.</p>
+            </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-6">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-200 text-left">
+              <div className="card overflow-x-auto">
+                <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-200 px-4 py-3">Tamanho</th>
-                      <th className="border border-gray-200 px-4 py-3">Cor</th>
-                      <th className="border border-gray-200 px-4 py-3">Stock</th>
+                    <tr className="border-b border-ink-100 bg-ink-50/60">
+                      <th className="py-3 px-5 text-xs uppercase tracking-wider text-ink-500 font-medium">Tamanho</th>
+                      <th className="py-3 px-5 text-xs uppercase tracking-wider text-ink-500 font-medium">Cor</th>
+                      <th className="py-3 px-5 text-xs uppercase tracking-wider text-ink-500 font-medium">Stock</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {variants.map((variant) => (
-                      <tr key={variant.id}>
-                        <td className="border border-gray-200 px-4 py-3">
-                          {variant.size}
-                        </td>
-                        <td className="border border-gray-200 px-4 py-3">
-                          {variant.color}
-                        </td>
-                        <td className="border border-gray-200 px-4 py-3">
-                          <input
-                            type="number"
-                            name={`stock-${variant.id}`}
-                            aria-label={`Stock ${variant.size} ${variant.color}`}
-                            min="0"
-                            value={stocks[variant.id] ?? "0"}
-                            onChange={(event) =>
-                              handleStockChange(variant.id, event.target.value)
-                            }
-                            className="w-28 rounded border border-gray-300 px-3 py-2"
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                  <tbody className="divide-y divide-ink-100">
+                    {variants.map((variant) => {
+                      const stock = stockFromValue(stocks[variant.id] ?? "0");
+                      const low = stock <= 2;
+                      return (
+                        <tr key={variant.id}>
+                          <td className="py-3 px-5 font-medium">{variant.size}</td>
+                          <td className="py-3 px-5">{variant.color}</td>
+                          <td className="py-3 px-5">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                name={`stock-${variant.id}`}
+                                aria-label={`Stock ${variant.size} ${variant.color}`}
+                                min="0"
+                                value={stocks[variant.id] ?? "0"}
+                                onChange={(event) => handleStockChange(variant.id, event.target.value)}
+                                className="input tabular w-28"
+                              />
+                              {low && (
+                                <span className="badge badge-warning">Baixo</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="mt-6 rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-              >
-                {isSaving ? "A guardar..." : "Guardar alteracoes"}
-              </button>
+              <div className="mt-6 flex justify-end">
+                <button type="submit" disabled={isSaving} className="btn-primary">
+                  {isSaving ? "A guardar..." : "Guardar alterações"}
+                </button>
+              </div>
             </form>
           )}
         </>

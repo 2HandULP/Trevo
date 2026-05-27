@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { confirmPasswordReset, validatePasswordResetToken } from "../lib/authApi";
+import Alert from "../components/Alert";
+import LoadingState from "../components/LoadingState";
 
 export default function ResetPassword() {
   const { t } = useTranslation("auth");
@@ -74,45 +76,54 @@ export default function ResetPassword() {
   }
 
   return (
-    <div style={{ maxWidth: "28rem", margin: "4rem auto", padding: "2rem", color: "black" }}>
-      <h1>{t("resetPasswordTitle")}</h1>
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-6 py-12 bg-ink-50/30">
+      <div className="card card-pad w-full max-w-md p-8">
+        <h1 className="text-2xl font-semibold tracking-tight mb-1.5">{t("resetPasswordTitle")}</h1>
 
-      {tokenStatus === "checking" && <p>{t("validatingLink")}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+        {tokenStatus === "checking" && <LoadingState label={t("validatingLink")} />}
 
-      {tokenStatus === "valid" && (
-        <form onSubmit={handleSubmit}>
-          <div>
-            <input
-              type="password"
-              name="newPassword"
-              placeholder={t("newPassword")}
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-            />
-          </div>
+        {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
-          <div>
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder={t("confirmPassword")}
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-            />
-          </div>
+        {tokenStatus === "valid" && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
+            <div className="field">
+              <label className="field-label" htmlFor="newPassword">{t("newPassword")}</label>
+              <input
+                id="newPassword"
+                className="input"
+                type="password"
+                name="newPassword"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
 
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? t("saving", { ns: "common" }) : t("resetPasswordSubmit")}
-          </button>
-        </form>
-      )}
+            <div className="field">
+              <label className="field-label" htmlFor="confirmPassword">{t("confirmPassword")}</label>
+              <input
+                id="confirmPassword"
+                className="input"
+                type="password"
+                name="confirmPassword"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
 
-      {tokenStatus === "invalid" && (
-        <p>
-          <Link to="/forgot-password">{t("requestNewLink")}</Link>
-        </p>
-      )}
+            <button type="submit" disabled={isSubmitting} className="btn-primary w-full mt-2 py-3">
+              {isSubmitting ? t("saving", { ns: "common" }) : t("resetPasswordSubmit")}
+            </button>
+          </form>
+        )}
+
+        {tokenStatus === "invalid" && (
+          <Link to="/forgot-password" className="mt-4 inline-block text-sm text-clover-700 hover:text-clover-800 font-medium">
+            {t("requestNewLink")}
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

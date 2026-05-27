@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
+import { ChevronLeft, ChevronRight, ImageOff, Search } from "lucide-react";
 import { productImageAlt } from "../lib/imageAlt";
 import { browseProducts, searchProducts } from "../services/productService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 const FILTER_KEYS = ["q", "minPrice", "maxPrice", "size", "color"];
 const SCOPE_KEYS = ["shopId", "collectionId"];
@@ -48,6 +51,11 @@ function productImage(product) {
   return product.imageUrl || product.images?.[0]?.url || product.images?.[0]?.imageUrl || "";
 }
 
+function formatPrice(price) {
+  if (price === null || price === undefined || price === "") return "";
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(price));
+}
+
 export default function ProductSearch() {
   const { t } = useTranslation("browse");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -91,8 +99,11 @@ export default function ProductSearch() {
           ...urlFilters,
           page: pageParam,
         };
-        const scopedBrowse = !hasSearchFilters(urlFilters) && (urlFilters.shopId || urlFilters.collectionId);
-        const page = scopedBrowse ? await browseProducts(params) : await searchProducts(params);
+        const scopedBrowse =
+          !hasSearchFilters(urlFilters) && (urlFilters.shopId || urlFilters.collectionId);
+        const page = scopedBrowse
+          ? await browseProducts(params)
+          : await searchProducts(params);
 
         if (active) {
           setResults(page);
@@ -146,80 +157,89 @@ export default function ProductSearch() {
   const hasNextPage = pageCount > 0 && currentPage + 1 < pageCount;
 
   return (
-    <main className="mx-auto my-10 grid max-w-6xl gap-6 text-black lg:grid-cols-[260px_1fr]">
-      <aside className="space-y-4 border border-gray-200 p-4">
-        <h1 className="text-2xl font-semibold">{t("products")}</h1>
+    <div className="page-shell grid gap-8 lg:grid-cols-[260px_1fr]">
+      <aside className="card card-pad self-start space-y-4 sticky top-20">
+        <h1 className="h-section">{t("products")}</h1>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("search")}</span>
-          <input
-            aria-label={t("search")}
-            name="q"
-            value={filters.q}
-            onChange={(event) => updateFilter("q", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
-            placeholder={t("searchPlaceholder")}
-          />
-        </label>
+        <div className="field">
+          <label className="field-label" htmlFor="f-q">{t("search")}</label>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" strokeWidth={1.8} />
+            <input
+              id="f-q"
+              aria-label={t("search")}
+              name="q"
+              value={filters.q}
+              onChange={(event) => updateFilter("q", event.target.value)}
+              className="input pl-9"
+              placeholder={t("searchPlaceholder")}
+            />
+          </div>
+        </div>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("minPrice")}</span>
-          <input
-            aria-label={t("minPrice")}
-            name="minPrice"
-            type="number"
-            min="0"
-            value={filters.minPrice}
-            onChange={(event) => updateFilter("minPrice", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="field">
+            <label className="field-label" htmlFor="f-min">{t("minPrice")}</label>
+            <input
+              id="f-min"
+              aria-label={t("minPrice")}
+              name="minPrice"
+              type="number"
+              min="0"
+              value={filters.minPrice}
+              onChange={(event) => updateFilter("minPrice", event.target.value)}
+              className="input"
+            />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="f-max">{t("maxPrice")}</label>
+            <input
+              id="f-max"
+              aria-label={t("maxPrice")}
+              name="maxPrice"
+              type="number"
+              min="0"
+              value={filters.maxPrice}
+              onChange={(event) => updateFilter("maxPrice", event.target.value)}
+              className="input"
+            />
+          </div>
+        </div>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("maxPrice")}</span>
+        <div className="field">
+          <label className="field-label" htmlFor="f-size">{t("size")}</label>
           <input
-            aria-label={t("maxPrice")}
-            name="maxPrice"
-            type="number"
-            min="0"
-            value={filters.maxPrice}
-            onChange={(event) => updateFilter("maxPrice", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("size")}</span>
-          <input
+            id="f-size"
             aria-label={t("size")}
             name="size"
             value={filters.size}
             onChange={(event) => updateFilter("size", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
+            className="input"
+            placeholder="S, M, 38…"
           />
-        </label>
+        </div>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("color")}</span>
+        <div className="field">
+          <label className="field-label" htmlFor="f-color">{t("color")}</label>
           <input
+            id="f-color"
             aria-label={t("color")}
             name="color"
             value={filters.color}
             onChange={(event) => updateFilter("color", event.target.value)}
-            className="w-full border border-gray-300 px-3 py-2"
+            className="input"
+            placeholder="Verde, preto…"
           />
-        </label>
+        </div>
       </aside>
 
       <section>
-        {isLoading && <p aria-live="polite">{t("loadingProducts")}</p>}
-        {error && (
-          <p role="alert" className="text-red-600">
-            {error}
-          </p>
-        )}
+        {isLoading && <LoadingState label={t("loadingProducts")} />}
+        {error && <Alert variant="error">{error}</Alert>}
 
-        {!isLoading && !error && products.length === 0 && <p>{t("noProducts")}</p>}
+        {!isLoading && !error && products.length === 0 && (
+          <div className="card card-pad p-10 text-center text-ink-500">{t("noProducts")}</div>
+        )}
 
         {!error && products.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -227,48 +247,68 @@ export default function ProductSearch() {
               const imageUrl = productImage(product);
 
               return (
-                <article key={product.id} className="border border-gray-200 p-4">
-                  {imageUrl && (
-                    <img
-                      src={imageUrl}
-                      alt={productImageAlt(product.name)}
-                      className="mb-3 aspect-square w-full object-cover"
-                    />
+                <Link
+                  to={`/products/${product.id}`}
+                  key={product.id}
+                  className="group card p-3 transition-colors hover:border-clover-400"
+                >
+                  <div className="aspect-square bg-ink-50 rounded overflow-hidden flex items-center justify-center">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={productImageAlt(product.name)}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageOff className="w-7 h-7 text-ink-300" strokeWidth={1.5} />
+                    )}
+                  </div>
+                  {product.brand && (
+                    <p className="mt-3 text-[11px] uppercase tracking-wider text-ink-500 font-medium">
+                      {product.brand}
+                    </p>
                   )}
-                  <h2 className="font-semibold">{product.name}</h2>
-                  {product.brand && <p>{product.brand}</p>}
-                  <p>{Number(product.price).toFixed(2)} EUR</p>
-                  <Link to={`/products/${product.id}`}>{t("viewProduct")}</Link>
-                </article>
+                  <h2 className="mt-1 text-sm font-semibold leading-snug text-ink-900 group-hover:text-clover-700 transition-colors">
+                    {product.name}
+                  </h2>
+                  <p className="mt-1 text-sm font-semibold tabular">
+                    {formatPrice(product.price)}
+                  </p>
+                </Link>
               );
             })}
           </div>
         )}
 
         {!error && pageCount > 1 && (
-          <nav aria-label={t("productPagination")} className="mt-6 flex items-center justify-between gap-3">
+          <nav
+            aria-label={t("productPagination")}
+            className="mt-8 flex items-center justify-between gap-3"
+          >
             <button
               type="button"
               onClick={() => updatePage(currentPage - 1)}
               disabled={!hasPreviousPage || isLoading}
-              className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-secondary"
             >
+              <ChevronLeft className="w-4 h-4" strokeWidth={1.8} />
               {t("previous", { ns: "common" })}
             </button>
-            <span>
+            <span className="text-sm text-ink-500 tabular">
               {t("pageOf", { page: currentPage + 1, total: pageCount })}
             </span>
             <button
               type="button"
               onClick={() => updatePage(currentPage + 1)}
               disabled={!hasNextPage || isLoading}
-              className="border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-secondary"
             >
               {t("next", { ns: "common" })}
+              <ChevronRight className="w-4 h-4" strokeWidth={1.8} />
             </button>
           </nav>
         )}
       </section>
-    </main>
+    </div>
   );
 }

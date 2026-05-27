@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { ImageOff, Filter } from "lucide-react";
 import { browseProducts, searchProducts } from "../services/productService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 const filterKeys = ["q", "minPrice", "maxPrice", "size", "color"];
 const scopeKeys = ["shopId", "collectionId"];
@@ -42,20 +45,22 @@ function formatPrice(price) {
 
 function ProductCard({ product }) {
   return (
-    <article className="rounded border border-gray-200 bg-white p-4">
-      <div className="flex aspect-square items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-500">
-        Sem imagem
+    <article className="card p-3">
+      <div className="aspect-square bg-ink-50 rounded flex items-center justify-center text-ink-300">
+        <ImageOff className="w-7 h-7" strokeWidth={1.5} />
       </div>
-      <div className="mt-4 space-y-2">
-        <h2 className="text-lg font-semibold">
-          <Link to={`/products/${product.id}`}>{product.name}</Link>
+      <div className="mt-3 space-y-1.5">
+        <h2 className="text-sm font-semibold leading-snug">
+          <Link to={`/products/${product.id}`} className="hover:text-clover-700 transition-colors">
+            {product.name}
+          </Link>
         </h2>
         {product.price !== undefined && product.price !== null && (
-          <p className="font-medium">{formatPrice(product.price)}</p>
+          <p className="text-sm font-semibold tabular">{formatPrice(product.price)}</p>
         )}
-        {product.brand && <p className="text-sm text-gray-600">Marca: {product.brand}</p>}
+        {product.brand && <p className="text-xs text-ink-500">Marca: {product.brand}</p>}
         {product.materials && (
-          <p className="text-sm text-gray-600">Materiais: {product.materials}</p>
+          <p className="text-xs text-ink-500 leading-snug line-clamp-2">Materiais: {product.materials}</p>
         )}
       </div>
     </article>
@@ -109,7 +114,7 @@ export default function ProductSearchResults() {
           setError(
             loadError.response?.data?.message ||
               loadError.response?.data?.detail ||
-              "Nao foi possivel carregar os produtos"
+              "Não foi possível carregar os produtos."
           );
         }
       } finally {
@@ -158,102 +163,77 @@ export default function ProductSearchResults() {
   }
 
   return (
-    <main className="mx-auto my-10 max-w-6xl px-4 text-black">
-      <h1 className="text-3xl font-bold">Produtos</h1>
+    <div className="page-shell">
+      <h1 className="h-page">Produtos</h1>
 
-      <div className="mt-6 grid gap-8 md:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="rounded border border-gray-200 p-4">
-          <form onSubmit={applyFilters} className="space-y-4">
-            <div>
-              <label htmlFor="product-search" className="block text-sm font-medium">
-                Pesquisa
-              </label>
+      <div className="mt-8 grid gap-8 md:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="card card-pad self-start sticky top-20">
+          <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-ink-700">
+            <Filter className="w-4 h-4" strokeWidth={1.7} />
+            Filtros
+          </div>
+          <form onSubmit={applyFilters} className="flex flex-col gap-4">
+            <div className="field">
+              <label htmlFor="product-search" className="field-label">Pesquisa</label>
               <input
                 id="product-search"
                 name="q"
                 type="search"
                 value={form.q}
                 onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                className="input"
               />
             </div>
 
-            <div>
-              <label htmlFor="min-price" className="block text-sm font-medium">
-                Preco minimo
-              </label>
-              <input
-                id="min-price"
-                name="minPrice"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.minPrice}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="field">
+                <label htmlFor="min-price" className="field-label">Preço mínimo</label>
+                <input
+                  id="min-price"
+                  name="minPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.minPrice}
+                  onChange={handleChange}
+                  className="input"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="max-price" className="field-label">Preço máximo</label>
+                <input
+                  id="max-price"
+                  name="maxPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.maxPrice}
+                  onChange={handleChange}
+                  className="input"
+                />
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="max-price" className="block text-sm font-medium">
-                Preco maximo
-              </label>
-              <input
-                id="max-price"
-                name="maxPrice"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.maxPrice}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
+            <div className="field">
+              <label htmlFor="size" className="field-label">Tamanho</label>
+              <input id="size" name="size" type="text" value={form.size} onChange={handleChange} className="input" />
             </div>
 
-            <div>
-              <label htmlFor="size" className="block text-sm font-medium">
-                Tamanho
-              </label>
-              <input
-                id="size"
-                name="size"
-                type="text"
-                value={form.size}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
+            <div className="field">
+              <label htmlFor="color" className="field-label">Cor</label>
+              <input id="color" name="color" type="text" value={form.color} onChange={handleChange} className="input" />
             </div>
 
-            <div>
-              <label htmlFor="color" className="block text-sm font-medium">
-                Cor
-              </label>
-              <input
-                id="color"
-                name="color"
-                type="text"
-                value={form.color}
-                onChange={handleChange}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
-            </div>
-
-            <button type="submit" className="w-full rounded bg-black px-4 py-2 text-white">
-              Aplicar filtros
-            </button>
+            <button type="submit" className="btn-primary w-full">Aplicar filtros</button>
           </form>
         </aside>
 
         <section>
-          {isLoading && <p aria-live="polite">A carregar produtos...</p>}
-          {error && (
-            <p role="alert" className="text-red-600">
-              {error}
-            </p>
-          )}
+          {isLoading && <LoadingState label="A carregar produtos..." />}
+          {error && <Alert variant="error">{error}</Alert>}
 
           {!isLoading && !error && products.length === 0 && (
-            <p>Nenhum produto encontrado.</p>
+            <div className="card card-pad p-10 text-center text-ink-500">Nenhum produto encontrado.</div>
           )}
 
           {!isLoading && !error && products.length > 0 && (
@@ -265,6 +245,6 @@ export default function ProductSearchResults() {
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }

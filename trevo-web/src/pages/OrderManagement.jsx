@@ -1,21 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  RefreshCw,
+  Inbox,
+} from "lucide-react";
 import { getShopOrders, updateOrderStatus } from "../services/orderService";
+import LoadingState from "../components/LoadingState";
+import Alert from "../components/Alert";
 
 const PAGE_SIZE = 20;
 
 const statusLabels = {
-  PLACED: "Recebida",
+  PLACED:    "Recebida",
   CONFIRMED: "Confirmada",
-  SHIPPED: "Enviada",
+  SHIPPED:   "Enviada",
   DELIVERED: "Entregue",
+};
+
+const statusBadge = {
+  PLACED:    "badge-warning",
+  CONFIRMED: "badge-info",
+  SHIPPED:   "badge-info",
+  DELIVERED: "badge-success",
 };
 
 const statusTabs = ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED"];
 
 const nextStatusByStatus = {
-  PLACED: "CONFIRMED",
+  PLACED:    "CONFIRMED",
   CONFIRMED: "SHIPPED",
-  SHIPPED: "DELIVERED",
+  SHIPPED:   "DELIVERED",
 };
 
 function getErrorMessage(error, fallback) {
@@ -27,37 +43,19 @@ function getErrorMessage(error, fallback) {
 }
 
 function ordersFromResponse(response) {
-  if (Array.isArray(response)) {
-    return response;
-  }
-
-  if (Array.isArray(response?.orders)) {
-    return response.orders;
-  }
-
-  if (Array.isArray(response?.content)) {
-    return response.content;
-  }
-
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.orders)) return response.orders;
+  if (Array.isArray(response?.content)) return response.content;
   return [];
 }
 
 function formatPrice(value) {
-  return new Intl.NumberFormat("pt-PT", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(value || 0));
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(value || 0));
 }
 
 function formatDate(value) {
-  if (!value) {
-    return "Data indisponivel";
-  }
-
-  return new Intl.DateTimeFormat("pt-PT", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
+  if (!value) return "Data indisponível";
+  return new Intl.DateTimeFormat("pt-PT", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }
 
 function statusLabel(status) {
@@ -66,11 +64,7 @@ function statusLabel(status) {
 
 function actionLabel(status) {
   const nextStatus = nextStatusByStatus[status];
-
-  if (!nextStatus) {
-    return "";
-  }
-
+  if (!nextStatus) return "";
   return `Marcar como ${statusLabel(nextStatus).toLowerCase()}`;
 }
 
@@ -93,25 +87,17 @@ export default function OrderManagement() {
 
       try {
         const orders = await getShopOrders({ page, size: PAGE_SIZE });
-
-        if (active) {
-          setOrderPage(orders);
-        }
+        if (active) setOrderPage(orders);
       } catch (loadError) {
         if (active) {
-          setError(
-            getErrorMessage(loadError, "Nao foi possivel carregar as encomendas")
-          );
+          setError(getErrorMessage(loadError, "Não foi possível carregar as encomendas."));
         }
       } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+        if (active) setIsLoading(false);
       }
     }
 
     loadOrders();
-
     return () => {
       active = false;
     };
@@ -135,7 +121,7 @@ export default function OrderManagement() {
     try {
       setOrderPage(await getShopOrders({ page, size: PAGE_SIZE }));
     } catch (loadError) {
-      setError(getErrorMessage(loadError, "Nao foi possivel carregar as encomendas"));
+      setError(getErrorMessage(loadError, "Não foi possível carregar as encomendas."));
     } finally {
       setIsLoading(false);
     }
@@ -143,10 +129,7 @@ export default function OrderManagement() {
 
   async function handleUpdateStatus(order) {
     const nextStatus = nextStatusByStatus[order.status];
-
-    if (!nextStatus) {
-      return;
-    }
+    if (!nextStatus) return;
 
     setUpdatingOrderId(order.id);
     setUpdateError("");
@@ -160,43 +143,28 @@ export default function OrderManagement() {
       };
 
       setOrderPage((currentPage) => {
-        if (!currentPage) {
-          return currentPage;
-        }
-
+        if (!currentPage) return currentPage;
         if (Array.isArray(currentPage)) {
-          return currentPage.map((currentOrder) =>
-            currentOrder.id === order.id ? nextOrder : currentOrder
-          );
+          return currentPage.map((o) => (o.id === order.id ? nextOrder : o));
         }
-
         if (Array.isArray(currentPage.orders)) {
           return {
             ...currentPage,
-            orders: currentPage.orders.map((currentOrder) =>
-              currentOrder.id === order.id ? nextOrder : currentOrder
-            ),
+            orders: currentPage.orders.map((o) => (o.id === order.id ? nextOrder : o)),
           };
         }
-
         if (Array.isArray(currentPage.content)) {
           return {
             ...currentPage,
-            content: currentPage.content.map((currentOrder) =>
-              currentOrder.id === order.id ? nextOrder : currentOrder
-            ),
+            content: currentPage.content.map((o) => (o.id === order.id ? nextOrder : o)),
           };
         }
-
         return currentPage;
       });
       setActiveStatus(nextStatus);
     } catch (updateStatusError) {
       setUpdateError(
-        getErrorMessage(
-          updateStatusError,
-          "Nao foi possivel atualizar o estado da encomenda"
-        )
+        getErrorMessage(updateStatusError, "Não foi possível atualizar o estado da encomenda.")
       );
     } finally {
       setUpdatingOrderId(null);
@@ -204,11 +172,11 @@ export default function OrderManagement() {
   }
 
   return (
-    <main className="mx-auto my-10 max-w-6xl px-4 text-black">
+    <div className="page-shell">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm uppercase text-gray-500">Loja</p>
-          <h1 className="text-3xl font-semibold">Gestao de encomendas</h1>
+          <p className="eyebrow text-clover-700">Loja</p>
+          <h1 className="h-page mt-2">Gestão de encomendas</h1>
         </div>
       </div>
 
@@ -218,44 +186,34 @@ export default function OrderManagement() {
             key={status}
             type="button"
             onClick={() => setActiveStatus(status)}
-            className={`rounded border px-4 py-2 text-sm ${
-              activeStatus === status
-                ? "border-black bg-black text-white"
-                : "border-gray-300 bg-white"
-            }`}
+            className={"opt-pill " + (activeStatus === status ? "opt-pill-selected" : "")}
           >
             {statusLabel(status)}
           </button>
         ))}
       </nav>
 
-      {isLoading && (
-        <p className="mt-6" aria-live="polite">
-          A carregar encomendas...
-        </p>
-      )}
+      {isLoading && <LoadingState label="A carregar encomendas..." />}
 
       {error && (
         <div className="mt-6 space-y-3" role="alert">
-          <p className="text-red-600">{error}</p>
-          <button
-            type="button"
-            onClick={retryLoad}
-            className="border border-gray-300 px-4 py-2"
-          >
+          <Alert variant="error">{error}</Alert>
+          <button type="button" onClick={retryLoad} className="btn-secondary">
+            <RefreshCw className="w-4 h-4" strokeWidth={1.7} />
             Tentar novamente
           </button>
         </div>
       )}
 
-      {updateError && (
-        <p className="mt-6 text-red-600" role="alert">
-          {updateError}
-        </p>
-      )}
+      {updateError && <Alert variant="error" className="mt-6">{updateError}</Alert>}
 
-      {isEmpty && (
-        <p className="mt-6 text-gray-600">Nao existem encomendas neste estado.</p>
+      {isEmpty && !isLoading && !error && (
+        <div className="mt-10 card card-pad p-16 text-center">
+          <div className="w-12 h-12 mx-auto rounded bg-ink-50 border border-ink-100 flex items-center justify-center text-ink-400">
+            <Inbox className="w-5 h-5" strokeWidth={1.7} />
+          </div>
+          <p className="mt-4 text-ink-500">Não existem encomendas neste estado.</p>
+        </div>
       )}
 
       {!isLoading && !error && filteredOrders.length > 0 && (
@@ -265,27 +223,22 @@ export default function OrderManagement() {
               const nextStatus = nextStatusByStatus[order.status];
 
               return (
-                <li
-                  key={order.id}
-                  className="border border-gray-200 bg-white p-4"
-                >
+                <li key={order.id} className="card card-pad p-5">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="text-lg font-semibold">Order #{order.id}</h2>
-                        <span className="border border-gray-300 px-2 py-1 text-xs font-semibold">
+                        <h2 className="text-base font-semibold tabular">
+                          Encomenda #{order.id}
+                        </h2>
+                        <span className={`badge ${statusBadge[order.status] || "badge-neutral"}`}>
                           {statusLabel(order.status)}
                         </span>
                       </div>
                       {order.buyerName && (
-                        <p className="mt-2 text-sm text-gray-700">
-                          Cliente: {order.buyerName}
-                        </p>
+                        <p className="mt-2 text-sm text-ink-700">Cliente: {order.buyerName}</p>
                       )}
-                      <p className="mt-2 text-sm text-gray-600">
-                        {formatDate(order.createdAt)}
-                      </p>
-                      <p className="mt-3 font-semibold">
+                      <p className="mt-1 text-xs text-ink-500">{formatDate(order.createdAt)}</p>
+                      <p className="mt-3 font-semibold tabular">
                         Total: {formatPrice(order.totalAmount)}
                       </p>
                     </div>
@@ -295,26 +248,23 @@ export default function OrderManagement() {
                         type="button"
                         onClick={() => handleUpdateStatus(order)}
                         disabled={updatingOrderId === order.id}
-                        className="border border-black px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                        className="btn-ink"
                       >
-                        {updatingOrderId === order.id
-                          ? "A atualizar..."
-                          : actionLabel(order.status)}
+                        {updatingOrderId === order.id ? "A atualizar..." : actionLabel(order.status)}
+                        <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
                       </button>
                     )}
                   </div>
 
                   {Array.isArray(order.items) && order.items.length > 0 && (
-                    <ul className="mt-4 divide-y divide-gray-200 border-t border-gray-200">
+                    <ul className="mt-4 divide-y divide-ink-100 border-t border-ink-100">
                       {order.items.map((item) => (
                         <li
                           key={item.id || `${item.productId}-${item.variantId}`}
-                          className="flex flex-wrap justify-between gap-3 py-3 text-sm"
+                          className="flex flex-wrap justify-between gap-3 py-2.5 text-sm"
                         >
-                          <span>
-                            {item.productName} x {item.quantity}
-                          </span>
-                          <span>{formatPrice(item.subtotal)}</span>
+                          <span>{item.productName} × {item.quantity}</span>
+                          <span className="tabular font-medium">{formatPrice(item.subtotal)}</span>
                         </li>
                       ))}
                     </ul>
@@ -327,26 +277,28 @@ export default function OrderManagement() {
           <div className="mt-6 flex items-center justify-between gap-4">
             <button
               type="button"
-              onClick={() => setPage((currentPage) => currentPage - 1)}
+              onClick={() => setPage((p) => p - 1)}
               disabled={isFirstPage}
-              className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-secondary"
             >
+              <ChevronLeft className="w-4 h-4" strokeWidth={1.8} />
               Anterior
             </button>
-            <span className="text-sm text-gray-600">
-              Pagina {page + 1} de {Math.max(totalPages, 1)}
+            <span className="text-sm text-ink-500 tabular">
+              Página {page + 1} de {Math.max(totalPages, 1)}
             </span>
             <button
               type="button"
-              onClick={() => setPage((currentPage) => currentPage + 1)}
+              onClick={() => setPage((p) => p + 1)}
               disabled={isLastPage}
-              className="border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-secondary"
             >
               Seguinte
+              <ChevronRight className="w-4 h-4" strokeWidth={1.8} />
             </button>
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }

@@ -13,6 +13,7 @@
   "addToCartFailed": "Não foi possível adicionar o produto ao carrinho.",
   "uploadPhotosFailed": "Não foi possível carregar as fotos",
   "tryOnFailed": "Falha ao gerar imagem. Tenta novamente.",
+  "tryOnGenerated": "Imagem gerada com sucesso!",
   "noProducts": "Sem produtos encontrados.",
   "viewProduct": "Ver produto",
   "productPagination": "Paginação de produtos",

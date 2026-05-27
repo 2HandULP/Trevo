@@ -18,7 +18,6 @@ import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
 import { getProStatus } from "../services/subscriptionService";
 import { generatePersonalizedTryOn, generateTryOn, getTryOnUsage } from "../services/tryOnService";
-import { uploadBuyerPhotos } from "../services/userPhotoService";
 import LoadingState from "../components/LoadingState";
 import Alert from "../components/Alert";
 
@@ -301,11 +300,14 @@ export default function ProductDetail() {
     setIsUploadingSeeIt(true);
 
     try {
-      await uploadBuyerPhotos(seeItPhotos.map((photo) => photo.file));
-      setSeeItSuccess(t("photosUploaded"));
-      setSeeItResultImage(images[activeImageIndex]?.url || seeItPhotos[0].previewUrl);
+      const result = await generatePersonalizedTryOn(
+        Number(productId),
+        seeItPhotos.map((photo) => photo.file)
+      );
+      setSeeItResultImage(result.imageUrl);
+      setSeeItSuccess(t("tryOnGenerated"));
     } catch (uploadError) {
-      setSeeItError(getErrorMessage(uploadError, t("uploadPhotosFailed")));
+      setSeeItError(getErrorMessage(uploadError, t("tryOnFailed")));
     } finally {
       setIsUploadingSeeIt(false);
     }

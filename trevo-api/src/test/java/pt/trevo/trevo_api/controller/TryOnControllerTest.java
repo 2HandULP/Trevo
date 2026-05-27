@@ -1,24 +1,19 @@
 package pt.trevo.trevo_api.controller;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -29,7 +24,7 @@ import pt.trevo.trevo_api.auth.AppUserDetailsService;
 import pt.trevo.trevo_api.auth.JwtService;
 import pt.trevo.trevo_api.config.SecurityConfig;
 import pt.trevo.trevo_api.dto.TryOnImageResponse;
-import pt.trevo.trevo_api.dto.TryOnRequest;
+import pt.trevo.trevo_api.dto.TryOnUsageResponse;
 import pt.trevo.trevo_api.persistence.repository.RefreshTokenRepository;
 import pt.trevo.trevo_api.persistence.repository.UserRepository;
 import pt.trevo.trevo_api.security.SecurityUtils;
@@ -39,8 +34,6 @@ import pt.trevo.trevo_api.service.TryOnService;
 @WebMvcTest(TryOnController.class)
 @Import({SecurityConfig.class, SecurityUtils.class, ImageUploadValidator.class})
 class TryOnControllerTest {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private MockMvc mockMvc;
@@ -59,106 +52,66 @@ class TryOnControllerTest {
 
     @Test
     @WithMockUser(username = "10", roles = "BUYER")
-    void postTryOnReturnsOkForFreeUserFirstCallAndPaymentRequiredForSecondCall() throws Exception {
-        TryOnRequest request = new TryOnRequest(20L, "classic-model");
-        when(tryOnService.generateTryOn(eq(10L), eq(20L), eq("classic-model")))
-            .thenReturn(new TryOnImageResponse("https://ai.example/first.png"))
-            .thenThrow(new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Free users can generate one try-on per product"));
+    void postTryOnReturnsOkWithSinglePhoto() throws Exception {
+        when(tryOnService.generateTryOn(eq(10L), eq(20L), any()))
+            .thenReturn(new TryOnImageResponse("https://ai.example/result.png"));
 
-        mockMvc.perform(post("/api/buyer/try-on")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.imageUrl").value("https://ai.example/first.png"));
-
-        mockMvc.perform(post("/api/buyer/try-on")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isPaymentRequired())
-            .andExpect(jsonPath("$.detail").value("Free users can generate one try-on per product"));
-    }
-
-    @Test
-    @WithMockUser(username = "10", roles = "BUYER")
-    void postPersonalizedTryOnReturnsForbiddenForNonProUser() throws Exception {
-        when(tryOnService.generatePersonalizedTryOn(eq(10L), eq(20L), anyList()))
-            .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Personalized try-on requires a Pro subscription"));
-
-        mockMvc.perform(multipart("/api/buyer/try-on/personalized")
-                .file(photo("photo-1.jpg"))
-                .file(photo("photo-2.jpg"))
-                .file(photo("photo-3.jpg"))
-                .param("productId", "20"))
-            .andExpect(status().isForbidden())
-            .andExpect(jsonPath("$.detail").value("Personalized try-on requires a Pro subscription"));
-    }
-
-    @Test
-    @WithMockUser(username = "10", roles = "BUYER")
-    void postPersonalizedTryOnReturnsBadRequestWhenPhotosAreMissing() throws Exception {
-        mockMvc.perform(multipart("/api/buyer/try-on/personalized")
-                .file(photo("photo-1.jpg"))
-                .file(photo("photo-2.jpg"))
-                .param("productId", "20"))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(username = "10", roles = "BUYER")
-    void postPersonalizedTryOnReturnsOkForValidProRequest() throws Exception {
-        when(tryOnService.generatePersonalizedTryOn(eq(10L), eq(20L), anyList()))
-            .thenReturn(new TryOnImageResponse("https://ai.example/personalized.png"));
-
-        mockMvc.perform(multipart("/api/buyer/try-on/personalized")
-                .file(photo("photo-1.jpg"))
-                .file(photo("photo-2.jpg"))
-                .file(photo("photo-3.jpg"))
+        mockMvc.perform(multipart("/api/buyer/try-on")
+                .file(photo("photo.jpg"))
                 .param("productId", "20"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.imageUrl").value("https://ai.example/personalized.png"));
+            .andExpect(jsonPath("$.imageUrl").value("https://ai.example/result.png"));
     }
 
     @Test
     @WithMockUser(username = "10", roles = "BUYER")
-    void postPersonalizedTryOnRequiresPhotosFieldName() throws Exception {
-        MockMultipartFile wrongField = new MockMultipartFile("images", "photo.jpg", "image/jpeg", new byte[] {1, 2, 3});
+    void postTryOnReturnsPaymentRequiredWhenFreeTierExhausted() throws Exception {
+        when(tryOnService.generateTryOn(eq(10L), eq(20L), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Free users can generate up to 3 try-on images"));
 
-        mockMvc.perform(multipart("/api/buyer/try-on/personalized")
-                .file(wrongField)
+        mockMvc.perform(multipart("/api/buyer/try-on")
+                .file(photo("photo.jpg"))
                 .param("productId", "20"))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isPaymentRequired());
     }
 
     @Test
     @WithMockUser(username = "10", roles = "BUYER")
-    void postPersonalizedTryOnRejectsUnsupportedPhotoType() throws Exception {
-        MockMultipartFile textFile = new MockMultipartFile("photos", "photo.txt", "text/plain", new byte[] {1, 2, 3});
+    void postTryOnRejectsUnsupportedPhotoType() throws Exception {
+        MockMultipartFile textFile = new MockMultipartFile("photo", "photo.txt", "text/plain", new byte[] {1, 2, 3});
 
-        mockMvc.perform(multipart("/api/buyer/try-on/personalized")
+        mockMvc.perform(multipart("/api/buyer/try-on")
                 .file(textFile)
-                .file(photo("photo-2.jpg"))
-                .file(photo("photo-3.jpg"))
                 .param("productId", "20"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.detail").value("photos must be a JPEG, PNG, GIF, or WEBP image"));
+            .andExpect(status().isBadRequest());
     }
 
     @Test
     @WithMockUser(username = "10", roles = "BUYER")
-    void postPersonalizedTryOnRejectsOversizedPhoto() throws Exception {
+    void postTryOnRejectsOversizedPhoto() throws Exception {
         byte[] oversized = new byte[5 * 1024 * 1024 + 1];
-        MockMultipartFile largeFile = new MockMultipartFile("photos", "large.jpg", "image/jpeg", oversized);
+        MockMultipartFile largeFile = new MockMultipartFile("photo", "large.jpg", "image/jpeg", oversized);
 
-        mockMvc.perform(multipart("/api/buyer/try-on/personalized")
+        mockMvc.perform(multipart("/api/buyer/try-on")
                 .file(largeFile)
-                .file(photo("photo-2.jpg"))
-                .file(photo("photo-3.jpg"))
                 .param("productId", "20"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.detail").value("photos exceeds the maximum allowed size"));
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "10", roles = "BUYER")
+    void getUsageReturnsUsageStats() throws Exception {
+        when(tryOnService.getUsage(10L))
+            .thenReturn(new TryOnUsageResponse(false, 2, 1));
+
+        mockMvc.perform(get("/api/buyer/try-on/usage"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.pro").value(false))
+            .andExpect(jsonPath("$.generationsUsed").value(2))
+            .andExpect(jsonPath("$.generationsLeft").value(1));
     }
 
     private MockMultipartFile photo(String filename) {
-        return new MockMultipartFile("photos", filename, "image/jpeg", new byte[] {1, 2, 3});
+        return new MockMultipartFile("photo", filename, "image/jpeg", new byte[] {1, 2, 3});
     }
 }

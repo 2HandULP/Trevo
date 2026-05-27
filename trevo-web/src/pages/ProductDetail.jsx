@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
   ImageOff,
-  Sparkles,
   Camera,
   X,
   CheckCircle2,
@@ -16,19 +15,9 @@ import { productImageAlt } from "../lib/imageAlt";
 import { normalizeRole, ROLES } from "../lib/roles";
 import { addCartItem } from "../services/cartService";
 import { getProduct } from "../services/productService";
-import { getProStatus } from "../services/subscriptionService";
-import { generatePersonalizedTryOn, generateTryOn, getTryOnUsage } from "../services/tryOnService";
+import { generateTryOn, getTryOnUsage } from "../services/tryOnService";
 import LoadingState from "../components/LoadingState";
 import Alert from "../components/Alert";
-
-const REQUIRED_TRY_ON_PHOTOS = 3;
-
-const BODY_TYPES = [
-  { value: "slim", labelKey: "bodyTypes.slim" },
-  { value: "athletic", labelKey: "bodyTypes.athletic" },
-  { value: "regular", labelKey: "bodyTypes.regular" },
-  { value: "plusSize", labelKey: "bodyTypes.plusSize" },
-];
 
 function formatPrice(price) {
   if (price === null || price === undefined || price === "") {
@@ -83,19 +72,12 @@ export default function ProductDetail() {
   const [cartSuccess, setCartSuccess] = useState("");
   const [cartError, setCartError] = useState("");
   const [isTryOnOpen, setIsTryOnOpen] = useState(false);
-  const [selectedBodyType, setSelectedBodyType] = useState(BODY_TYPES[0].value);
   const [isGeneratingTryOn, setIsGeneratingTryOn] = useState(false);
   const [generatedTryOnImage, setGeneratedTryOnImage] = useState("");
   const [tryOnError, setTryOnError] = useState("");
+  const [tryOnPhoto, setTryOnPhoto] = useState(null);
   const [isPro, setIsPro] = useState(null);
-  const [tryOnUsed, setTryOnUsed] = useState(false);
-  const [isSeeItOpen, setIsSeeItOpen] = useState(false);
-  const [seeItPhotos, setSeeItPhotos] = useState([]);
-  const [seeItError, setSeeItError] = useState("");
-  const [seeItSuccess, setSeeItSuccess] = useState("");
-  const [isUploadingSeeIt, setIsUploadingSeeIt] = useState(false);
-  const [seeItResultImage, setSeeItResultImage] = useState("");
-  const seeItPhotosRef = useRef([]);
+  const [generationsLeft, setGenerationsLeft] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -135,16 +117,6 @@ export default function ProductDetail() {
     setCartError("");
   }, [selectedSize, selectedColor]);
 
-  useEffect(() => {
-    seeItPhotosRef.current = seeItPhotos;
-  }, [seeItPhotos]);
-
-  useEffect(() => {
-    return () => {
-      seeItPhotosRef.current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-    };
-  }, []);
-
   const images = useMemo(
     () => normalizeImages(product?.images, product?.name),
     [product]
@@ -166,8 +138,8 @@ export default function ProductDetail() {
     isAuthenticated &&
     normalizeRole(role) === ROLES.BUYER &&
     Boolean(product?.shopId);
-  const canUseSeeItOnYourself =
-    isAuthenticated && normalizeRole(role) === ROLES.BUYER;
+
+  const freeTierExhausted = isPro === false && generationsLeft !== null && generationsLeft <= 0;
 
   function isSizeDisabled(size) {
     return !variants.some(
@@ -217,14 +189,11 @@ export default function ProductDetail() {
   async function loadTryOnStatus() {
     if (!isAuthenticated || normalizeRole(role) !== ROLES.BUYER) return;
     try {
-      const [proStatus, usage] = await Promise.all([
-        getProStatus(),
-        getTryOnUsage(productId),
-      ]);
-      setIsPro(proStatus.pro);
-      setTryOnUsed(usage.used);
+      const usage = await getTryOnUsage();
+      setIsPro(usage.pro);
+      setGenerationsLeft(usage.generationsLeft);
     } catch {
-      // Status unavailable - modal works without badge/counter
+      // Status unavailable
     }
   }
 
@@ -233,83 +202,44 @@ export default function ProductDetail() {
     loadTryOnStatus();
   }
 
+  function closeTryOnModal() {
+    if (tryOnPhoto) {
+      URL.revokeObjectURL(tryOnPhoto.previewUrl);
+    }
+    setTryOnPhoto(null);
+    setIsTryOnOpen(false);
+    setGeneratedTryOnImage("");
+    setTryOnError("");
+  }
+
+  function handleTryOnPhotoChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (tryOnPhoto) {
+      URL.revokeObjectURL(tryOnPhoto.previewUrl);
+    }
+
+    setTryOnPhoto({ file, previewUrl: URL.createObjectURL(file) });
+    setGeneratedTryOnImage("");
+    setTryOnError("");
+  }
+
   async function handleGenerateTryOn() {
+    if (!tryOnPhoto) return;
+
     setGeneratedTryOnImage("");
     setTryOnError("");
     setIsGeneratingTryOn(true);
 
     try {
-      const result = await generateTryOn(Number(productId), selectedBodyType);
+      const result = await generateTryOn(Number(productId), tryOnPhoto.file);
       setGeneratedTryOnImage(result.imageUrl);
-
-      if (isPro === false && !tryOnUsed) {
-        setTryOnUsed(true);
-      }
+      loadTryOnStatus();
     } catch (err) {
       setTryOnError(getErrorMessage(err, t("tryOnFailed")));
     } finally {
       setIsGeneratingTryOn(false);
-    }
-  }
-
-  function handleSeeItPhotoChange(event) {
-    const files = [...event.target.files];
-    setSeeItError("");
-    setSeeItSuccess("");
-    setSeeItResultImage("");
-
-    setSeeItPhotos((currentPhotos) => {
-      currentPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-      return files.map((file) => ({
-        file,
-        previewUrl: URL.createObjectURL(file),
-      }));
-    });
-
-    if (files.length !== REQUIRED_TRY_ON_PHOTOS) {
-      setSeeItError("Seleciona exatamente 3 imagens.");
-    }
-  }
-
-  function clearSeeItPhotos() {
-    setSeeItPhotos((currentPhotos) => {
-      currentPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-      return [];
-    });
-  }
-
-  function closeSeeItModal() {
-    clearSeeItPhotos();
-    setIsSeeItOpen(false);
-    setSeeItError("");
-    setSeeItSuccess("");
-    setSeeItResultImage("");
-  }
-
-  async function handleSeeItSubmit(event) {
-    event.preventDefault();
-    setSeeItError("");
-    setSeeItSuccess("");
-    setSeeItResultImage("");
-
-    if (seeItPhotos.length !== REQUIRED_TRY_ON_PHOTOS) {
-      setSeeItError("Seleciona exatamente 3 imagens.");
-      return;
-    }
-
-    setIsUploadingSeeIt(true);
-
-    try {
-      const result = await generatePersonalizedTryOn(
-        Number(productId),
-        seeItPhotos.map((photo) => photo.file)
-      );
-      setSeeItResultImage(result.imageUrl);
-      setSeeItSuccess(t("tryOnGenerated"));
-    } catch (uploadError) {
-      setSeeItError(getErrorMessage(uploadError, t("tryOnFailed")));
-    } finally {
-      setIsUploadingSeeIt(false);
     }
   }
 
@@ -488,29 +418,16 @@ export default function ProductDetail() {
               {isAddingToCart ? t("addingToCart") : t("addToCart")}
             </button>
 
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={handleOpenTryOn}
-                disabled={!isAuthenticated}
-                title={!isAuthenticated ? t("loginRequired") : ""}
-                className="btn-secondary py-3"
-              >
-                <Sparkles className="w-4 h-4 text-clover-500" strokeWidth={1.8} />
-                {t("virtualTryOn")}
-              </button>
-
-              {canUseSeeItOnYourself && (
-                <button
-                  type="button"
-                  onClick={() => setIsSeeItOpen(true)}
-                  className="btn-secondary py-3"
-                >
-                  <Camera className="w-4 h-4 text-clover-500" strokeWidth={1.8} />
-                  {t("seeItOnYourself")}
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={handleOpenTryOn}
+              disabled={!isAuthenticated}
+              title={!isAuthenticated ? t("loginRequired") : ""}
+              className="btn-secondary w-full mt-3 py-3"
+            >
+              <Camera className="w-4 h-4 text-clover-500" strokeWidth={1.8} />
+              {t("virtualTryOn")}
+            </button>
 
             {cartSuccess && (
               <Alert variant="success" className="mt-3">{cartSuccess}</Alert>
@@ -548,15 +465,17 @@ export default function ProductDetail() {
                       PRO · Ilimitado
                     </span>
                   )}
-                  {isPro === false && !tryOnUsed && (
-                    <span className="badge badge-neutral">1 experimento gratuito</span>
+                  {isPro === false && generationsLeft !== null && generationsLeft > 0 && (
+                    <span className="badge badge-neutral">
+                      {t("generationsLeft", { count: generationsLeft })}
+                    </span>
                   )}
                 </div>
                 <p className="mt-2 text-sm text-ink-500">{t("tryOnDescription")}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setIsTryOnOpen(false)}
+                onClick={closeTryOnModal}
                 className="w-8 h-8 rounded inline-flex items-center justify-center border border-ink-200 hover:bg-ink-50 transition-colors"
                 aria-label={t("close", { ns: "common" })}
               >
@@ -564,52 +483,50 @@ export default function ProductDetail() {
               </button>
             </div>
 
-            {isPro === false && tryOnUsed && (
+            {freeTierExhausted && (
               <Alert variant="warning" className="mt-4">
-                Experimento gratuito esgotado.{" "}
+                {t("freeTierExhausted")}{" "}
                 <Link to="/pro" className="font-semibold underline text-clover-700">
-                  Atualiza para Pro
-                </Link>{" "}
-                para gerações ilimitadas.
+                  {t("upgradeForMore")}
+                </Link>
               </Alert>
             )}
 
-            <fieldset className="mt-6">
-              <legend className="text-sm font-semibold mb-2">{t("model")}</legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {BODY_TYPES.map((bodyType) => (
-                  <label
-                    key={bodyType.value}
-                    className={
-                      "opt-pill flex items-center gap-2 cursor-pointer " +
-                      (selectedBodyType === bodyType.value ? "opt-pill-selected" : "")
-                    }
-                  >
-                    <input
-                      type="radio"
-                      name="bodyType"
-                      value={bodyType.value}
-                      checked={selectedBodyType === bodyType.value}
-                      onChange={() => setSelectedBodyType(bodyType.value)}
-                      className="accent-clover-500"
-                    />
-                    {t(bodyType.labelKey)}
-                  </label>
-                ))}
+            <div className="mt-6">
+              <label htmlFor="try-on-photo" className="text-sm font-semibold">
+                {t("tryOnPhotoLabel")}
+              </label>
+              <p className="text-xs text-ink-500 mt-0.5 mb-2">{t("tryOnPhotoHelp")}</p>
+              <input
+                id="try-on-photo"
+                type="file"
+                accept="image/*"
+                onChange={handleTryOnPhotoChange}
+                className="input file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-ink-100 file:text-ink-800 file:font-medium file:text-xs hover:file:bg-ink-200"
+              />
+            </div>
+
+            {tryOnPhoto && (
+              <div className="mt-4">
+                <img
+                  src={tryOnPhoto.previewUrl}
+                  alt={t("tryOnPreviewAlt")}
+                  className="h-32 w-32 rounded border border-ink-200 object-cover"
+                />
               </div>
-            </fieldset>
+            )}
 
             <button
               type="button"
               onClick={handleGenerateTryOn}
               disabled={
                 isGeneratingTryOn ||
-                images.length === 0 ||
-                (isPro === false && tryOnUsed)
+                !tryOnPhoto ||
+                freeTierExhausted
               }
               className="btn-primary w-full mt-6 py-3"
             >
-              <Sparkles className="w-4 h-4" strokeWidth={1.8} />
+              <Camera className="w-4 h-4" strokeWidth={1.8} />
               {isGeneratingTryOn ? t("generatingTryOn") : t("generateTryOn")}
             </button>
 
@@ -617,10 +534,6 @@ export default function ProductDetail() {
               <p className="mt-3 text-sm text-red-600" role="alert">
                 {tryOnError}
               </p>
-            )}
-
-            {images.length === 0 && (
-              <p className="mt-3 text-sm text-ink-500">{t("noTryOnImage")}</p>
             )}
 
             {generatedTryOnImage && (
@@ -631,100 +544,7 @@ export default function ProductDetail() {
                 </h3>
                 <img
                   src={generatedTryOnImage}
-                  alt={t("tryOnResultAlt", {
-                    bodyType: t(
-                      BODY_TYPES.find((bodyType) => bodyType.value === selectedBodyType)
-                        ?.labelKey || BODY_TYPES[0].labelKey
-                    ),
-                  })}
-                  className="mt-3 aspect-square w-full rounded border border-ink-200 object-cover"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* "See it on yourself" modal */}
-      {isSeeItOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/45 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="see-it-on-yourself-title"
-            className="w-full max-w-2xl rounded-md bg-white p-6 shadow-xl"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="see-it-on-yourself-title" className="text-xl font-semibold tracking-tight">
-                  {t("seeItTitle")}
-                </h2>
-                <p className="mt-2 text-sm text-ink-500">{t("seeItDescription")}</p>
-              </div>
-              <button
-                type="button"
-                onClick={closeSeeItModal}
-                className="w-8 h-8 rounded inline-flex items-center justify-center border border-ink-200 hover:bg-ink-50 transition-colors"
-                aria-label={t("close", { ns: "common" })}
-              >
-                <X className="w-4 h-4" strokeWidth={1.8} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSeeItSubmit} className="mt-6 flex flex-col gap-5">
-              <div className="field">
-                <label htmlFor="see-it-photos" className="field-label">
-                  {t("images")}
-                </label>
-                <input
-                  id="see-it-photos"
-                  type="file"
-                  name="seeItPhotos"
-                  accept="image/*"
-                  multiple
-                  onChange={handleSeeItPhotoChange}
-                  className="input file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-ink-100 file:text-ink-800 file:font-medium file:text-xs hover:file:bg-ink-200"
-                />
-                <p className="field-help">Carrega exatamente 3 imagens.</p>
-              </div>
-
-              {seeItError && <Alert variant="error">{seeItError}</Alert>}
-              {seeItSuccess && <Alert variant="success">{seeItSuccess}</Alert>}
-
-              {seeItPhotos.length > 0 && (
-                <ul className="grid grid-cols-3 gap-3">
-                  {seeItPhotos.map((photo, index) => (
-                    <li key={photo.previewUrl}>
-                      <img
-                        src={photo.previewUrl}
-                        alt={t("seeItPreviewAlt", { index: index + 1 })}
-                        className="aspect-square w-full rounded border border-ink-200 object-cover"
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <button
-                type="submit"
-                disabled={
-                  isUploadingSeeIt || seeItPhotos.length !== REQUIRED_TRY_ON_PHOTOS
-                }
-                className="btn-primary w-full py-3"
-              >
-                {isUploadingSeeIt ? t("uploading") : t("generateResult")}
-              </button>
-            </form>
-
-            {seeItResultImage && (
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" strokeWidth={1.8} />
-                  {t("customResult")}
-                </h3>
-                <img
-                  src={seeItResultImage}
-                  alt={t("seeItResultAlt")}
+                  alt={t("tryOnResultAlt")}
                   className="mt-3 aspect-square w-full rounded border border-ink-200 object-cover"
                 />
               </div>

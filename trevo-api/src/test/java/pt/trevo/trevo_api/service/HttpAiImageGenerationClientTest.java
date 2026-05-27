@@ -6,7 +6,6 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -25,27 +24,20 @@ class HttpAiImageGenerationClientTest extends BaseUnitTest {
 
     @BeforeEach
     void setUp() {
-        Map<String, String> modelPhotos = Map.of(
-            "slim", "https://example.com/slim.jpg",
-            "athletic", "https://example.com/athletic.jpg",
-            "regular", "https://example.com/regular.jpg",
-            "plusSize", "https://example.com/plus-size.jpg"
-        );
-        // Create TryOnConfig with the test model photos
-        pt.trevo.trevo_api.config.TryOnConfig config = new pt.trevo.trevo_api.config.TryOnConfig(modelPhotos);
-        client = new HttpAiImageGenerationClient(replicateApiClient, config);
+        client = new HttpAiImageGenerationClient(replicateApiClient);
     }
 
     @Test
-    void generateTryOnReturnsImageUrlOnSuccessfulPrediction() {
+    void generateTryOnUsesPhotoUrlAsHumanImage() {
         Product product = productWithImage("https://cdn.example.com/shirt.jpg");
+        UserPhotoInput photo = testPhoto("https://cloudinary.example.com/user.jpg");
         when(replicateApiClient.createAndAwaitPrediction(
             "https://cdn.example.com/shirt.jpg",
-            "https://example.com/slim.jpg",
+            "https://cloudinary.example.com/user.jpg",
             "Linen Shirt"
         )).thenReturn("https://replicate.delivery/result.png");
 
-        String result = client.generateTryOn(product, "slim");
+        String result = client.generateTryOn(product, photo);
 
         assertThat(result).isEqualTo("https://replicate.delivery/result.png");
     }
@@ -53,40 +45,13 @@ class HttpAiImageGenerationClientTest extends BaseUnitTest {
     @Test
     void generateTryOnThrows400WhenProductHasNoImages() {
         Product product = productWithoutImages();
+        UserPhotoInput photo = testPhoto("https://cloudinary.example.com/user.jpg");
 
-        Throwable thrown = catchThrowable(() -> client.generateTryOn(product, "slim"));
+        Throwable thrown = catchThrowable(() -> client.generateTryOn(product, photo));
 
         assertThat(thrown).isInstanceOf(ResponseStatusException.class);
         assertThat(((ResponseStatusException) thrown).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(((ResponseStatusException) thrown).getReason()).isEqualTo("Product has no images");
-    }
-
-    @Test
-    void generateTryOnThrows400WhenModelIdentifierHasNoPhoto() {
-        Product product = productWithImage("https://cdn.example.com/shirt.jpg");
-
-        Throwable thrown = catchThrowable(() -> client.generateTryOn(product, "unknown-type"));
-
-        assertThat(thrown).isInstanceOf(ResponseStatusException.class);
-        assertThat(((ResponseStatusException) thrown).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(((ResponseStatusException) thrown).getReason()).contains("No reference photo configured");
-    }
-
-    @Test
-    void generatePersonalizedTryOnUsesFirstPhotoUrlAsHumanImage() {
-        Product product = productWithImage("https://cdn.example.com/shirt.jpg");
-        UserPhotoInput photo1 = testPhoto("https://cloudinary.example.com/user-photo-1.jpg");
-        UserPhotoInput photo2 = testPhoto("https://cloudinary.example.com/user-photo-2.jpg");
-        UserPhotoInput photo3 = testPhoto("https://cloudinary.example.com/user-photo-3.jpg");
-        when(replicateApiClient.createAndAwaitPrediction(
-            "https://cdn.example.com/shirt.jpg",
-            "https://cloudinary.example.com/user-photo-1.jpg",
-            "Linen Shirt"
-        )).thenReturn("https://replicate.delivery/personalized.png");
-
-        String result = client.generatePersonalizedTryOn(product, List.of(photo1, photo2, photo3));
-
-        assertThat(result).isEqualTo("https://replicate.delivery/personalized.png");
     }
 
     private UserPhotoInput testPhoto(String temporaryUrl) {

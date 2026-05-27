@@ -492,6 +492,8 @@ export default function ProductDetail() {
               <button
                 type="button"
                 onClick={handleOpenTryOn}
+                disabled={!isAuthenticated}
+                title={!isAuthenticated ? t("loginRequired") : ""}
                 className="btn-secondary py-3"
               >
                 <Sparkles className="w-4 h-4 text-clover-500" strokeWidth={1.8} />

@@ -23,6 +23,7 @@ public class ReplicateApiClient {
     private final long pollIntervalMs;
     private final long timeoutMs;
     private final RestClient restClient;
+    private volatile String cachedLatestVersion;
 
     public ReplicateApiClient(
         @Value("${replicate.api-token:}") String apiToken,
@@ -51,6 +52,30 @@ public class ReplicateApiClient {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private String resolveVersion() {
+        if (modelVersion != null && !modelVersion.isBlank()) {
+            return modelVersion;
+        }
+        if (cachedLatestVersion != null) {
+            return cachedLatestVersion;
+        }
+        try {
+            Map<String, Object> model = restClient.get()
+                .uri("/models/cuuupid/idm-vton")
+                .header("Authorization", "Bearer " + apiToken)
+                .retrieve()
+                .body(Map.class);
+            if (model != null && model.get("latest_version") instanceof Map<?, ?> lv) {
+                cachedLatestVersion = (String) lv.get("id");
+                return cachedLatestVersion;
+            }
+        } catch (RestClientException ex) {
+            log.warn("Failed to fetch latest model version", ex);
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not resolve IDM-VTON model version");
+    }
+
     private String createPrediction(String garmentImageUrl, String humanImageUrl, String garmentDescription) {
         Map<String, Object> input = Map.of(
             "garm_img", garmentImageUrl,
@@ -59,21 +84,13 @@ public class ReplicateApiClient {
             "category", "upper_body"
         );
 
-        Map<String, Object> body;
-        if (modelVersion != null && !modelVersion.isBlank()) {
-            body = Map.of("version", modelVersion, "input", input);
-        } else {
-            body = Map.of("input", input);
-        }
-
-        String uri = (modelVersion != null && !modelVersion.isBlank())
-            ? "/predictions"
-            : "/models/cuuupid/idm-vton/predictions";
+        String version = resolveVersion();
+        Map<String, Object> body = Map.of("version", version, "input", input);
 
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restClient.post()
-                .uri(uri)
+                .uri("/predictions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer " + apiToken)
                 .body(body)

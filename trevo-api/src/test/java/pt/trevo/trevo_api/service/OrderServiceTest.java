@@ -59,6 +59,9 @@ class OrderServiceTest extends BaseUnitTest {
     @Mock
     private PayoutService payoutService;
 
+    @Mock
+    private PayPalService payPalService;
+
     @InjectMocks
     private OrderService orderService;
 
@@ -79,7 +82,7 @@ class OrderServiceTest extends BaseUnitTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY);
+        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY).orders();
 
         assertThat(orders).hasSize(2);
         assertThat(orders.stream().map(OrderResponse::shopId).toList())
@@ -162,7 +165,7 @@ class OrderServiceTest extends BaseUnitTest {
         doThrow(new RuntimeException("notification DB unavailable"))
             .when(notificationService).createNewOrderNotification(any(Order.class));
 
-        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY);
+        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY).orders();
 
         assertThat(orders).hasSize(1);
         assertThat(cart.getItems()).isEmpty();

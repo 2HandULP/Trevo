@@ -18,9 +18,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import pt.trevo.trevo_api.dto.CheckoutResponse;
 import pt.trevo.trevo_api.dto.OrderItemResponse;
 import pt.trevo.trevo_api.dto.OrderPageResponse;
 import pt.trevo.trevo_api.dto.OrderResponse;
+import pt.trevo.trevo_api.dto.PayPalOrderResponse;
 import pt.trevo.trevo_api.persistence.entity.Cart;
 import pt.trevo.trevo_api.persistence.entity.CartItem;
 import pt.trevo.trevo_api.persistence.entity.Order;
@@ -46,6 +48,7 @@ public class OrderService {
     private final ShopRepository shopRepository;
     private final NotificationService notificationService;
     private final PayoutService payoutService;
+    private final PayPalService payPalService;
 
     public OrderService(
         CartRepository cartRepository,
@@ -53,7 +56,8 @@ public class OrderService {
         VariantRepository variantRepository,
         ShopRepository shopRepository,
         NotificationService notificationService,
-        PayoutService payoutService
+        PayoutService payoutService,
+        PayPalService payPalService
     ) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
@@ -61,10 +65,11 @@ public class OrderService {
         this.shopRepository = shopRepository;
         this.notificationService = notificationService;
         this.payoutService = payoutService;
+        this.payPalService = payPalService;
     }
 
     @Transactional
-    public List<OrderResponse> checkout(Long buyerId, PaymentMethod paymentMethod) {
+    public CheckoutResponse checkout(Long buyerId, PaymentMethod paymentMethod) {
         if (buyerId == null || paymentMethod == null) {
             throw badRequest("Invalid checkout request");
         }
@@ -114,7 +119,8 @@ public class OrderService {
             Order order = new Order();
             order.setBuyer(cart.getBuyer());
             order.setShop(shop);
-            order.setStatus(OrderStatus.PLACED);
+            order.setStatus(paymentMethod == PaymentMethod.PAYPAL || paymentMethod == PaymentMethod.STRIPE
+                ? OrderStatus.PENDING_PAYMENT : OrderStatus.PLACED);
             order.setPaymentMethod(paymentMethod);
             order.setCreatedAt(Instant.now());
 
@@ -151,7 +157,15 @@ public class OrderService {
         cart.getItems().clear();
         cartRepository.save(cart);
 
-        return orders;
+        String approveUrl = null;
+        if (paymentMethod == PaymentMethod.PAYPAL && !orders.isEmpty()) {
+            Order firstOrder = orderRepository.findById(orders.getFirst().id())
+                .orElseThrow(() -> badRequest("Order not found"));
+            PayPalOrderResponse payPalOrder = payPalService.createOrder(firstOrder);
+            approveUrl = payPalOrder.approveUrl();
+        }
+
+        return new CheckoutResponse(orders, approveUrl);
     }
 
     @Transactional

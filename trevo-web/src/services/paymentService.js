@@ -6,3 +6,10 @@ export async function createPaymentIntent(orderId) {
   });
   return data;
 }
+
+export async function capturePayPalPayment(paypalOrderId) {
+  const { data } = await apiClient.post("/payments/paypal/capture", {
+    paypalOrderId,
+  });
+  return data;
+}

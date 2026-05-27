@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pt.trevo.trevo_api.dto.CheckoutRequest;
+import pt.trevo.trevo_api.dto.CheckoutResponse;
 import pt.trevo.trevo_api.dto.OrderPageResponse;
 import pt.trevo.trevo_api.dto.OrderResponse;
 import pt.trevo.trevo_api.dto.UpdateOrderStatusRequest;
@@ -36,7 +37,7 @@ public class OrderController {
     @PostMapping("/api/buyer/orders/checkout")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('BUYER')")
-    public List<OrderResponse> checkout(
+    public CheckoutResponse checkout(
         @Valid @RequestBody CheckoutRequest request,
         Authentication authentication
     ) {

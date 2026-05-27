@@ -13,7 +13,7 @@ Modify `HttpAiImageGenerationClient` to call Replicate's prediction API directly
 Replace the current generic REST logic with Replicate-specific calls:
 
 1. **Create prediction** — `POST https://api.replicate.com/v1/predictions`
-   - Model: `cuuupid/idm-vton` (version `c871bb9b046c1462f71a8a085b6a0a78c64634a42babddec446cdd93be0e25f6`, configurable)
+   - Model: `cuuupid/idm-vton` (uses `POST /v1/models/cuuupid/idm-vton/predictions` by default — always uses latest version; optionally pin a version hash via `REPLICATE_MODEL_VERSION`)
    - Input fields:
      - `garm_img` (string, required) — first product image URL (from `product.getImages()`)
      - `human_img` (string, required) — model reference photo URL (mapped from body type identifier)
@@ -52,7 +52,7 @@ These URLs are configured via `app.ai.try-on.model-photos.*` properties so they 
 replicate.api-token=${REPLICATE_API_TOKEN:}
 
 # Optional (defaults provided)
-replicate.model-version=${REPLICATE_MODEL_VERSION:c871bb9b046c1462f71a8a085b6a0a78c64634a42babddec446cdd93be0e25f6}
+replicate.model-version=${REPLICATE_MODEL_VERSION:}
 replicate.poll-interval-ms=${REPLICATE_POLL_INTERVAL_MS:2000}
 replicate.timeout-ms=${REPLICATE_TIMEOUT_MS:60000}
 
@@ -62,6 +62,8 @@ app.ai.try-on.model-photos.athletic=${AI_TRYON_MODEL_PHOTO_ATHLETIC:}
 app.ai.try-on.model-photos.regular=${AI_TRYON_MODEL_PHOTO_REGULAR:}
 app.ai.try-on.model-photos.plusSize=${AI_TRYON_MODEL_PHOTO_PLUS_SIZE:}
 ```
+
+Note: `plusSize` uses camelCase to match the frontend `BODY_TYPES` value exactly (Spring relaxed binding applies to property names but not Map keys).
 
 ### Error handling
 

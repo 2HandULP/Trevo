@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import pt.trevo.trevo_api.BaseUnitTest;
 import pt.trevo.trevo_api.dto.CreateProductRequest;
 import pt.trevo.trevo_api.dto.UpdateProductRequest;
+import pt.trevo.trevo_api.persistence.entity.GarmentType;
 import pt.trevo.trevo_api.persistence.entity.Product;
 import pt.trevo.trevo_api.persistence.entity.ProductStatus;
 import pt.trevo.trevo_api.persistence.entity.Shop;
@@ -45,7 +46,8 @@ class ProductServiceTest extends BaseUnitTest {
             "Lightweight shirt",
             new BigDecimal("39.99"),
             "Trevo",
-            "Linen"
+            "Linen",
+            GarmentType.UPPER_BODY
         );
 
         when(shopRepository.findByOwnerId(ownerId)).thenReturn(Optional.of(shop));
@@ -69,6 +71,7 @@ class ProductServiceTest extends BaseUnitTest {
             "Updated description",
             new BigDecimal("59.99"),
             "Updated brand",
+            null,
             null
         );
 

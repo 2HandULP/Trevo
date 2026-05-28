@@ -41,6 +41,7 @@
   "tryOnPreviewAlt": "Pré-visualização da foto",
   "generateTryOn": "Gerar experimentação",
   "generatingTryOn": "A gerar experimentação...",
+  "tryOnWait": "Este processo pode demorar até 4 minutos. Não feches esta janela.",
   "noTryOnImage": "Este produto ainda não tem imagem para simular.",
   "result": "Resultado",
   "tryOnResultAlt": "Resultado da experimentação virtual",

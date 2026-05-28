@@ -40,9 +40,9 @@ public class ReplicateApiClient {
             .build();
     }
 
-    public String createAndAwaitPrediction(String garmentImageUrl, String humanImageUrl, String garmentDescription) {
+    public String createAndAwaitPrediction(String garmentImageUrl, String humanImageUrl, String garmentDescription, String category) {
         ensureConfigured();
-        String predictionUrl = createPrediction(garmentImageUrl, humanImageUrl, garmentDescription);
+        String predictionUrl = createPrediction(garmentImageUrl, humanImageUrl, garmentDescription, category);
         return pollUntilComplete(predictionUrl);
     }
 
@@ -76,12 +76,12 @@ public class ReplicateApiClient {
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not resolve IDM-VTON model version");
     }
 
-    private String createPrediction(String garmentImageUrl, String humanImageUrl, String garmentDescription) {
+    private String createPrediction(String garmentImageUrl, String humanImageUrl, String garmentDescription, String category) {
         Map<String, Object> input = Map.of(
             "garm_img", garmentImageUrl,
             "human_img", humanImageUrl,
             "garment_des", garmentDescription,
-            "category", "upper_body"
+            "category", category
         );
 
         String version = resolveVersion();

@@ -46,12 +46,12 @@ INSERT INTO collections (shop_id, name, display_order) VALUES
 -- 4. PRODUCTS
 -- ============================================================
 
-INSERT INTO products (shop_id, name, description, price, brand, materials, status) VALUES
-(1, 'Vestido Floral Vintage', 'Vestido floral dos anos 90 em excelente estado.', 35.00, 'Zara', 'Algodão 100%', 'ACTIVE'),
-(1, 'Casaco de Ganga Oversized', 'Casaco de ganga lavagem clara, tamanho oversize.', 45.00, 'Levis', 'Ganga 100%', 'ACTIVE'),
-(1, 'Saia Midi Plissada', 'Saia plissada em tom verde oliva.', 28.00, 'H&M', 'Poliéster 95%, Elastano 5%', 'ACTIVE'),
-(2, 'T-shirt Básica Orgânica', 'T-shirt em algodão orgânico certificado.', 15.00, 'COS', 'Algodão orgânico 100%', 'ACTIVE'),
-(2, 'Calças Cargo Recicladas', 'Calças cargo feitas com tecido reciclado.', 40.00, 'Patagonia', 'Poliéster reciclado 100%', 'ACTIVE');
+INSERT INTO products (shop_id, name, description, price, brand, materials, garment_type, status) VALUES
+(1, 'Vestido Floral Vintage', 'Vestido floral dos anos 90 em excelente estado.', 35.00, 'Zara', 'Algodão 100%', 'DRESSES', 'ACTIVE'),
+(1, 'Casaco de Ganga Oversized', 'Casaco de ganga lavagem clara, tamanho oversize.', 45.00, 'Levis', 'Ganga 100%', 'UPPER_BODY', 'ACTIVE'),
+(1, 'Saia Midi Plissada', 'Saia plissada em tom verde oliva.', 28.00, 'H&M', 'Poliéster 95%, Elastano 5%', 'LOWER_BODY', 'ACTIVE'),
+(2, 'T-shirt Básica Orgânica', 'T-shirt em algodão orgânico certificado.', 15.00, 'COS', 'Algodão orgânico 100%', 'UPPER_BODY', 'ACTIVE'),
+(2, 'Calças Cargo Recicladas', 'Calças cargo feitas com tecido reciclado.', 40.00, 'Patagonia', 'Poliéster reciclado 100%', 'LOWER_BODY', 'ACTIVE');
 
 -- IDs: vestido=1, casaco=2, saia=3, tshirt=4, calcas=5
 
@@ -77,21 +77,21 @@ INSERT INTO product_images (product_id, image_url, display_order) VALUES
 -- ============================================================
 
 INSERT INTO variants (product_id, size, color, stock) VALUES
-(1, 'S', 'Floral', 2),
-(1, 'M', 'Floral', 1),
-(2, 'M', 'Azul Claro', 3),
-(2, 'L', 'Azul Claro', 2),
-(2, 'XL', 'Azul Claro', 1),
-(3, 'S', 'Verde Oliva', 1),
-(3, 'M', 'Verde Oliva', 2),
-(4, 'S', 'Branco', 5),
-(4, 'M', 'Branco', 5),
-(4, 'L', 'Branco', 3),
-(4, 'S', 'Preto', 4),
-(4, 'M', 'Preto', 6),
-(5, 'M', 'Bege', 2),
-(5, 'L', 'Bege', 3),
-(5, 'M', 'Preto', 2);
+(1, 'S', 'Floral', 15),
+(1, 'M', 'Floral', 12),
+(2, 'M', 'Azul Claro', 15),
+(2, 'L', 'Azul Claro', 12),
+(2, 'XL', 'Azul Claro', 10),
+(3, 'S', 'Verde Oliva', 12),
+(3, 'M', 'Verde Oliva', 15),
+(4, 'S', 'Branco', 20),
+(4, 'M', 'Branco', 20),
+(4, 'L', 'Branco', 15),
+(4, 'S', 'Preto', 18),
+(4, 'M', 'Preto', 20),
+(5, 'M', 'Bege', 12),
+(5, 'L', 'Bege', 15),
+(5, 'M', 'Preto', 12);
 
 -- IDs: vest_S=1, vest_M=2, cas_M=3, cas_L=4, cas_XL=5,
 --      saia_S=6, saia_M=7, tsh_S_br=8, tsh_M_br=9, tsh_L_br=10,

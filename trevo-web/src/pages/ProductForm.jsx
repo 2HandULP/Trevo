@@ -20,7 +20,14 @@ const initialForm = {
   price: "",
   brand: "",
   materials: "",
+  garmentType: "",
 };
+
+const GARMENT_TYPE_OPTIONS = [
+  { value: "UPPER_BODY", label: "Parte superior" },
+  { value: "LOWER_BODY", label: "Parte inferior" },
+  { value: "DRESSES", label: "Vestido" },
+];
 
 const emptyVariant = {
   size: "",
@@ -59,6 +66,7 @@ function toProductPayload(form) {
     price: form.price,
     brand: form.brand.trim(),
     materials: form.materials.trim(),
+    garmentType: form.garmentType || null,
   };
 }
 
@@ -100,6 +108,7 @@ export default function ProductForm({ mode }) {
               price: product.price == null ? "" : String(product.price),
               brand: product.brand || "",
               materials: product.materials || "",
+              garmentType: product.garmentType || "",
             });
             setVariants(
               product.variants?.length
@@ -225,6 +234,11 @@ export default function ProductForm({ mode }) {
       return;
     }
 
+    if (!form.garmentType) {
+      setError("Seleciona o tipo de peça.");
+      return;
+    }
+
     if (!validateVariants()) {
       setError("O stock deve ser um número igual ou superior a 0.");
       return;
@@ -294,6 +308,15 @@ export default function ProductForm({ mode }) {
               <div className="field sm:col-span-2">
                 <label htmlFor="product-materials" className="field-label">Materiais</label>
                 <input id="product-materials" className="input" type="text" name="materials" value={form.materials} onChange={handleChange} placeholder="100% algodão" />
+              </div>
+              <div className="field sm:col-span-2">
+                <label htmlFor="product-garment-type" className="field-label">Tipo de peça (experimentação virtual)</label>
+                <select id="product-garment-type" className="input" name="garmentType" value={form.garmentType} onChange={handleChange}>
+                  <option value="">Selecionar...</option>
+                  {GARMENT_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </section>

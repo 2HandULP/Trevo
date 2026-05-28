@@ -29,6 +29,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import pt.trevo.trevo_api.auth.JwtService;
 import pt.trevo.trevo_api.dto.CreateProductRequest;
 import pt.trevo.trevo_api.dto.UpdateProductRequest;
+import pt.trevo.trevo_api.persistence.entity.GarmentType;
 import pt.trevo.trevo_api.persistence.entity.Product;
 import pt.trevo.trevo_api.persistence.entity.ProductStatus;
 import pt.trevo.trevo_api.persistence.entity.Role;
@@ -118,9 +119,9 @@ class CrudLatencyTest {
         // Use Spring-configured ObjectMapper so any registered modules (JavaTimeModule, etc.)
         // are always in sync with what the application expects.
         createBody = objectMapper.writeValueAsString(
-            new CreateProductRequest("LatencyProduct", "Test", new BigDecimal("19.99"), "Brand", null));
+            new CreateProductRequest("LatencyProduct", "Test", new BigDecimal("19.99"), "Brand", null, GarmentType.UPPER_BODY));
         updateBody = objectMapper.writeValueAsString(
-            new UpdateProductRequest("UpdatedName", null, null, null, null));
+            new UpdateProductRequest("UpdatedName", null, null, null, null, null));
 
         // Pre-create exactly WARMUP + ITERATIONS unique variants for the DELETE test so
         // each iteration has a fresh variant to delete.

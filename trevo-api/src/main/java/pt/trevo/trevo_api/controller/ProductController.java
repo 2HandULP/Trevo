@@ -233,6 +233,7 @@ public class ProductController {
             product.getPrice(),
             product.getBrand(),
             product.getMaterials(),
+            product.getGarmentType(),
             product.getStatus(),
             variants.stream().map(this::toVariantResponse).toList(),
             images,

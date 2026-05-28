@@ -63,6 +63,10 @@ public class Product {
     private String materials;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "garment_type")
+    private GarmentType garmentType;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProductStatus status;
 

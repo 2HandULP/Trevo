@@ -14,7 +14,7 @@ class ReplicateApiClientTest {
         ReplicateApiClient client = new ReplicateApiClient("", "version-hash", 100, 500);
 
         Throwable thrown = catchThrowable(() ->
-            client.createAndAwaitPrediction("garment.jpg", "human.jpg", "desc")
+            client.createAndAwaitPrediction("garment.jpg", "human.jpg", "desc", "upper_body")
         );
 
         assertThat(thrown).isInstanceOf(ResponseStatusException.class);
@@ -28,7 +28,7 @@ class ReplicateApiClientTest {
         ReplicateApiClient client = new ReplicateApiClient(null, "version-hash", 100, 500);
 
         Throwable thrown = catchThrowable(() ->
-            client.createAndAwaitPrediction("garment.jpg", "human.jpg", "desc")
+            client.createAndAwaitPrediction("garment.jpg", "human.jpg", "desc", "upper_body")
         );
 
         assertThat(thrown).isInstanceOf(ResponseStatusException.class);

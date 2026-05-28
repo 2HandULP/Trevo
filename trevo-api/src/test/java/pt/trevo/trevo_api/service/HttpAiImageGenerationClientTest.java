@@ -34,7 +34,8 @@ class HttpAiImageGenerationClientTest extends BaseUnitTest {
         when(replicateApiClient.createAndAwaitPrediction(
             "https://cdn.example.com/shirt.jpg",
             "https://cloudinary.example.com/user.jpg",
-            "Linen Shirt"
+            "Linen Shirt",
+            "upper_body"
         )).thenReturn("https://replicate.delivery/result.png");
 
         String result = client.generateTryOn(product, photo);

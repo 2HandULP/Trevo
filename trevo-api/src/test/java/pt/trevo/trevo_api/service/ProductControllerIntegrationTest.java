@@ -41,6 +41,7 @@ import pt.trevo.trevo_api.dto.CreateProductRequest;
 import pt.trevo.trevo_api.dto.UpdateProductRequest;
 import pt.trevo.trevo_api.dto.UpdateStockRequest;
 import pt.trevo.trevo_api.dto.UpsertVariantRequest;
+import pt.trevo.trevo_api.persistence.entity.GarmentType;
 import pt.trevo.trevo_api.persistence.entity.Product;
 import pt.trevo.trevo_api.persistence.entity.ProductStatus;
 import pt.trevo.trevo_api.persistence.entity.Shop;
@@ -273,7 +274,7 @@ class ProductControllerIntegrationTest {
     @Test
     @WithMockUser(username = "11", roles = "SHOP_OWNER")
     void createProduct_returnsCreatedProductWhenAuthorized() throws Exception {
-        CreateProductRequest request = new CreateProductRequest("New Coat", "Warm coat", new BigDecimal("89.99"), "Brand", "Wool");
+        CreateProductRequest request = new CreateProductRequest("New Coat", "Warm coat", new BigDecimal("89.99"), "Brand", "Wool", GarmentType.UPPER_BODY);
         Product saved = activeProduct(5L, 10L, "New Coat", "89.99");
 
         when(productService.createProduct(eq(11L), any(CreateProductRequest.class))).thenReturn(saved);
@@ -291,7 +292,7 @@ class ProductControllerIntegrationTest {
     @Test
     @WithMockUser(username = "22", roles = "BUYER")
     void createProduct_returnsForbiddenForBuyer() throws Exception {
-        CreateProductRequest request = new CreateProductRequest("Coat", null, new BigDecimal("50.00"), null, null);
+        CreateProductRequest request = new CreateProductRequest("Coat", null, new BigDecimal("50.00"), null, null, null);
 
         mockMvc.perform(post("/api/products")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -301,7 +302,7 @@ class ProductControllerIntegrationTest {
 
     @Test
     void createProduct_returnsUnauthorizedWithoutAuthentication() throws Exception {
-        CreateProductRequest request = new CreateProductRequest("Coat", null, new BigDecimal("50.00"), null, null);
+        CreateProductRequest request = new CreateProductRequest("Coat", null, new BigDecimal("50.00"), null, null, null);
 
         mockMvc.perform(post("/api/products")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -314,7 +315,7 @@ class ProductControllerIntegrationTest {
     @Test
     @WithMockUser(username = "11", roles = "SHOP_OWNER")
     void updateProduct_returnsUpdatedProduct() throws Exception {
-        UpdateProductRequest request = new UpdateProductRequest("Updated Name", null, null, null, null);
+        UpdateProductRequest request = new UpdateProductRequest("Updated Name", null, null, null, null, null);
         Product updated = activeProduct(3L, 10L, "Updated Name", "50.00");
 
         when(productService.updateProduct(eq(11L), eq(3L), any(UpdateProductRequest.class))).thenReturn(updated);
@@ -330,7 +331,7 @@ class ProductControllerIntegrationTest {
     @Test
     @WithMockUser(username = "99", roles = "SHOP_OWNER")
     void updateProduct_returnsForbiddenWhenCallerIsNotOwner() throws Exception {
-        UpdateProductRequest request = new UpdateProductRequest("Name", null, null, null, null);
+        UpdateProductRequest request = new UpdateProductRequest("Name", null, null, null, null, null);
 
         when(productService.updateProduct(eq(99L), eq(3L), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Only shop owner can manage this product"));

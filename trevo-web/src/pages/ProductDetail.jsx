@@ -530,6 +530,12 @@ export default function ProductDetail() {
               {isGeneratingTryOn ? t("generatingTryOn") : t("generateTryOn")}
             </button>
 
+            {isGeneratingTryOn && (
+              <p className="mt-3 text-sm text-ink-500">
+                {t("tryOnWait")}
+              </p>
+            )}
+
             {tryOnError && (
               <p className="mt-3 text-sm text-red-600" role="alert">
                 {tryOnError}

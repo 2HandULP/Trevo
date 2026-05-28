@@ -54,6 +54,7 @@ public class ProductService {
             .price(request.price())
             .brand(request.brand())
             .materials(request.materials())
+            .garmentType(request.garmentType())
             .status(ProductStatus.ACTIVE)
             .build();
 
@@ -92,6 +93,9 @@ public class ProductService {
         }
         if (request.materials() != null) {
             product.setMaterials(request.materials());
+        }
+        if (request.garmentType() != null) {
+            product.setGarmentType(request.garmentType());
         }
 
         return productRepository.save(product);

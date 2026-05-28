@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Receipt, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
+import { Receipt, ChevronLeft, ChevronRight, Inbox, CreditCard } from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
 import { getBuyerOrder, getBuyerOrders } from "../services/orderService";
 import LoadingState from "../components/LoadingState";
 import Alert from "../components/Alert";
+import StripePaymentForm from "./StripePaymentForm";
 
 const statusLabelKeys = {
   PENDING_PAYMENT: "statuses.pendingPayment",
@@ -74,6 +76,14 @@ export default function OrderHistory() {
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isResumingPayment, setIsResumingPayment] = useState(false);
+  const [paymentSuccessMessage, setPaymentSuccessMessage] = useState("");
+
+  const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+  const stripePromise = useMemo(
+    () => (stripePublishableKey ? loadStripe(stripePublishableKey) : null),
+    [stripePublishableKey]
+  );
 
   useEffect(() => {
     let active = true;
@@ -114,6 +124,8 @@ export default function OrderHistory() {
     setSelectedOrder(null);
     setSelectedOrderId(orderId);
     setDetailError("");
+    setIsResumingPayment(false);
+    setPaymentSuccessMessage("");
     setIsLoadingDetail(true);
 
     try {
@@ -123,6 +135,28 @@ export default function OrderHistory() {
       setDetailError(getErrorMessage(selectError, t("loadDetailsFailed")));
     } finally {
       setIsLoadingDetail(false);
+    }
+  }
+
+  async function handlePaymentSuccess() {
+    setIsResumingPayment(false);
+    setPaymentSuccessMessage(t("paymentResumed"));
+
+    if (selectedOrderId) {
+      try {
+        const refreshedOrder = await getBuyerOrder(selectedOrderId);
+        setSelectedOrder(refreshedOrder);
+      } catch {
+        // Order list will reflect updated status on next refresh; non-fatal.
+      }
+    }
+
+    try {
+      const refreshedPage = await getBuyerOrders({ page, size: PAGE_SIZE });
+      setOrderPage(refreshedPage);
+      setTotalPages(refreshedPage.totalPages || 0);
+    } catch {
+      // non-fatal
     }
   }
 
@@ -269,13 +303,43 @@ export default function OrderHistory() {
                   <strong className="text-xl font-bold tabular">{formatPrice(selectedOrder.totalAmount)}</strong>
                 </div>
 
-                <Link
-                  to={`/orders/${selectedOrder.id}/receipt`}
-                  className="btn-secondary mt-5 inline-flex"
-                >
-                  <Receipt className="w-4 h-4" strokeWidth={1.7} />
-                  {t("viewReceipt")}
-                </Link>
+                {paymentSuccessMessage && (
+                  <Alert variant="success" className="mt-4">{paymentSuccessMessage}</Alert>
+                )}
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {selectedOrder.status === "PENDING_PAYMENT"
+                    && selectedOrder.paymentMethod === "STRIPE"
+                    && !isResumingPayment && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsResumingPayment(true);
+                        setPaymentSuccessMessage("");
+                      }}
+                      className="btn-primary flex-1 min-w-[180px]"
+                    >
+                      <CreditCard className="w-4 h-4" strokeWidth={1.7} />
+                      {t("resumePayment")}
+                    </button>
+                  )}
+
+                  <Link
+                    to={`/orders/${selectedOrder.id}/receipt`}
+                    className="btn-secondary flex-1 min-w-[180px]"
+                  >
+                    <Receipt className="w-4 h-4" strokeWidth={1.7} />
+                    {t("viewReceipt")}
+                  </Link>
+                </div>
+
+                {isResumingPayment && (
+                  <StripePaymentForm
+                    order={selectedOrder}
+                    onSuccess={handlePaymentSuccess}
+                    stripePromise={stripePromise}
+                  />
+                )}
               </div>
             )}
           </section>

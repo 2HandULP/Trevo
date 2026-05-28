@@ -14,20 +14,22 @@ import Alert from "../components/Alert";
 const PAGE_SIZE = 20;
 
 const statusLabels = {
-  PLACED:    "Recebida",
-  CONFIRMED: "Confirmada",
-  SHIPPED:   "Enviada",
-  DELIVERED: "Entregue",
+  PENDING_PAYMENT: "Pagamento pendente",
+  PLACED:          "Recebida",
+  CONFIRMED:       "Confirmada",
+  SHIPPED:         "Enviada",
+  DELIVERED:       "Entregue",
 };
 
 const statusBadge = {
-  PLACED:    "badge-warning",
-  CONFIRMED: "badge-info",
-  SHIPPED:   "badge-info",
-  DELIVERED: "badge-success",
+  PENDING_PAYMENT: "badge-warning",
+  PLACED:          "badge-warning",
+  CONFIRMED:       "badge-info",
+  SHIPPED:         "badge-info",
+  DELIVERED:       "badge-success",
 };
 
-const statusTabs = ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED"];
+const statusTabs = ["PENDING_PAYMENT", "PLACED", "CONFIRMED", "SHIPPED", "DELIVERED"];
 
 const nextStatusByStatus = {
   PLACED:    "CONFIRMED",

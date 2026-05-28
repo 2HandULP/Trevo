@@ -44,7 +44,7 @@ public class Product {
     private Long id;
 
     // Many products belong to one shop.
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "shop_id", nullable = false)
     private Shop shop;
 

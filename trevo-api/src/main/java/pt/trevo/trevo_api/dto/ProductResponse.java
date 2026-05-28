@@ -9,6 +9,7 @@ import java.util.List;
 public record ProductResponse(
     Long id,
     Long shopId,
+    String shopName,
     String name,
     String description,
     BigDecimal price,

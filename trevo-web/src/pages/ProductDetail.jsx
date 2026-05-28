@@ -325,7 +325,12 @@ export default function ProductDetail() {
 
           {/* Buy panel */}
           <section>
-            <p className="eyebrow">{product.brand || t("brandMissing")}</p>
+            {product.shopName && (
+              <Link to={`/shops/${product.shopId}`} className="text-sm font-medium text-clover-700 hover:underline">
+                {product.shopName}
+              </Link>
+            )}
+            <p className={product.shopName ? "eyebrow mt-1" : "eyebrow"}>{product.brand || t("brandMissing")}</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight leading-tight">{product.name}</h1>
             {product.price !== undefined && product.price !== null && (
               <p className="mt-3 text-2xl font-bold tabular">{formatPrice(product.price)}</p>

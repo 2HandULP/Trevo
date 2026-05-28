@@ -81,7 +81,8 @@ public class ReplicateApiClient {
             "garm_img", garmentImageUrl,
             "human_img", humanImageUrl,
             "garment_des", garmentDescription,
-            "category", category
+            "category", category,
+            "crop", true
         );
 
         String version = resolveVersion();

@@ -222,6 +222,11 @@ export default function ProductDetail() {
   async function handleGenerateTryOn() {
     if (!tryOnPhoto) return;
 
+    if (tryOnPhoto.file.size > 5 * 1024 * 1024) {
+      setTryOnError(t("tryOnPhotoTooLarge"));
+      return;
+    }
+
     setGeneratedTryOnImage("");
     setTryOnError("");
     setIsGeneratingTryOn(true);

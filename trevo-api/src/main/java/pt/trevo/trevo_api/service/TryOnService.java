@@ -53,11 +53,6 @@ public class TryOnService {
         TryOnUsage usage = findOrCreateUsage(buyer, product);
         String modelIdentifier = "personalized:" + buyerId;
 
-        Optional<TryOnImage> cachedImage = tryOnImageRepository.findFirstCachedForUsage(usage.getId(), modelIdentifier);
-        if (cachedImage.isPresent()) {
-            return new TryOnImageResponse(cachedImage.get().getImageUrl());
-        }
-
         enforceFreeTierLimit(proUser, buyerId);
         String imageUrl = aiImageGenerationClient.generateTryOn(product, photo);
         incrementUsage(usage);

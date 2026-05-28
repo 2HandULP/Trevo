@@ -54,6 +54,21 @@ public class ProductController {
         this.securityUtils = securityUtils;
     }
 
+    // ── Owner products ───────────────────────────────────────────────────────
+
+    @GetMapping("/mine")
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    public List<ProductResponse> getMyProducts(Authentication authentication) {
+        Long callerId = securityUtils.requireUserId(authentication);
+        List<Product> products = productService.findProductsByOwner(callerId);
+        Map<Long, List<Variant>> variantsByProductId = variantService.findByProductIds(
+            products.stream().map(Product::getId).toList()
+        ).stream().collect(Collectors.groupingBy(v -> v.getProduct().getId()));
+        return products.stream()
+            .map(p -> toProductResponse(p, variantsByProductId.getOrDefault(p.getId(), List.of())))
+            .toList();
+    }
+
     // ── Search (public) ──────────────────────────────────────────────────────
 
     @GetMapping("/search")
@@ -129,6 +144,18 @@ public class ProductController {
     ) {
         Long callerId = securityUtils.requireUserId(authentication);
         Product product = productService.archiveProduct(callerId, id);
+        List<Variant> variants = variantService.findByProductId(id);
+        return toProductResponse(product, variants);
+    }
+
+    @PostMapping("/{id}/unarchive")
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    public ProductResponse unarchiveProduct(
+        @PathVariable Long id,
+        Authentication authentication
+    ) {
+        Long callerId = securityUtils.requireUserId(authentication);
+        Product product = productService.unarchiveProduct(callerId, id);
         List<Variant> variants = variantService.findByProductId(id);
         return toProductResponse(product, variants);
     }
@@ -228,6 +255,7 @@ public class ProductController {
         return new ProductResponse(
             product.getId(),
             product.getShop().getId(),
+            product.getShop().getName(),
             product.getName(),
             product.getDescription(),
             product.getPrice(),

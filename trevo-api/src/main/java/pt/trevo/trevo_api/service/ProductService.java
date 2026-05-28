@@ -113,6 +113,25 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    @Transactional
+    public Product unarchiveProduct(Long callerId, Long productId) {
+        if (callerId == null || productId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid unarchive product request");
+        }
+
+        Product product = findManagedProduct(productId);
+        ensureOwner(product, callerId);
+        product.setStatus(ProductStatus.ACTIVE);
+        return productRepository.save(product);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> findProductsByOwner(Long callerId) {
+        Shop shop = shopRepository.findByOwnerId(callerId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found for this owner"));
+        return productRepository.findByShopId(shop.getId());
+    }
+
     @Transactional(readOnly = true)
     public List<Product> findProductsForBuyer(Long shopId) {
         if (shopId == null) {

@@ -14,6 +14,21 @@ export async function browseProducts(params = {}) {
   return data;
 }
 
+export async function archiveProduct(productId) {
+  const { data } = await apiClient.post(`/products/${productId}/archive`);
+  return data;
+}
+
+export async function unarchiveProduct(productId) {
+  const { data } = await apiClient.post(`/products/${productId}/unarchive`);
+  return data;
+}
+
+export async function getMyProducts() {
+  const { data } = await apiClient.get("/products/mine");
+  return data;
+}
+
 export async function createProduct(payload) {
   const { data } = await apiClient.post("/products", payload);
   return data;

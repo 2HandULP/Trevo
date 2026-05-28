@@ -13,6 +13,7 @@ import ProductDetail from "./pages/ProductDetail";
 import ProductForm from "./pages/ProductForm";
 import ProductSearch from "./pages/ProductSearch";
 import StockManagement from "./pages/StockManagement";
+import ShopProductManagement from "./pages/ShopProductManagement";
 import ShopProducts from "./pages/ShopProducts";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -69,6 +70,7 @@ export default function App() {
 
           <Route element={<RoleRoute allowedRoles={[ROLES.SHOP_OWNER]} />}>
             <Route path="/shop/dashboard" element={<ShopDashboard />} />
+            <Route path="/shop/products" element={<ShopProductManagement />} />
             <Route path="/shop/orders" element={<OrderManagement />} />
             <Route path="/shop/payouts" element={<PayoutDashboard />} />
           </Route>

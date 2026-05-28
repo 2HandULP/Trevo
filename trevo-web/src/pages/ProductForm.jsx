@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Trash2, Plus, Upload, X } from "lucide-react";
 import { getShopDashboard, getShopProfile } from "../services/shopService";
 import {
@@ -433,10 +433,20 @@ export default function ProductForm({ mode }) {
             )}
           </section>
 
-          <div className="flex justify-end">
-            <button type="submit" disabled={isSubmitting} className="btn-primary">
-              {isSubmitting ? "A guardar..." : "Guardar produto"}
+          <div className="flex justify-between">
+            <button type="button" onClick={() => window.history.back()} className="btn-secondary">
+              Voltar
             </button>
+            <div className="flex gap-3">
+              {isEditMode && (
+                <Link to={`/products/${productId}/stock`} className="btn-secondary">
+                  Gerir stock
+                </Link>
+              )}
+              <button type="submit" disabled={isSubmitting} className="btn-primary">
+                {isSubmitting ? "A guardar..." : "Guardar produto"}
+              </button>
+            </div>
           </div>
         </form>
       )}

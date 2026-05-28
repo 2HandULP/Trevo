@@ -49,7 +49,7 @@ INSERT INTO collections (shop_id, name, display_order) VALUES
 INSERT INTO products (shop_id, name, description, price, brand, materials, garment_type, status) VALUES
 (1, 'Vestido Floral Vintage', 'Vestido floral dos anos 90 em excelente estado.', 35.00, 'Zara', 'Algodão 100%', 'DRESSES', 'ACTIVE'),
 (1, 'Casaco de Ganga Oversized', 'Casaco de ganga lavagem clara, tamanho oversize.', 45.00, 'Levis', 'Ganga 100%', 'UPPER_BODY', 'ACTIVE'),
-(1, 'Saia Midi Plissada', 'Saia plissada em tom verde oliva.', 28.00, 'H&M', 'Poliéster 95%, Elastano 5%', 'LOWER_BODY', 'ACTIVE'),
+(1, 'Saia Plissada', 'Saia plissada em tom verde oliva.', 28.00, 'H&M', 'Poliéster 95%, Elastano 5%', 'LOWER_BODY', 'ACTIVE'),
 (2, 'T-shirt Básica Orgânica', 'T-shirt em algodão orgânico certificado.', 15.00, 'COS', 'Algodão orgânico 100%', 'UPPER_BODY', 'ACTIVE'),
 (2, 'Calças Cargo Recicladas', 'Calças cargo feitas com tecido reciclado.', 40.00, 'Patagonia', 'Poliéster reciclado 100%', 'LOWER_BODY', 'ACTIVE');
 

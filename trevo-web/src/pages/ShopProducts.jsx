@@ -152,8 +152,10 @@ export default function ShopProducts() {
         <>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="eyebrow text-clover-700">Produtos da loja</p>
-              <h1 className="h-page mt-2">{shop.name}</h1>
+              <Link to={`/shops/${shopId}`} className="eyebrow text-clover-700 hover:underline">
+                {shop.name}
+              </Link>
+              <h1 className="h-page mt-2">Produtos</h1>
             </div>
 
             <label className="field max-w-[220px]">

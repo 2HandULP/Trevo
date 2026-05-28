@@ -100,11 +100,12 @@ export default function StockManagement() {
   return (
     <div className="page-shell-narrow">
       <Link
-        to={`/products/${productId}/edit`}
+        to="#"
+        onClick={(e) => { e.preventDefault(); window.history.back(); }}
         className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-900 mb-4"
       >
         <ArrowLeft className="w-4 h-4" strokeWidth={1.7} />
-        Voltar ao produto
+        Voltar
       </Link>
       <p className="eyebrow text-clover-700">Loja · Catálogo</p>
       <h1 className="h-page mt-2">Gestão de stock</h1>

@@ -1,6 +1,6 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Search, ShoppingCart, User, LogOut } from "lucide-react";
+import { Search, ShoppingCart, ClipboardList, User, LogOut } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { ROLES } from "../lib/roles";
 import logoUrl from "../assets/trevo-logo.svg";
@@ -69,13 +69,22 @@ export default function Header() {
           </Link>
 
           {isAuthenticated && role === ROLES.BUYER && (
-            <Link
-              to="/cart"
-              className="inline-flex items-center justify-center w-9 h-9 rounded border border-ink-200 bg-white hover:bg-ink-50 transition-colors"
-              aria-label={t("cart", "Carrinho")}
-            >
-              <ShoppingCart className="w-[18px] h-[18px]" strokeWidth={1.7} />
-            </Link>
+            <>
+              <Link
+                to="/orders"
+                className="inline-flex items-center justify-center w-9 h-9 rounded border border-ink-200 bg-white hover:bg-ink-50 transition-colors"
+                aria-label={t("orders", "Encomendas")}
+              >
+                <ClipboardList className="w-[18px] h-[18px]" strokeWidth={1.7} />
+              </Link>
+              <Link
+                to="/cart"
+                className="inline-flex items-center justify-center w-9 h-9 rounded border border-ink-200 bg-white hover:bg-ink-50 transition-colors"
+                aria-label={t("cart", "Carrinho")}
+              >
+                <ShoppingCart className="w-[18px] h-[18px]" strokeWidth={1.7} />
+              </Link>
+            </>
           )}
 
           {!isAuthenticated ? (

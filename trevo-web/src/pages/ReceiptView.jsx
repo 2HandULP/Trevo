@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Download, Receipt as ReceiptIcon } from "lucide-react";
 import { downloadReceiptPdf } from "../lib/receiptDownload";
 import { getBuyerOrder } from "../services/orderService";
@@ -123,7 +123,13 @@ export default function ReceiptView() {
             </div>
             <div className="sm:col-span-2">
               <dt className="text-xs text-ink-500 uppercase tracking-wider font-medium">{t("shop")}</dt>
-              <dd className="mt-1 font-semibold">{order.shopName || "N/A"}</dd>
+              <dd className="mt-1 font-semibold">
+                {order.shopId ? (
+                  <Link to={`/shops/${order.shopId}`} className="hover:text-clover-700 transition-colors">
+                    {order.shopName || "N/A"}
+                  </Link>
+                ) : (order.shopName || "N/A")}
+              </dd>
             </div>
           </dl>
 
@@ -140,7 +146,11 @@ export default function ReceiptView() {
                   className="flex flex-wrap justify-between gap-4 py-3 text-sm"
                 >
                   <div>
-                    <p className="font-semibold">{item.productName}</p>
+                    <p className="font-semibold">
+                      <Link to={`/products/${item.productId}`} className="hover:text-clover-700 transition-colors">
+                        {item.productName}
+                      </Link>
+                    </p>
                     <p className="text-xs text-ink-500 mt-0.5">
                       {t("quantityUnit", { quantity: item.quantity, unitPrice: formatPrice(item.unitPrice) })}
                     </p>

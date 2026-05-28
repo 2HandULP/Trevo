@@ -171,7 +171,11 @@ export default function OrderHistory() {
                         </p>
                         <StatusBadge status={order.status} t={t} />
                       </div>
-                      <p className="mt-1.5 text-sm text-ink-800">{order.shopName}</p>
+                      <p className="mt-1.5 text-sm text-ink-800">
+                        <Link to={`/shops/${order.shopId}`} className="hover:text-clover-700 transition-colors">
+                          {order.shopName}
+                        </Link>
+                      </p>
                       <p className="text-xs text-ink-500">{formatDate(order.createdAt, t)}</p>
                       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
                         <span>{t("total")}: <span className="font-semibold tabular">{formatPrice(order.totalAmount)}</span></span>
@@ -226,7 +230,11 @@ export default function OrderHistory() {
                   </h3>
                   <StatusBadge status={selectedOrder.status} t={t} />
                 </div>
-                <p className="mt-1.5 font-medium">{selectedOrder.shopName}</p>
+                <p className="mt-1.5 font-medium">
+                  <Link to={`/shops/${selectedOrder.shopId}`} className="hover:text-clover-700 transition-colors">
+                    {selectedOrder.shopName}
+                  </Link>
+                </p>
                 {selectedOrder.trackingNumber && (
                   <p className="mt-2 text-sm text-ink-500">
                     {t("tracking")}: <span className="font-mono text-ink-900">{selectedOrder.trackingNumber}</span>
@@ -238,7 +246,11 @@ export default function OrderHistory() {
                     <li key={item.id} className="border-t border-ink-100 pt-3">
                       <div className="flex justify-between gap-4">
                         <div>
-                          <p className="font-semibold text-sm">{item.productName}</p>
+                          <p className="font-semibold text-sm">
+                            <Link to={`/products/${item.productId}`} className="hover:text-clover-700 transition-colors">
+                              {item.productName}
+                            </Link>
+                          </p>
                           <p className="text-xs text-ink-500 mt-0.5">
                             {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                           </p>

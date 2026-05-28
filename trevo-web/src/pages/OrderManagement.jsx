@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -263,7 +264,12 @@ export default function OrderManagement() {
                           key={item.id || `${item.productId}-${item.variantId}`}
                           className="flex flex-wrap justify-between gap-3 py-2.5 text-sm"
                         >
-                          <span>{item.productName} × {item.quantity}</span>
+                          <span>
+                            <Link to={`/products/${item.productId}/edit`} className="hover:text-clover-700 transition-colors">
+                              {item.productName}
+                            </Link>
+                            {" × "}{item.quantity}
+                          </span>
                           <span className="tabular font-medium">{formatPrice(item.subtotal)}</span>
                         </li>
                       ))}

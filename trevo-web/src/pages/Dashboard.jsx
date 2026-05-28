@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, Plus } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { fetchUserProfile } from "../lib/authApi";
 import LoadingState from "../components/LoadingState";
@@ -91,10 +91,30 @@ export default function Dashboard() {
                 </>
               )}
             </dl>
-            <Link to="/profile" className="btn-secondary mt-6 inline-flex">
-              Gerir conta
-              <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
-            </Link>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link to="/profile" className="btn-secondary inline-flex">
+                Gerir conta
+                <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
+              </Link>
+              {profile.role === "BUYER" && (
+                <Link to="/orders" className="btn-secondary inline-flex">
+                  As minhas encomendas
+                  <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
+                </Link>
+              )}
+              {profile.role === "SHOP_OWNER" && !profile.shopName && (
+                <Link to="/shops/new" className="btn-primary inline-flex">
+                  <Plus className="w-4 h-4" strokeWidth={1.8} />
+                  Criar loja
+                </Link>
+              )}
+              {profile.role === "SHOP_OWNER" && profile.shopName && (
+                <Link to="/shop/dashboard" className="btn-secondary inline-flex">
+                  Painel da loja
+                  <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </div>

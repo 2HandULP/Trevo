@@ -127,7 +127,9 @@ export default function Cart() {
             >
               <div className="flex items-center justify-between gap-4 mb-4">
                 <h2 id={`shop-${shop.shopId}`} className="text-lg font-semibold tracking-tight">
-                  {shop.shopName}
+                  <Link to={`/shops/${shop.shopId}`} className="hover:text-clover-700 transition-colors">
+                    {shop.shopName}
+                  </Link>
                 </h2>
                 <p className="text-sm text-ink-600">
                   {t("subtotal")}: <span className="font-semibold text-ink-900 tabular">{formatPrice(shop.subtotal)}</span>
@@ -156,7 +158,11 @@ export default function Cart() {
                       )}
 
                       <div>
-                        <h3 className="font-semibold text-ink-900">{item.productName}</h3>
+                        <h3 className="font-semibold text-ink-900">
+                          <Link to={`/products/${item.productId}`} className="hover:text-clover-700 transition-colors">
+                            {item.productName}
+                          </Link>
+                        </h3>
                         <p className="mt-1 text-xs text-ink-500">
                           {t("sizeColor", { size: item.size || "N/A", color: item.color || "N/A" })}
                         </p>

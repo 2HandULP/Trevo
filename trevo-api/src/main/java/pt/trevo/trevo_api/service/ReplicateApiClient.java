@@ -19,20 +19,16 @@ public class ReplicateApiClient {
     private static final String REPLICATE_API_BASE = "https://api.replicate.com/v1";
 
     private final String apiToken;
-    private final String modelVersion;
     private final long pollIntervalMs;
     private final long timeoutMs;
     private final RestClient restClient;
-    private volatile String cachedLatestVersion;
 
     public ReplicateApiClient(
         @Value("${replicate.api-token:}") String apiToken,
-        @Value("${replicate.model-version:}") String modelVersion,
         @Value("${replicate.poll-interval-ms:2000}") long pollIntervalMs,
-        @Value("${replicate.timeout-ms:60000}") long timeoutMs
+        @Value("${replicate.timeout-ms:240000}") long timeoutMs
     ) {
         this.apiToken = apiToken;
-        this.modelVersion = modelVersion;
         this.pollIntervalMs = pollIntervalMs;
         this.timeoutMs = timeoutMs;
         this.restClient = RestClient.builder()
@@ -40,9 +36,9 @@ public class ReplicateApiClient {
             .build();
     }
 
-    public String createAndAwaitPrediction(String garmentImageUrl, String humanImageUrl, String garmentDescription, String category) {
+    public String createAndAwaitPrediction(String prompt, List<String> imageUrls) {
         ensureConfigured();
-        String predictionUrl = createPrediction(garmentImageUrl, humanImageUrl, garmentDescription, category);
+        String predictionUrl = createPrediction(prompt, imageUrls);
         return pollUntilComplete(predictionUrl);
     }
 
@@ -52,46 +48,20 @@ public class ReplicateApiClient {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private String resolveVersion() {
-        if (modelVersion != null && !modelVersion.isBlank()) {
-            return modelVersion;
-        }
-        if (cachedLatestVersion != null) {
-            return cachedLatestVersion;
-        }
-        try {
-            Map<String, Object> model = restClient.get()
-                .uri("/models/cuuupid/idm-vton")
-                .header("Authorization", "Bearer " + apiToken)
-                .retrieve()
-                .body(Map.class);
-            if (model != null && model.get("latest_version") instanceof Map<?, ?> lv) {
-                cachedLatestVersion = (String) lv.get("id");
-                return cachedLatestVersion;
-            }
-        } catch (RestClientException ex) {
-            log.warn("Failed to fetch latest model version", ex);
-        }
-        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not resolve IDM-VTON model version");
-    }
-
-    private String createPrediction(String garmentImageUrl, String humanImageUrl, String garmentDescription, String category) {
+    private String createPrediction(String prompt, List<String> imageUrls) {
         Map<String, Object> input = Map.of(
-            "garm_img", garmentImageUrl,
-            "human_img", humanImageUrl,
-            "garment_des", garmentDescription,
-            "category", category,
-            "crop", true
+            "prompt", prompt,
+            "image_input", imageUrls
         );
 
-        String version = resolveVersion();
-        Map<String, Object> body = Map.of("version", version, "input", input);
+        Map<String, Object> body = Map.of("input", input);
+
+        log.debug("Nano Banana 2 request: prompt='{}', images={}", prompt, imageUrls);
 
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restClient.post()
-                .uri("/predictions")
+                .uri("/models/google/nano-banana-2/predictions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer " + apiToken)
                 .body(body)

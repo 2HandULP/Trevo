@@ -82,7 +82,7 @@ class OrderServiceTest extends BaseUnitTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY).orders();
+        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY, null).orders();
 
         assertThat(orders).hasSize(2);
         assertThat(orders.stream().map(OrderResponse::shopId).toList())
@@ -102,7 +102,7 @@ class OrderServiceTest extends BaseUnitTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        orderService.checkout(buyerId, PaymentMethod.MBWAY);
+        orderService.checkout(buyerId, PaymentMethod.MBWAY, null);
 
         assertThat(variant.getStock()).isEqualTo(3);
         verify(variantRepository).save(variant);
@@ -120,7 +120,7 @@ class OrderServiceTest extends BaseUnitTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        orderService.checkout(buyerId, PaymentMethod.MBWAY);
+        orderService.checkout(buyerId, PaymentMethod.MBWAY, null);
 
         assertThat(cart.getItems()).isEmpty();
         verify(cartRepository).save(cart);
@@ -141,7 +141,7 @@ class OrderServiceTest extends BaseUnitTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        orderService.checkout(buyerId, PaymentMethod.MBWAY);
+        orderService.checkout(buyerId, PaymentMethod.MBWAY, null);
 
         ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
         verify(notificationService, times(2)).createNewOrderNotification(orderCaptor.capture());
@@ -165,7 +165,7 @@ class OrderServiceTest extends BaseUnitTest {
         doThrow(new RuntimeException("notification DB unavailable"))
             .when(notificationService).createNewOrderNotification(any(Order.class));
 
-        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY).orders();
+        List<OrderResponse> orders = orderService.checkout(buyerId, PaymentMethod.MBWAY, null).orders();
 
         assertThat(orders).hasSize(1);
         assertThat(cart.getItems()).isEmpty();
@@ -185,7 +185,7 @@ class OrderServiceTest extends BaseUnitTest {
         when(variantRepository.findByIdsForUpdate(anyList())).thenReturn(List.of(variant));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                orderService.checkout(buyerId, PaymentMethod.MBWAY)
+                orderService.checkout(buyerId, PaymentMethod.MBWAY, null)
         );
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

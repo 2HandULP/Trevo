@@ -91,10 +91,10 @@ class OrderControllerIntegrationTest {
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
     void checkoutReturnsCreatedWithOrderList() throws Exception {
-        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
+        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY, null);
         OrderResponse order = sampleOrder(10L, OrderStatus.PLACED);
 
-        when(orderService.checkout(eq(1L), eq(PaymentMethod.MBWAY)))
+        when(orderService.checkout(eq(1L), eq(PaymentMethod.MBWAY), any()))
             .thenReturn(new pt.trevo.trevo_api.dto.CheckoutResponse(List.of(order), null));
 
         mockMvc.perform(post("/api/buyer/orders/checkout")
@@ -109,8 +109,8 @@ class OrderControllerIntegrationTest {
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
     void checkoutReturnsBadRequestForEmptyCart() throws Exception {
-        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
-        when(orderService.checkout(any(), any()))
+        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY, null);
+        when(orderService.checkout(any(), any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty"));
 
         mockMvc.perform(post("/api/buyer/orders/checkout")
@@ -122,8 +122,8 @@ class OrderControllerIntegrationTest {
     @Test
     @WithMockUser(username = "1", roles = "BUYER")
     void checkoutReturnsBadRequestOnStockConflict() throws Exception {
-        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
-        when(orderService.checkout(any(), any()))
+        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY, null);
+        when(orderService.checkout(any(), any(), any()))
             .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock conflict for variants: [101]"));
 
         mockMvc.perform(post("/api/buyer/orders/checkout")
@@ -134,7 +134,7 @@ class OrderControllerIntegrationTest {
 
     @Test
     void checkoutRequiresAuthentication() throws Exception {
-        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
+        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY, null);
         mockMvc.perform(post("/api/buyer/orders/checkout")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -144,7 +144,7 @@ class OrderControllerIntegrationTest {
     @Test
     @WithMockUser(username = "2", roles = "SHOP_OWNER")
     void checkoutForbidsShopOwner() throws Exception {
-        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY);
+        CheckoutRequest request = new CheckoutRequest(PaymentMethod.MBWAY, null);
         mockMvc.perform(post("/api/buyer/orders/checkout")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))

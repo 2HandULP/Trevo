@@ -9,7 +9,6 @@ import {
   X,
   CheckCircle2,
 } from "lucide-react";
-import ReviewForm from "../components/ReviewForm";
 import { useAuth } from "../hooks/useAuth";
 import { productImageAlt } from "../lib/imageAlt";
 import { normalizeRole, ROLES } from "../lib/roles";
@@ -134,11 +133,6 @@ export default function ProductDetail() {
   const selectedVariant = variants.find(
     (variant) => variant.size === selectedSize && variant.color === selectedColor
   );
-  const canReviewShop =
-    isAuthenticated &&
-    normalizeRole(role) === ROLES.BUYER &&
-    Boolean(product?.shopId);
-
   const freeTierExhausted = isPro === false && generationsLeft !== null && generationsLeft <= 0;
 
   function isSizeDisabled(size) {
@@ -441,11 +435,6 @@ export default function ProductDetail() {
               <Alert variant="error" className="mt-3">{cartError}</Alert>
             )}
 
-            {canReviewShop && (
-              <div className="mt-10 pt-6 border-t border-ink-100">
-                <ReviewForm shopId={product.shopId} />
-              </div>
-            )}
           </section>
         </div>
       )}

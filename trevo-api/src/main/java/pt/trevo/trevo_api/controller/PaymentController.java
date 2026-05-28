@@ -1,5 +1,6 @@
 package pt.trevo.trevo_api.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import pt.trevo.trevo_api.dto.CreatePaymentIntentRequest;
+import pt.trevo.trevo_api.dto.MbWayCallbackRequest;
 import pt.trevo.trevo_api.dto.PayPalCaptureResponse;
 import pt.trevo.trevo_api.dto.PaymentIntentResponse;
 import pt.trevo.trevo_api.persistence.entity.Order;
@@ -20,6 +22,7 @@ import pt.trevo.trevo_api.persistence.entity.OrderStatus;
 import pt.trevo.trevo_api.persistence.entity.PaymentMethod;
 import pt.trevo.trevo_api.persistence.repository.OrderRepository;
 import pt.trevo.trevo_api.security.SecurityUtils;
+import pt.trevo.trevo_api.service.MbWayService;
 import pt.trevo.trevo_api.service.PaymentService;
 import pt.trevo.trevo_api.service.PayPalService;
 import pt.trevo.trevo_api.service.StripeWebhookService;
@@ -31,21 +34,27 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final PayPalService payPalService;
     private final StripeWebhookService stripeWebhookService;
+    private final MbWayService mbWayService;
     private final OrderRepository orderRepository;
     private final SecurityUtils securityUtils;
+    private final ObjectMapper objectMapper;
 
     public PaymentController(
         PaymentService paymentService,
         PayPalService payPalService,
         StripeWebhookService stripeWebhookService,
+        MbWayService mbWayService,
         OrderRepository orderRepository,
-        SecurityUtils securityUtils
+        SecurityUtils securityUtils,
+        ObjectMapper objectMapper
     ) {
         this.paymentService = paymentService;
         this.payPalService = payPalService;
         this.stripeWebhookService = stripeWebhookService;
+        this.mbWayService = mbWayService;
         this.orderRepository = orderRepository;
         this.securityUtils = securityUtils;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping("/stripe/payment-intents")
@@ -91,5 +100,23 @@ public class PaymentController {
     ) {
         stripeWebhookService.handleWebhook(payload, signatureHeader);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/mbway/callback")
+    public ResponseEntity<Void> handleMbWayCallback(
+        @RequestBody String rawPayload,
+        @RequestHeader("X-Signature") String signature
+    ) {
+        MbWayCallbackRequest callback = parseMbWayCallback(rawPayload);
+        mbWayService.handleCallback(callback, rawPayload, signature);
+        return ResponseEntity.ok().build();
+    }
+
+    private MbWayCallbackRequest parseMbWayCallback(String rawPayload) {
+        try {
+            return objectMapper.readValue(rawPayload, MbWayCallbackRequest.class);
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid MB WAY callback payload");
+        }
     }
 }

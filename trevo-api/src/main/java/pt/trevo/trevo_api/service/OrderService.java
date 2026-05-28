@@ -49,6 +49,7 @@ public class OrderService {
     private final NotificationService notificationService;
     private final PayoutService payoutService;
     private final PayPalService payPalService;
+    private final MbWayService mbWayService;
 
     public OrderService(
         CartRepository cartRepository,
@@ -57,7 +58,8 @@ public class OrderService {
         ShopRepository shopRepository,
         NotificationService notificationService,
         PayoutService payoutService,
-        PayPalService payPalService
+        PayPalService payPalService,
+        MbWayService mbWayService
     ) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
@@ -66,12 +68,16 @@ public class OrderService {
         this.notificationService = notificationService;
         this.payoutService = payoutService;
         this.payPalService = payPalService;
+        this.mbWayService = mbWayService;
     }
 
     @Transactional
-    public CheckoutResponse checkout(Long buyerId, PaymentMethod paymentMethod) {
+    public CheckoutResponse checkout(Long buyerId, PaymentMethod paymentMethod, String phone) {
         if (buyerId == null || paymentMethod == null) {
             throw badRequest("Invalid checkout request");
+        }
+        if (paymentMethod == PaymentMethod.MBWAY && (phone == null || phone.isBlank())) {
+            throw badRequest("Phone number is required for MB WAY payments");
         }
 
         Cart cart = cartRepository.findByBuyerIdWithItems(buyerId)
@@ -119,8 +125,7 @@ public class OrderService {
             Order order = new Order();
             order.setBuyer(cart.getBuyer());
             order.setShop(shop);
-            order.setStatus(paymentMethod == PaymentMethod.PAYPAL || paymentMethod == PaymentMethod.STRIPE
-                ? OrderStatus.PENDING_PAYMENT : OrderStatus.PLACED);
+            order.setStatus(OrderStatus.PENDING_PAYMENT);
             order.setPaymentMethod(paymentMethod);
             order.setCreatedAt(Instant.now());
 
@@ -163,6 +168,12 @@ public class OrderService {
                 .orElseThrow(() -> badRequest("Order not found"));
             PayPalOrderResponse payPalOrder = payPalService.createOrder(firstOrder);
             approveUrl = payPalOrder.approveUrl();
+        } else if (paymentMethod == PaymentMethod.MBWAY) {
+            for (OrderResponse orderResponse : orders) {
+                Order order = orderRepository.findById(orderResponse.id())
+                    .orElseThrow(() -> badRequest("Order not found"));
+                mbWayService.createPaymentRequest(order, phone);
+            }
         }
 
         return new CheckoutResponse(orders, approveUrl);

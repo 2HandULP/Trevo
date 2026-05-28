@@ -42,7 +42,7 @@ public class OrderController {
         Authentication authentication
     ) {
         Long buyerId = securityUtils.requireUserId(authentication);
-        return orderService.checkout(buyerId, request.paymentMethod());
+        return orderService.checkout(buyerId, request.paymentMethod(), request.phone());
     }
 
     @GetMapping("/api/buyer/orders")

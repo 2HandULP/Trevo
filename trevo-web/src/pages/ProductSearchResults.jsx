@@ -62,6 +62,14 @@ function ProductCard({ product }) {
         {product.materials && (
           <p className="text-xs text-ink-500 leading-snug line-clamp-2">Materiais: {product.materials}</p>
         )}
+        {product.shopId && product.shopName && (
+          <Link
+            to={`/shops/${product.shopId}`}
+            className="text-xs text-clover-700 hover:underline font-medium"
+          >
+            {product.shopName}
+          </Link>
+        )}
       </div>
     </article>
   );

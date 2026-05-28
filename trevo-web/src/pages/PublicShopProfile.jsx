@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { Star, ArrowRight, Store } from "lucide-react";
+import ReviewForm from "../components/ReviewForm";
 import ReviewsSection from "../components/ReviewsSection";
+import { useAuth } from "../hooks/useAuth";
+import { normalizeRole, ROLES } from "../lib/roles";
 import { getShopProfile } from "../services/shopService";
 import LoadingState from "../components/LoadingState";
 import Alert from "../components/Alert";
@@ -19,6 +22,7 @@ function formatRating(averageRating, t) {
 export default function PublicShopProfile() {
   const { t } = useTranslation("browse");
   const { shopId } = useParams();
+  const { isAuthenticated, role } = useAuth();
   const [shop, setShop] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -130,6 +134,11 @@ export default function PublicShopProfile() {
 
           {/* Reviews */}
           <section className="mt-12 pt-8 border-t border-ink-100">
+            {isAuthenticated && normalizeRole(role) === ROLES.BUYER && (
+              <div className="mb-10">
+                <ReviewForm shopId={shopId} />
+              </div>
+            )}
             <ReviewsSection shopId={shopId} />
           </section>
         </>

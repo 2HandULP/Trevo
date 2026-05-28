@@ -8,6 +8,7 @@ import {
   Plus,
   ArrowRight,
   Receipt,
+  LayoutGrid,
 } from "lucide-react";
 import { getShopDashboard } from "../services/shopService";
 import LoadingState from "../components/LoadingState";
@@ -137,10 +138,16 @@ export default function ShopDashboard() {
             <StatCard
               Icon={Store}
               label="Catálogo"
+              value={dashboard.productCount ?? 0}
+              actionTo="/shop/products"
+              actionLabel="Gerir produtos"
+            />
+            <StatCard
+              Icon={LayoutGrid}
+              label="Coleções"
               value="—"
-              actionTo="/products/new"
-              actionLabel="Adicionar produto"
-              actionIcon={Plus}
+              actionTo={`/shops/${shop.id}/collections`}
+              actionLabel="Gerir coleções"
             />
           </div>
 

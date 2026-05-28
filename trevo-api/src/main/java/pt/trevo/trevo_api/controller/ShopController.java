@@ -23,6 +23,7 @@ import pt.trevo.trevo_api.dto.CreateCollectionRequest;
 import pt.trevo.trevo_api.dto.CreateShopRequest;
 import pt.trevo.trevo_api.dto.RenameCollectionRequest;
 import pt.trevo.trevo_api.dto.ReorderCollectionsRequest;
+import pt.trevo.trevo_api.dto.ShopDashboardResponse;
 import pt.trevo.trevo_api.dto.ShopProfileResponse;
 import pt.trevo.trevo_api.dto.ShopResponse;
 import pt.trevo.trevo_api.dto.UpdateShopRequest;
@@ -52,6 +53,15 @@ public class ShopController {
         this.collectionService = collectionService;
         this.securityUtils = securityUtils;
         this.imageUploadValidator = imageUploadValidator;
+    }
+
+    // ── Dashboard ─────────────────────────────────────────────────────────
+
+    @GetMapping("/me/dashboard")
+    @PreAuthorize("hasRole('SHOP_OWNER')")
+    public ShopDashboardResponse getDashboard(Authentication authentication) {
+        Long callerId = securityUtils.requireUserId(authentication);
+        return shopService.getDashboard(callerId);
     }
 
     // ── Shop CRUD ────────────────────────────────────────────────────────────
